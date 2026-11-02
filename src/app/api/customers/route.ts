@@ -33,7 +33,13 @@ function parseCsvLine(line: string): string[] {
 
 export async function GET() {
   try {
-    const csvPath = path.join(process.cwd(), 'customers.csv');
+    let csvPath = path.join(process.cwd(), 'customers.csv');
+    if (!fs.existsSync(csvPath)) {
+      const publicPath = path.join(process.cwd(), 'public', 'customers.csv');
+      if (fs.existsSync(publicPath)) {
+        csvPath = publicPath;
+      }
+    }
     if (!fs.existsSync(csvPath)) {
       return NextResponse.json({
         success: true,
