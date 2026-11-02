@@ -89,16 +89,8 @@ export const validateCustomerLogin = (
   const normMobile = normalizeMobile(mobileInput);
   const normDob = normalizeDob(dobInput);
 
-  if (!normName) {
-    return { isValid: false, message: 'Please enter your Full Name in CAPITAL letters.' };
-  }
-
-  if (!normMobile || normMobile.length < 10) {
-    return { isValid: false, message: 'Please enter a valid 10-digit Mobile Number.' };
-  }
-
-  if (!normDob) {
-    return { isValid: false, message: 'Please enter DOB in YYYY/MM/DD format (e.g. 2007/10/26).' };
+  if (!normName || !normMobile || normMobile.length < 10 || !normDob) {
+    return { isValid: false, message: 'Access Denied' };
   }
 
   // Search in dynamic/CSV database
@@ -119,13 +111,13 @@ export const validateCustomerLogin = (
     return {
       isValid: true,
       customer: match,
-      message: `Welcome ${match.name}! Authenticated successfully from customers.csv.`
+      message: `Welcome ${match.name}!`
     };
   }
 
   // Strict authentication: reject any user not registered in customers.csv!
   return {
     isValid: false,
-    message: 'Access Denied: Details not found in customers.csv. Please contact Administrator (+91 9344795832) to subscribe.'
+    message: 'Access Denied'
   };
 };

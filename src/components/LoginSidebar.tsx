@@ -164,14 +164,8 @@ export const LoginSidebar: React.FC<LoginSidebarProps> = ({
             </div>
 
             {errorMsg && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-2xl text-[11px] font-bold text-red-600 animate-in fade-in">
-                <p>{errorMsg}</p>
-                <a 
-                  href="tel:+919344795832"
-                  className="inline-block mt-1 text-[#F97316] hover:underline"
-                >
-                  Contact Administrator (+91 9344795832)
-                </a>
+              <div className="py-2 px-4 bg-red-50 border border-red-200 text-red-600 rounded-2xl text-xs font-black tracking-wider text-center animate-shake uppercase">
+                {errorMsg}
               </div>
             )}
 

@@ -319,7 +319,7 @@ export default function Home() {
                   </div>
 
                   {authStatusMessage && (
-                    <div className="p-2.5 bg-orange-100 border border-orange-300 text-orange-950 rounded-2xl text-xs font-bold text-center animate-shake">
+                    <div className="py-2 px-4 bg-red-50 border border-red-200 text-red-600 rounded-2xl text-xs font-black tracking-wider text-center animate-shake uppercase">
                       {authStatusMessage}
                     </div>
                   )}
