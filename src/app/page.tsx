@@ -17,7 +17,18 @@ import { validateCustomerLogin, setDynamicCustomers } from '../data/customerAuth
 import { CalendarDay } from '../components/SubscriptionCalendar';
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'landing' | 'discover' | 'plans' | 'checkout' | 'dashboard'>('landing');
+  const [activeTab, _setActiveTab] = useState<'landing' | 'discover' | 'plans' | 'checkout' | 'dashboard'>('landing');
+
+  // Push tab transitions into browser history so Back button returns to the previous page
+  const setActiveTab = (tab: 'landing' | 'discover' | 'plans' | 'checkout' | 'dashboard', pushHistory = true) => {
+    _setActiveTab(tab);
+    if (typeof window !== 'undefined' && pushHistory) {
+      if (window.history.state?.tab !== tab) {
+        window.history.pushState({ tab }, '', tab === 'landing' ? window.location.pathname : '#' + tab);
+      }
+    }
+  };
+
   const [showLoginCard, setShowLoginCard] = useState(false);
   const [isGuestUser, setIsGuestUser] = useState(false);
   const [isAdminContactOpen, setIsAdminContactOpen] = useState(false);
@@ -51,15 +62,22 @@ export default function Home() {
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>('Mon');
   const [selectedMealTime, setSelectedMealTime] = useState<MealTime>('breakfast');
 
-  // Session persistence & load customers from customers.csv
+  // Session persistence, browser history sync & load customers from customers.csv
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const validTabs: ('landing' | 'discover' | 'plans' | 'checkout' | 'dashboard')[] = [
+      'landing', 'discover', 'plans', 'checkout', 'dashboard'
+    ];
+
+    // Read URL hash (#discover, #checkout, etc.) or fallback to landing
+    const initialHash = window.location.hash.replace('#', '') as any;
+    const initialTab = validTabs.includes(initialHash) ? initialHash : 'landing';
+
+    _setActiveTab(initialTab);
+    window.history.replaceState({ tab: initialTab }, '', initialTab === 'landing' ? window.location.pathname : '#' + initialTab);
+
     try {
-      const savedTab = sessionStorage.getItem('stuvvy_tab') as any;
-      if (savedTab && ['landing', 'discover', 'plans', 'checkout', 'dashboard'].includes(savedTab)) {
-        setActiveTab(savedTab);
-      } else {
-        setActiveTab('landing');
-      }
       const savedUser = localStorage.getItem('stuvvy_user');
       if (savedUser) {
         setUser(JSON.parse(savedUser));
@@ -75,7 +93,40 @@ export default function Home() {
         }
       })
       .catch(err => console.log('Notice: Could not load customers from customers.csv API:', err));
-  }, []);
+
+    // Handle Browser Back / Forward buttons
+    const handlePopState = (event: PopStateEvent) => {
+      // If a modal or drawer is open when back is pressed, close it first
+      if (isAdminContactOpen) {
+        setIsAdminContactOpen(false);
+        return;
+      }
+      if (isCartOpen) {
+        setIsCartOpen(false);
+        return;
+      }
+      if (planMenuModal.isOpen) {
+        setPlanMenuModal(prev => ({ ...prev, isOpen: false }));
+        return;
+      }
+      if (showLoginCard && activeTab === 'landing') {
+        setShowLoginCard(false);
+        return;
+      }
+
+      const targetTab = event.state?.tab || (window.location.hash.replace('#', '') as any);
+      if (validTabs.includes(targetTab)) {
+        _setActiveTab(targetTab);
+      } else {
+        _setActiveTab('landing');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isAdminContactOpen, isCartOpen, planMenuModal.isOpen, showLoginCard, activeTab]);
 
   // Save current active tab whenever it changes
   useEffect(() => {
