@@ -1,0 +1,16 @@
+# Apache .htaccess configuration for GoDaddy Hosting (stuvvy.in)
+RewriteEngine On
+
+# 1. Force HTTPS for stuvvy.in
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# 2. Preserve ACME challenges for SSL certificates
+RewriteCond %{REQUEST_URI} ^/\.well-known/acme-challenge/
+RewriteRule .* - [L]
+
+# 3. Optional reverse proxy if Node.js is executed as background daemon on port 3000
+<IfModule mod_proxy.c>
+  RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
+  ProxyPassReverse / http://127.0.0.1:3000/
+</IfModule>
