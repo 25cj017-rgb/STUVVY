@@ -15,11 +15,12 @@ export interface CalendarDay {
   isDelivery: boolean; // true = Need Food, false = Skip Food
 }
 
-interface SubscriptionCalendarProps {
+export interface SubscriptionCalendarProps {
   totalRangeDays?: number; // Days window to show (e.g., 7, 14, 30)
   isPaid?: boolean; // If paid, calendar is locked
   initialSelectedDays?: CalendarDay[];
   ratePerDay?: number;
+  startDate?: string | Date;
   onDaysChange?: (updatedDays: CalendarDay[], activeCount: number) => void;
 }
 
@@ -42,17 +43,45 @@ const COL_START_MAP: Record<string, string> = {
   Sat: 'col-start-7',
 };
 
-// Utility to generate upcoming dates starting from November 2
-export const generateUpcomingDays = (count: number = 7): CalendarDay[] => {
+/**
+ * Parses user start date string (e.g., "04-11-2026", "2026-11-04", "04/11/2026", "Nov 4, 2026")
+ */
+export const parseCustomDate = (dateInput?: string | Date): Date => {
+  if (!dateInput) return new Date(2026, 10, 2); // Default: Nov 2, 2026
+  if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? new Date(2026, 10, 2) : dateInput;
+
+  const cleaned = dateInput.trim();
+  if (!cleaned) return new Date(2026, 10, 2);
+
+  // Pattern: DD-MM-YYYY or DD/MM/YYYY
+  const dmyMatch = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (dmyMatch) {
+    const [, d, m, y] = dmyMatch;
+    return new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+  }
+
+  // Pattern: YYYY-MM-DD or YYYY/MM/DD
+  const ymdMatch = cleaned.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+  if (ymdMatch) {
+    const [, y, m, d] = ymdMatch;
+    return new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+  }
+
+  const parsed = new Date(cleaned);
+  return isNaN(parsed.getTime()) ? new Date(2026, 10, 2) : parsed;
+};
+
+// Utility to generate upcoming dates starting from a specific start date (or default Nov 2, 2026)
+export const generateUpcomingDays = (count: number = 7, customStartDate?: string | Date): CalendarDay[] => {
   const days: CalendarDay[] = [];
-  const startDate = new Date(2026, 10, 2); // Start from Nov 2, 2026 (Monday)
+  const baseStart = parseCustomDate(customStartDate);
 
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   for (let i = 0; i < count; i++) {
-    const d = new Date(startDate);
-    d.setDate(startDate.getDate() + i);
+    const d = new Date(baseStart);
+    d.setDate(baseStart.getDate() + i);
     
     const dayName = dayNames[d.getDay()];
     const monthName = monthNames[d.getMonth()];
@@ -78,30 +107,31 @@ export const SubscriptionCalendar: React.FC<SubscriptionCalendarProps> = ({
   isPaid = false,
   initialSelectedDays,
   ratePerDay = 98.43,
+  startDate,
   onDaysChange
 }) => {
   const [days, setDays] = useState<CalendarDay[]>(() => {
     if (initialSelectedDays && initialSelectedDays.length > 0) {
       return initialSelectedDays;
     }
-    return generateUpcomingDays(totalRangeDays);
+    return generateUpcomingDays(totalRangeDays, startDate);
   });
 
   const [showAdminModal, setShowAdminModal] = useState(false);
   const [adminNote, setAdminNote] = useState('');
   const [requestSent, setRequestSent] = useState(false);
 
-  // Sync state if totalRangeDays changes and no initial days provided
+  // Sync state if totalRangeDays or startDate changes and no initial days provided
   useEffect(() => {
     if (!initialSelectedDays || initialSelectedDays.length === 0) {
-      const generated = generateUpcomingDays(totalRangeDays);
+      const generated = generateUpcomingDays(totalRangeDays, startDate);
       setDays(generated);
       const activeCount = generated.filter(d => d.isDelivery).length;
       if (onDaysChange) {
         onDaysChange(generated, activeCount);
       }
     }
-  }, [totalRangeDays]);
+  }, [totalRangeDays, startDate]);
 
   const activeDaysCount = days.filter(d => d.isDelivery).length;
   const skippedDaysCount = days.filter(d => !d.isDelivery).length;
@@ -367,11 +397,11 @@ export const SubscriptionCalendar: React.FC<SubscriptionCalendarProps> = ({
                   </div>
                   <div>
                     <span className="text-[10px] text-zinc-400 font-bold block">Admin Email Desk</span>
-                    <span className="font-extrabold text-zinc-900">admin@stuvvy.com</span>
+                    <span className="font-extrabold text-zinc-900">orders@stuvvy.in</span>
                   </div>
                 </div>
                 <a
-                  href="mailto:admin@stuvvy.com?subject=Emergency%20Subscription%20Date%20Change"
+                  href="mailto:orders@stuvvy.in?subject=Emergency%20Subscription%20Date%20Change"
                   className="px-3 py-1.5 bg-zinc-900 text-white font-bold rounded-xl text-[11px] hover:bg-zinc-800 transition-colors"
                 >
                   Send Email

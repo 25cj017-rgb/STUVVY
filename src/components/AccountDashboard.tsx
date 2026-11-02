@@ -7,7 +7,7 @@ import { UserProfile } from '../types';
 import { 
   User, Calendar, CreditCard, MapPin, PauseCircle, PlayCircle, 
   RefreshCw, ShieldCheck, CheckCircle2, Clock, ChevronRight, AlertCircle, 
-  ArrowLeft, Lock, Phone, Utensils, Sparkles, LogOut, Check, Bike, MessageSquare
+  ArrowLeft, Lock, Phone, Utensils, Sparkles, LogOut, Check, MessageSquare
 } from 'lucide-react';
 
 interface AccountDashboardProps {
@@ -37,7 +37,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
     jainNoGarlic: false
   });
 
-  const currentUser = user && user.fullName ? user : {
+  const currentUser: UserProfile = user && user.fullName ? user : {
     id: user?.id || 'usr_guest',
     fullName: user?.fullName || 'Guest Explorer',
     mobileNumber: user?.mobileNumber || '',
@@ -46,8 +46,16 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
     beneficiaryStatus: 'Standard',
     dietaryPreferences: ['Pure Veg', 'South Indian Traditional'],
     allergyInfo: ['None'],
-    address: user?.address || 'Address pending login'
+    address: user?.address || 'Address pending login',
+    addresses: user?.addresses,
+    selectedAddress: user?.selectedAddress,
+    startDate: user?.startDate,
+    plan: user?.plan
   };
+
+  const [activeAddress, setActiveAddress] = useState<string>(
+    currentUser.selectedAddress || currentUser.address || (currentUser.addresses && currentUser.addresses[0]) || ''
+  );
 
   const currentPlan = activePlan || {
     id: 'weekly',
@@ -86,8 +94,45 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
               </span>
             </div>
             <p className="text-xs text-zinc-500 font-medium mt-0.5">
-              📞 +91 {currentUser.mobileNumber} • {currentUser.address}
+              📞 +91 {currentUser.mobileNumber}
             </p>
+            {/* If user has 2+ addresses, show interactive toggle */}
+            {currentUser.addresses && currentUser.addresses.length > 1 ? (
+              <div className="mt-2 space-y-1.5">
+                <div className="text-[10px] font-black uppercase tracking-wider text-orange-600 flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-orange-600" />
+                  <span>Delivery Address Selection</span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {currentUser.addresses.map((locAddr, idx) => {
+                    const isSelected = activeAddress.trim() === locAddr.trim();
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setActiveAddress(locAddr);
+                          setStatusMessage(`Delivery location updated to Location ${idx + 1}`);
+                          setTimeout(() => setStatusMessage(''), 3000);
+                        }}
+                        className={`text-xs px-3 py-1.5 rounded-xl border font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-orange-500 text-white border-orange-500 shadow-xs'
+                            : 'bg-zinc-100 text-zinc-700 border-zinc-200 hover:bg-zinc-200'
+                        }`}
+                      >
+                        <span className="text-[10px] font-black uppercase">Loc {idx + 1}:</span>
+                        <span className="max-w-[200px] truncate">{locAddr}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-zinc-600 font-medium mt-0.5">
+                📍 {activeAddress || currentUser.address}
+              </p>
+            )}
           </div>
         </div>
 
@@ -117,79 +162,6 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
           <span>{statusMessage}</span>
         </div>
       )}
-
-      {/* LIVE ORDER TRACKING STATUS */}
-      <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[32px] p-6 sm:p-7 shadow-sm space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-100 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center font-black">
-              <Bike className="w-4 h-4" />
-            </div>
-            <div>
-              <div className="text-xs font-black uppercase tracking-wider text-zinc-400">
-                Today's Delivery Status • Order #STV-2026-882
-              </div>
-              <div className="text-base font-black text-zinc-950 font-heading">
-                Chef Preparing Homely Meal (Hot & Fresh)
-              </div>
-            </div>
-          </div>
-
-          <div className="text-xs font-extrabold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-200 self-start sm:self-auto">
-            Est. Arrival: 12:45 PM
-          </div>
-        </div>
-
-        {/* Multi-step progress bar */}
-        <div className="grid grid-cols-4 gap-2 pt-1 text-center">
-          {[
-            { step: '1', title: 'Confirmed', done: true },
-            { step: '2', title: 'Cooking', done: true, active: true },
-            { step: '3', title: 'Eco Packed', done: false },
-            { step: '4', title: 'Delivered', done: false },
-          ].map((s, idx) => (
-            <div key={idx} className="space-y-1.5">
-              <div className={`h-2 rounded-full ${
-                s.done ? 'bg-orange-500' : s.active ? 'bg-orange-300 animate-pulse' : 'bg-zinc-200'
-              }`} />
-              <div className={`text-[11px] font-black ${s.done || s.active ? 'text-zinc-950' : 'text-zinc-400'}`}>
-                {s.title}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div className="bg-zinc-50 border border-zinc-200/70 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-zinc-950 text-white flex items-center justify-center text-xs font-black">
-              M
-            </div>
-            <div>
-              <span className="font-extrabold text-zinc-900">Delivery Partner Murugan</span>
-              <span className="text-zinc-500 text-[11px] ml-1.5 block sm:inline">• For delivery questions, contact Administrator</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <a 
-              href="tel:+919344795832" 
-              className="bg-zinc-950 hover:bg-zinc-800 text-white font-extrabold px-3 py-1.5 rounded-xl text-[11px] flex items-center gap-1.5 cursor-pointer transition-all"
-            >
-              <Phone className="w-3.5 h-3.5 text-orange-400" />
-              <span>Call Admin</span>
-            </a>
-            <a 
-              href="https://wa.me/919344795832" 
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold px-3 py-1.5 rounded-xl text-[11px] flex items-center gap-1.5 cursor-pointer transition-all"
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>WhatsApp</span>
-            </a>
-          </div>
-        </div>
-      </div>
 
       {/* Active Subscription Banner */}
       <div className="bg-zinc-950 text-white rounded-[32px] p-6 sm:p-8 border border-zinc-900 shadow-xl relative overflow-hidden">
@@ -244,6 +216,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
           totalRangeDays={savedCalendar ? savedCalendar.length : (currentPlan.defaultDays || 7)}
           ratePerDay={currentPlan.ratePerDay || 98.43}
           isPaid={true}
+          startDate={currentUser.startDate}
           initialSelectedDays={savedCalendar}
         />
       </div>

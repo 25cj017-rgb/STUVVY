@@ -3,7 +3,10 @@ export interface CustomerRecord {
   name: string;      // e.g. "SRI RAM V K"
   mobileNo: string;  // e.g. "9344795832"
   dob: string;       // e.g. "26-10-2007"
-  address?: string;  // e.g. "No. 14, 2nd Cross, Anna Nagar West, Chennai - 600040"
+  address?: string;  // Primary address
+  addresses?: string[]; // Multiple addresses if customer has 2+ locations
+  plan?: string;     // e.g. "Weekly" or "Monthly" or "Daily"
+  startDate?: string; // e.g. "03-11-2026" or "2026-11-03"
 }
 
 // Initial demo customers from customers.csv
@@ -13,14 +16,25 @@ export const DEMO_CUSTOMERS_DATABASE: CustomerRecord[] = [
     name: 'SRI RAM V K',
     mobileNo: '9344795832',
     dob: '26-10-2007', // 2007/10/26 in YYYY/MM/DD format
-    address: 'No. 14, 2nd Cross, Anna Nagar West, Chennai - 600040'
+    address: 'No. 14, 2nd Cross, Anna Nagar West, Chennai - 600040',
+    addresses: [
+      'No. 14, 2nd Cross, Anna Nagar West, Chennai - 600040',
+      'Plot 88, 5th Main Road, Anna Nagar, Chennai - 600040'
+    ],
+    plan: 'Weekly',
+    startDate: '03-11-2026'
   },
   {
     sNo: 2,
     name: 'AARAV SHARMA',
     mobileNo: '9876543210',
     dob: '15-08-1995', // 1995/08/15 in YYYY/MM/DD format
-    address: 'Flat 4B, Green Meadows, T. Nagar, Chennai - 600017'
+    address: 'Flat 4B, Green Meadows, T. Nagar, Chennai - 600017',
+    addresses: [
+      'Flat 4B, Green Meadows, T. Nagar, Chennai - 600017'
+    ],
+    plan: 'Daily',
+    startDate: '05-11-2026'
   }
 ];
 

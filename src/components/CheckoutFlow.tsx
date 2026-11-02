@@ -7,7 +7,7 @@ import { UserProfile, CartItem } from '../types';
 import { 
   ArrowLeft, CheckCircle2, ShieldCheck, Lock, Phone, MessageSquare, 
   Check, Plus, Minus, Lightbulb, Sparkles, ArrowRight, Calendar as CalendarIcon, 
-  ShoppingBag, Clock, X, AlertCircle 
+  ShoppingBag, Clock, X, AlertCircle, MapPin 
 } from 'lucide-react';
 
 interface CheckoutFlowProps {
@@ -36,7 +36,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
   const [currentMode, setCurrentMode] = useState<'subscription' | 'cart'>(checkoutMode);
   const [currentPlan, setCurrentPlan] = useState<PlanOption>(plan);
   const [totalRangeDays, setTotalRangeDays] = useState<number>(selectedDays);
-  const [calendarDays, setCalendarDays] = useState<CalendarDay[]>(() => generateUpcomingDays(selectedDays));
+  const [calendarDays, setCalendarDays] = useState<CalendarDay[]>(() => generateUpcomingDays(selectedDays, user?.startDate));
   const [activeFoodDays, setActiveFoodDays] = useState<number>(selectedDays);
 
   // Synchronize when parent navigation changes modes or plans
@@ -50,23 +50,25 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
 
   React.useEffect(() => {
     setTotalRangeDays(selectedDays);
-    const newGen = generateUpcomingDays(selectedDays);
+    const newGen = generateUpcomingDays(selectedDays, user?.startDate);
     setCalendarDays(newGen);
     setActiveFoodDays(newGen.filter(d => d.isDelivery).length);
-  }, [selectedDays]);
+  }, [selectedDays, user?.startDate]);
 
   const [fullName, setFullName] = useState(user?.fullName || '');
   const [mobileNumber, setMobileNumber] = useState(user?.mobileNumber || '');
-  const [email, setEmail] = useState('subscriber@stuvvy.com');
-  const [address, setAddress] = useState(user?.address || '');
+  const [email, setEmail] = useState('orders@stuvvy.in');
+  const [address, setAddress] = useState(user?.selectedAddress || user?.address || (user?.addresses && user.addresses[0]) || '');
   const [deliverySlot, setDeliverySlot] = useState('Morning Breakfast (7:30 - 8:30 AM)');
 
   // Sync address, fullName, and mobile when user updates from customers.csv
   useEffect(() => {
-    if (user?.address) setAddress(user.address);
+    if (user?.selectedAddress) setAddress(user.selectedAddress);
+    else if (user?.address) setAddress(user.address);
+    else if (user?.addresses && user.addresses.length > 0) setAddress(user.addresses[0]);
     if (user?.fullName) setFullName(user.fullName);
     if (user?.mobileNumber) setMobileNumber(user.mobileNumber);
-  }, [user?.address, user?.fullName, user?.mobileNumber]);
+  }, [user?.address, user?.selectedAddress, user?.addresses, user?.fullName, user?.mobileNumber]);
   
   const [showAdminPaymentNotify, setShowAdminPaymentNotify] = useState<boolean>(false);
   const [orderId] = useState<string>(() => 'STV-' + Math.floor(100000 + Math.random() * 900000));
@@ -89,7 +91,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
   const handleIncrementDays = () => {
     const newCount = totalRangeDays + 1;
     setTotalRangeDays(newCount);
-    const newGen = generateUpcomingDays(newCount);
+    const newGen = generateUpcomingDays(newCount, user?.startDate);
     setCalendarDays(newGen);
     setActiveFoodDays(newGen.filter(d => d.isDelivery).length);
   };
@@ -97,7 +99,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
   const handleDecrementDays = () => {
     const newCount = Math.max(1, totalRangeDays - 1);
     setTotalRangeDays(newCount);
-    const newGen = generateUpcomingDays(newCount);
+    const newGen = generateUpcomingDays(newCount, user?.startDate);
     setCalendarDays(newGen);
     setActiveFoodDays(newGen.filter(d => d.isDelivery).length);
   };
@@ -106,7 +108,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
     const weekly = SUBSCRIPTION_PLANS.find(p => p.id === 'weekly') || SUBSCRIPTION_PLANS[1];
     setCurrentPlan(weekly);
     setTotalRangeDays(7);
-    const newGen = generateUpcomingDays(7);
+    const newGen = generateUpcomingDays(7, user?.startDate);
     setCalendarDays(newGen);
     setActiveFoodDays(7);
     if (onSwitchPlan) {
@@ -208,14 +210,14 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
                     </div>
                     <div className="space-y-1">
                       <div className="text-sm font-black text-zinc-900">Your meal tray is empty</div>
-                      <p className="text-xs text-zinc-500">Pick any delicious fresh meal from the daily menu to checkout.</p>
+                      <p className="text-xs text-zinc-500">Pick any delicious fresh meal from the menu to checkout.</p>
                     </div>
                     <button
                       type="button"
                       onClick={onBack}
                       className="inline-flex items-center gap-1.5 bg-zinc-950 hover:bg-zinc-800 text-white font-extrabold text-xs py-2 px-4 rounded-xl shadow-xs transition-all cursor-pointer"
                     >
-                      <span>Browse Daily Menu</span>
+                      <span>Browse Menu</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -288,6 +290,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
                 totalRangeDays={totalRangeDays}
                 ratePerDay={ratePerDay}
                 isPaid={false}
+                startDate={user?.startDate}
                 onDaysChange={handleCalendarDaysChange}
               />
             </div>
@@ -327,16 +330,80 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
                 />
               </div>
 
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-bold text-zinc-700 mb-1">Delivery Address</label>
-                <textarea
-                  rows={2}
-                  required
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-zinc-300 rounded-xl text-xs font-bold text-zinc-900 focus:outline-none focus:border-orange-500"
-                />
-              </div>
+              {/* ADDRESS SELECTION: If user has 2+ addresses, prompt asking which address to deliver to */}
+              {user?.addresses && user.addresses.length > 1 ? (
+                <div className="sm:col-span-2 space-y-3 pt-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-zinc-950 flex items-center gap-1.5">
+                      <MapPin className="w-4 h-4 text-orange-600" />
+                      <span>Which delivery address should we deliver to?</span>
+                    </label>
+                    <span className="text-[10px] font-black uppercase bg-orange-100 text-orange-800 px-2.5 py-0.5 rounded-full border border-orange-200">
+                      Select Location
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {user.addresses.map((locAddr, idx) => {
+                      const isSelected = address.trim() === locAddr.trim();
+                      const locNum = idx + 1;
+                      return (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setAddress(locAddr)}
+                          className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer relative flex flex-col justify-between gap-2.5 ${
+                            isSelected
+                              ? 'bg-orange-50/70 border-2 border-orange-500 shadow-md ring-1 ring-orange-500/20'
+                              : 'bg-zinc-50 hover:bg-zinc-100 border-zinc-200 text-zinc-700'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                              isSelected ? 'bg-orange-500 text-white' : 'bg-zinc-200 text-zinc-700'
+                            }`}>
+                              Location {locNum}
+                            </span>
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center border transition-all ${
+                              isSelected ? 'bg-orange-500 border-orange-500 text-white shadow-xs' : 'border-zinc-300 bg-white'
+                            }`}>
+                              {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                            </div>
+                          </div>
+                          <p className={`text-xs font-bold leading-relaxed ${isSelected ? 'text-zinc-950' : 'text-zinc-600'}`}>
+                            {locAddr}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="pt-1">
+                    <label className="block text-[11px] font-bold text-zinc-500 mb-1">
+                      Selected Delivery Address
+                    </label>
+                    <textarea
+                      rows={2}
+                      required
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      className="w-full px-3.5 py-2.5 bg-white border border-zinc-300 rounded-xl text-xs font-bold text-zinc-900 focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+                </div>
+              ) : (
+                /* Single Address (No prompt needed for people with one address) */
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-bold text-zinc-700 mb-1">Delivery Address</label>
+                  <textarea
+                    rows={2}
+                    required
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white border border-zinc-300 rounded-xl text-xs font-bold text-zinc-900 focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+              )}
             </div>
           </div>
 

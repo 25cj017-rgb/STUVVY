@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { Check, Sparkles, Plus, Minus, Lightbulb, Zap, ArrowRight, ShieldCheck, Eye } from 'lucide-react';
 
+import { UserProfile } from '../types';
+
 export interface PlanOption {
   id: string;
   name: string;
@@ -78,14 +80,25 @@ interface PricingSectionProps {
   onSelectPlan: (plan: PlanOption, customDays?: number, calculatedPrice?: number) => void;
   onViewMenu?: (planId: 'daily' | 'weekly' | 'monthly') => void;
   isCompactView?: boolean;
+  user?: UserProfile;
 }
 
 export const PricingSection: React.FC<PricingSectionProps> = ({ 
   selectedPlan, 
   onSelectPlan,
   onViewMenu,
-  isCompactView = false 
+  isCompactView = false,
+  user
 }) => {
+  // Check if current logged in user has a specific assigned plan from customers.csv
+  const userPlanNormalized = (user?.plan || '').trim().toLowerCase();
+  const assignedPlan = userPlanNormalized 
+    ? (SUBSCRIPTION_PLANS.find(p => p.id === userPlanNormalized || userPlanNormalized.includes(p.id) || p.name.toLowerCase().includes(userPlanNormalized)) || null)
+    : null;
+
+  // If user has an assigned plan in CSV, show ONLY that plan! Otherwise show all plans.
+  const plansToDisplay = assignedPlan ? [assignedPlan] : SUBSCRIPTION_PLANS;
+
   // State for days selector per plan
   const [daysState, setDaysState] = useState<Record<string, number>>({
     daily: 1,
@@ -93,7 +106,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
     monthly: 30
   });
 
-  // State to track dismiss or active suggestion popup
+  // State to track dismiss or active suggestion popup (hidden if user already has an assigned plan)
   const [showWeeklySuggestion, setShowWeeklySuggestion] = useState(true);
 
   const handleIncrementDays = (planId: string) => {
@@ -128,19 +141,26 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
       {!isCompactView && (
         <div className="text-center max-w-2xl mx-auto mb-10">
           <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-600 bg-zinc-100 px-3 py-1 rounded-full border border-zinc-200">
-            Flexible Subscription Options
+            {assignedPlan ? 'Your Registered Plan' : 'Flexible Subscription Options'}
           </span>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-950 font-heading mt-3 tracking-tight">
-            Select Your Meal Subscription
+            {assignedPlan ? `Your Assigned Plan: ${assignedPlan.name}` : 'Select Your Meal Subscription'}
           </h2>
           <p className="text-xs sm:text-sm text-zinc-500 font-medium mt-2 leading-relaxed">
-            Adjust days to automatically calculate your price. Pause or change plans anytime.
+            {assignedPlan ? (
+              <span>
+                Registered under <strong>{user?.fullName}</strong>
+                {user?.startDate ? ` • Deliveries begin ${user.startDate}` : ''}.
+              </span>
+            ) : (
+              'Adjust days to automatically calculate your price. Pause or change plans anytime.'
+            )}
           </p>
         </div>
       )}
 
-      {/* WEEKLY SUBSCRIPTION POPUP / SUGGESTION BANNER (ELEGANT SUBTLE CHARCOAL CARD) */}
-      {showWeeklySuggestion && (
+      {/* WEEKLY SUBSCRIPTION POPUP / SUGGESTION BANNER (Only shown when not restricted to single assigned plan) */}
+      {!assignedPlan && showWeeklySuggestion && (
         <div className="mb-8 bg-zinc-950 text-white p-5 sm:p-6 rounded-3xl shadow-xl border border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top duration-300">
           <div className="flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center shrink-0 text-amber-300 shadow-xs border border-white/10">
@@ -174,9 +194,9 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
         </div>
       )}
 
-      {/* 3 Pricing Cards Grid */}
-      <div className={`grid grid-cols-1 ${isCompactView ? 'gap-4' : 'md:grid-cols-3 gap-6'} items-stretch`}>
-        {SUBSCRIPTION_PLANS.map((plan) => {
+      {/* Pricing Cards Grid (Renders ONLY assigned plan if user has one, or all 3 plans if not) */}
+      <div className={`grid grid-cols-1 ${plansToDisplay.length === 1 ? 'max-w-lg mx-auto' : isCompactView ? 'gap-4' : 'md:grid-cols-3 gap-6'} items-stretch`}>
+        {plansToDisplay.map((plan) => {
           const isSelected = selectedPlan?.id === plan.id;
           const currentDays = daysState[plan.id] || plan.defaultDays;
           const calculatedPrice = getCalculatedPrice(plan);
@@ -190,12 +210,17 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                   : 'bg-white border border-zinc-200/90 shadow-xs hover:border-zinc-300'
               }`}
             >
-              {/* Savings / Popular Badge */}
-              {plan.savingsBadge && (
+              {/* Savings / Popular / Assigned Badge */}
+              {assignedPlan?.id === plan.id ? (
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1 rounded-full shadow-md whitespace-nowrap border border-emerald-500 flex items-center gap-1.5">
+                  <Sparkles className="w-3 h-3 text-emerald-200" />
+                  <span>Your Assigned Plan</span>
+                </div>
+              ) : plan.savingsBadge ? (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-zinc-950 text-white text-[10px] font-black uppercase tracking-widest px-3.5 py-1 rounded-full shadow-md whitespace-nowrap border border-zinc-800">
                   {plan.savingsBadge}
                 </div>
-              )}
+              ) : null}
 
               <div>
                 {/* Plan Header */}

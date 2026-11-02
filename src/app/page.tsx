@@ -162,14 +162,43 @@ export default function Home() {
       setIsGuestUser(false); // Full subscriber mode
       
       setTimeout(() => {
-        setUser({
+        const custAddrs = authResult.customer?.addresses && authResult.customer.addresses.length > 0
+          ? authResult.customer.addresses
+          : (authResult.customer?.address ? [authResult.customer.address] : []);
+        const primaryAddr = custAddrs[0] || authResult.customer?.address || '';
+
+        const updatedUser: UserProfile = {
           ...user,
           fullName: authResult.customer?.name || fullName.toUpperCase(),
           mobileNumber: authResult.customer?.mobileNo || mobileNumber,
           dob: dob,
-          address: authResult.customer?.address || '',
+          address: primaryAddr,
+          addresses: custAddrs,
+          selectedAddress: primaryAddr,
+          plan: authResult.customer?.plan,
+          startDate: authResult.customer?.startDate,
           isVerified: true
-        });
+        };
+
+        setUser(updatedUser);
+
+        // If customer has a pre-assigned plan in CSV, automatically initialize selectedPlan
+        if (authResult.customer?.plan) {
+          const normPlan = authResult.customer.plan.toLowerCase().trim();
+          const matchedPlan = SUBSCRIPTION_PLANS.find(p => 
+            p.id === normPlan || normPlan.includes(p.id) || p.name.toLowerCase().includes(normPlan)
+          );
+          if (matchedPlan) {
+            setSelectedPlan(matchedPlan);
+            setSelectedDays(matchedPlan.defaultDays);
+            setCalculatedPrice(matchedPlan.price);
+          }
+        }
+
+        try {
+          localStorage.setItem('stuvvy_user', JSON.stringify(updatedUser));
+        } catch {}
+
         setActiveTab('discover');
       }, 500);
     }, 800);
@@ -547,6 +576,7 @@ export default function Home() {
                 onSelectPlan={handleSelectPlan}
                 onViewMenu={(planType) => setPlanMenuModal({ isOpen: true, planType })}
                 isCompactView={false}
+                user={user}
               />
             </div>
           </div>
@@ -659,7 +689,7 @@ export default function Home() {
                 onClick={() => setActiveTab('discover')} 
                 className="hover:text-zinc-900 cursor-pointer"
               >
-                Daily Menu
+                Menu
               </button>
               <button 
                 onClick={() => setActiveTab('dashboard')} 

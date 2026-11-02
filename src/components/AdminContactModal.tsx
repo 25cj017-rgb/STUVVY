@@ -92,11 +92,11 @@ export const AdminContactModal: React.FC<AdminContactModalProps> = ({
               </div>
               <div>
                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Email Support</span>
-                <span className="text-sm font-black text-zinc-950">admin@stuvvy.com</span>
+                <span className="text-sm font-black text-zinc-950">orders@stuvvy.in</span>
               </div>
             </div>
             <a
-              href="mailto:admin@stuvvy.com"
+              href="mailto:orders@stuvvy.in"
               className="bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-extrabold px-3 py-2 rounded-xl transition-all cursor-pointer"
             >
               Email

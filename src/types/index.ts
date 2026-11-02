@@ -50,6 +50,10 @@ export interface UserProfile {
   dietaryPreferences: string[];
   allergyInfo: string[];
   address: string;
+  addresses?: string[];
+  selectedAddress?: string;
+  plan?: string;
+  startDate?: string;
 }
 
 export interface CartItem {

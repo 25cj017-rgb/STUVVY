@@ -55,7 +55,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             }`}
           >
             <Utensils className="w-3.5 h-3.5" />
-            <span>Daily Menu</span>
+            <span>Menu</span>
           </button>
 
           <button 
