@@ -24,12 +24,20 @@ export const LoginSidebar: React.FC<LoginSidebarProps> = ({
   const [dob, setDob] = useState(user.dob || '');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   if (!isOpen) return null;
 
   const handleVerifyOtp = () => {
-    setIsVerifying(true);
+    setErrorMsg('');
     const authResult = validateCustomerLogin(fullName, mobileNumber, dob);
+    
+    if (!authResult.isValid) {
+      setErrorMsg(authResult.message || 'Details not found in customers.csv. Contact Admin.');
+      return;
+    }
+
+    setIsVerifying(true);
     setTimeout(() => {
       setIsVerifying(false);
       setIsSuccess(true);
@@ -40,7 +48,7 @@ export const LoginSidebar: React.FC<LoginSidebarProps> = ({
           fullName: authResult.customer?.name || fullName,
           mobileNumber: authResult.customer?.mobileNo || mobileNumber,
           dob: authResult.customer?.dob || dob,
-          address: authResult.customer?.address || user.address,
+          address: authResult.customer?.address || '',
           isVerified: true
         });
         onClose();
@@ -154,6 +162,18 @@ export const LoginSidebar: React.FC<LoginSidebarProps> = ({
                 />
               </div>
             </div>
+
+            {errorMsg && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-2xl text-[11px] font-bold text-red-600 animate-in fade-in">
+                <p>{errorMsg}</p>
+                <a 
+                  href="tel:+919344795832"
+                  className="inline-block mt-1 text-[#F97316] hover:underline"
+                >
+                  Contact Administrator (+91 9344795832)
+                </a>
+              </div>
+            )}
 
             <div className="pt-2">
               {isSuccess ? (

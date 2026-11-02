@@ -116,7 +116,7 @@ export default function Home() {
           fullName: authResult.customer?.name || fullName.toUpperCase(),
           mobileNumber: authResult.customer?.mobileNo || mobileNumber,
           dob: dob,
-          address: authResult.customer?.address || user.address,
+          address: authResult.customer?.address || '',
           isVerified: true
         });
         setActiveTab('discover');

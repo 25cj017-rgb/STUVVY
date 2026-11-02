@@ -123,16 +123,9 @@ export const validateCustomerLogin = (
     };
   }
 
-  // Fallback for custom user registration if fields are valid format
+  // Strict authentication: reject any user not registered in customers.csv!
   return {
-    isValid: true,
-    customer: {
-      sNo: 99,
-      name: normName,
-      mobileNo: normMobile,
-      dob: normDob,
-      address: 'No. 14, 2nd Cross, Anna Nagar West, Chennai - 600040'
-    },
-    message: `Account verified for ${normName}!`
+    isValid: false,
+    message: 'Access Denied: Details not found in customers.csv. Please contact Administrator (+91 9344795832) to subscribe.'
   };
 };

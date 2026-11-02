@@ -88,7 +88,7 @@ export async function GET() {
           name,
           mobileNo,
           dob,
-          address: address || 'No. 14, 2nd Cross, Anna Nagar West, Chennai - 600040'
+          address: address || ''
         });
       }
     }
