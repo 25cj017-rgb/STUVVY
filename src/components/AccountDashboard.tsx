@@ -11,7 +11,7 @@ import {
   User, Calendar, CreditCard, MapPin, PauseCircle, PlayCircle, 
   RefreshCw, ShieldCheck, CheckCircle2, Clock, ChevronRight, AlertCircle, 
   ArrowLeft, Lock, Phone, Utensils, Sparkles, LogOut, Check, MessageSquare,
-  Award, Gift, Star, CalendarRange, Timer
+  Award, Gift, Star, CalendarRange, Timer, UserCheck, LogIn, Eye
 } from 'lucide-react';
 
 interface AccountDashboardProps {
@@ -20,6 +20,8 @@ interface AccountDashboardProps {
   savedCalendar?: CalendarDay[];
   user?: UserProfile;
   onLogout?: () => void;
+  onOpenLoginModal?: () => void;
+  isGuestUser?: boolean;
 }
 
 export const AccountDashboard: React.FC<AccountDashboardProps> = ({ 
@@ -27,7 +29,9 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
   onNavigateToPlans,
   savedCalendar,
   user,
-  onLogout
+  onLogout,
+  onOpenLoginModal,
+  isGuestUser = false
 }) => {
   const [isPaused, setIsPaused] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
@@ -41,22 +45,124 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
     jainNoGarlic: false
   });
 
-  const currentUser: UserProfile = user && user.fullName ? user : {
-    id: user?.id || 'usr_guest',
-    fullName: user?.fullName || 'Yamuna J N',
-    mobileNumber: user?.mobileNumber || '9626531680',
-    dob: user?.dob || '',
-    isVerified: !!user?.isVerified,
-    beneficiaryStatus: 'Standard',
-    dietaryPreferences: ['Pure Veg', 'South Indian Traditional'],
-    allergyInfo: ['None'],
-    address: user?.address || 'Saravanampatti, Coimbatore, Tamil Nadu 641035',
-    addresses: user?.addresses,
-    selectedAddress: user?.selectedAddress,
-    startDate: user?.startDate || '11/1/2026',
-    purchaseDate: user?.purchaseDate || '10/29/2026 22:03:21',
-    plan: user?.plan || 'Monthly'
-  };
+  const isVerifiedSubscriber = !!user?.isVerified && 
+    !isGuestUser && 
+    !!user?.fullName && 
+    user.fullName.toLowerCase() !== 'guest explorer' && 
+    user.fullName.trim() !== '';
+
+  // =========================================================================
+  // 1. GUEST EXPLORER VIEW (WHEN USER HAS NOT LOGGED IN OR IS EXPLORING)
+  // =========================================================================
+  if (!isVerifiedSubscriber) {
+    return (
+      <div className="py-8 max-w-4xl mx-auto px-4 sm:px-6 space-y-6 select-none">
+        
+        {/* GUEST PROFILE HEADER */}
+        <div className="bg-white/95 backdrop-blur-xl p-6 sm:p-8 rounded-[32px] border border-zinc-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-zinc-100 text-zinc-900 font-black text-2xl flex items-center justify-center border-2 border-zinc-200 shadow-inner shrink-0">
+              <Eye className="w-8 h-8 text-zinc-500" />
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-2xl sm:text-3xl font-black text-zinc-950 font-heading tracking-tight">
+                  Guest Explorer
+                </h1>
+                <span className="text-[10px] font-black uppercase bg-zinc-100 text-zinc-600 px-3 py-1 rounded-full border border-zinc-200">
+                  Preview Mode
+                </span>
+              </div>
+              <p className="text-xs text-zinc-500 font-medium">
+                You are currently browsing Stuvvy as a guest. No active subscription is attached to this session.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 self-start sm:self-center shrink-0">
+            {onOpenLoginModal && (
+              <button
+                onClick={onOpenLoginModal}
+                className="bg-zinc-950 hover:bg-zinc-800 text-white font-black text-xs px-5 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+              >
+                <LogIn className="w-3.5 h-3.5 text-orange-400" />
+                <span>Log In</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* 2 CALL-TO-ACTION CARDS FOR GUESTS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Card 1: Already Subscribed? Log In */}
+          <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[28px] p-6 shadow-xs flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600">
+                <UserCheck className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-black font-heading text-zinc-950">
+                Already Subscribed to Stuvvy?
+              </h3>
+              <p className="text-xs text-zinc-500 leading-relaxed font-medium">
+                If you have registered via our Google Form or admin hotline, log in with your Full Name and Mobile Number to view your active delivery schedule, download your digital Stuvvy Card, and track your Star Rewards.
+              </p>
+            </div>
+
+            {onOpenLoginModal && (
+              <button
+                onClick={onOpenLoginModal}
+                className="w-full bg-zinc-950 hover:bg-zinc-800 text-white font-extrabold text-xs py-3 px-4 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <LogIn className="w-4 h-4 text-orange-400" />
+                <span>Subscriber Log In</span>
+              </button>
+            )}
+          </div>
+
+          {/* Card 2: New Customer? Subscribe */}
+          <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[28px] p-6 shadow-xs flex flex-col justify-between space-y-4">
+            <div className="space-y-2">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
+                <Sparkles className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-black font-heading text-zinc-950">
+                Looking to Start a Subscription?
+              </h3>
+              <p className="text-xs text-zinc-500 leading-relaxed font-medium">
+                Subscribe to our wholesome Daily, Weekly, or Monthly meal plans in Coimbatore. Enjoy authentic stone-ground recipes with zero preservatives delivered hot to your doorstep.
+              </p>
+            </div>
+
+            <button
+              onClick={onNavigateToPlans}
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-xs py-3 px-4 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 text-white" />
+              <span>Explore Subscription Plans</span>
+            </button>
+          </div>
+        </div>
+
+        {/* ADMIN HOTLINE SUPPORT CARD */}
+        <div className="bg-zinc-50 border border-zinc-200/80 rounded-2xl p-5 text-center space-y-2">
+          <div className="flex items-center justify-center gap-2 text-xs font-black text-zinc-900">
+            <Phone className="w-4 h-4 text-orange-500" />
+            <span>Need Help or Custom Group Meals?</span>
+          </div>
+          <p className="text-xs text-zinc-500">
+            Call our Kitchen Admin at <strong className="text-zinc-900">+91 9344795832</strong> or chat via WhatsApp for instant registration assistance.
+          </p>
+        </div>
+
+      </div>
+    );
+  }
+
+  // =========================================================================
+  // 2. VERIFIED SUBSCRIBER VIEW (SHOWN ONLY WHEN USER IS LOGGED IN & VERIFIED)
+  // =========================================================================
+  const currentUser: UserProfile = user;
 
   const [activeAddress, setActiveAddress] = useState<string>(
     currentUser.selectedAddress || currentUser.address || (currentUser.addresses && currentUser.addresses[0]) || ''
@@ -100,9 +206,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
   return (
     <div className="py-8 max-w-4xl mx-auto px-4 sm:px-6 space-y-8 select-none">
       
-      {/* ======================================================== */}
-      {/* 1. USER PROFILE CARD (PHOTO, NAME, STATUS, LOCATION)    */}
-      {/* ======================================================== */}
+      {/* 1. USER PROFILE CARD (PHOTO, NAME, STATUS, LOCATION) */}
       <div className="bg-white/95 backdrop-blur-xl p-6 sm:p-8 rounded-[32px] border border-zinc-200/90 shadow-sm relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-start sm:items-center gap-4 sm:gap-5">
@@ -113,7 +217,6 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                   src="/user-avatar.jpg"
                   alt={currentUser.fullName}
                   onError={(e) => {
-                    // Fallback to initials if avatar fails to load
                     (e.target as HTMLImageElement).style.display = 'none';
                   }}
                   className="w-full h-full object-cover"
@@ -213,9 +316,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
         </div>
       )}
 
-      {/* ======================================================== */}
-      {/* 2. SUBSCRIPTION DATES & SCHEDULE BREAKDOWN               */}
-      {/* ======================================================== */}
+      {/* 2. SUBSCRIPTION DATES & SCHEDULE BREAKDOWN */}
       <div className="bg-zinc-950 text-white rounded-[32px] p-6 sm:p-8 border border-zinc-900 shadow-xl relative overflow-hidden space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
           <div>
@@ -306,9 +407,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
         </div>
       </div>
 
-      {/* ======================================================== */}
-      {/* 3. DOWNLOAD YOUR STUVVY SUBSCRIBER CARD                  */}
-      {/* ======================================================== */}
+      {/* 3. DOWNLOAD YOUR STUVVY SUBSCRIBER CARD */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
@@ -334,17 +433,13 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
         />
       </div>
 
-      {/* ======================================================== */}
       {/* 4. STUVVY STAR REWARDS & SPECIAL MONTHLY OFFER (12 STARS) */}
-      {/* ======================================================== */}
       <StuvvyStarRewards
         consecutiveMonths={currentUser.consecutiveMonths || 1}
         planName={currentUser.plan || currentPlan.name}
       />
 
-      {/* ======================================================== */}
-      {/* 5. SAVED & PAID CALENDAR (POST-PAYMENT SCHEDULE)         */}
-      {/* ======================================================== */}
+      {/* 5. SAVED & PAID CALENDAR (POST-PAYMENT SCHEDULE) */}
       <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[32px] p-6 sm:p-8 shadow-sm space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-black text-zinc-950">
@@ -364,9 +459,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
         />
       </div>
 
-      {/* ======================================================== */}
-      {/* 6. DIETARY PREFERENCES & HEALTH CUSTOMIZATIONS          */}
-      {/* ======================================================== */}
+      {/* 6. DIETARY PREFERENCES & HEALTH CUSTOMIZATIONS */}
       <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[32px] p-6 sm:p-7 shadow-sm space-y-4">
         <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
           <div className="flex items-center gap-2.5">

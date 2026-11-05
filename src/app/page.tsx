@@ -676,6 +676,11 @@ export default function Home() {
                 savedCalendar={savedCalendar}
                 user={user}
                 onLogout={handleLogout}
+                onOpenLoginModal={() => {
+                  setShowLoginCard(true);
+                  setActiveTab('landing');
+                }}
+                isGuestUser={isGuestUser || !user?.isVerified || user.fullName === 'Guest Explorer'}
               />
             </div>
           </div>
@@ -765,3 +770,4 @@ export default function Home() {
     </div>
   );
 }
+
