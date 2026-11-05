@@ -45,7 +45,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
     jainNoGarlic: false
   });
 
-  const isVerifiedSubscriber = !!user?.isVerified && 
+  const isVerifiedSubscriber = 
     !isGuestUser && 
     !!user?.fullName && 
     user.fullName.toLowerCase() !== 'guest explorer' && 
@@ -56,7 +56,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
   // =========================================================================
   if (!isVerifiedSubscriber) {
     return (
-      <div className="py-8 max-w-4xl mx-auto px-4 sm:px-6 space-y-6 select-none">
+      <div className="py-6 sm:py-8 w-full max-w-7xl mx-auto px-4 sm:px-6 sm:px-8 space-y-6 select-none">
         
         {/* GUEST PROFILE HEADER */}
         <div className="bg-white/95 backdrop-blur-xl p-6 sm:p-8 rounded-[32px] border border-zinc-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6">
@@ -234,7 +234,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
   };
 
   return (
-    <div className="py-8 max-w-4xl mx-auto px-4 sm:px-6 space-y-8 select-none">
+    <div className="py-6 sm:py-8 w-full max-w-7xl mx-auto px-4 sm:px-6 sm:px-8 space-y-8 select-none">
       
       {/* 1. USER PROFILE CARD (PHOTO, NAME, STATUS, LOCATION) */}
       <div className="bg-white/95 backdrop-blur-xl p-6 sm:p-8 rounded-[32px] border border-zinc-200/90 shadow-sm relative overflow-hidden">

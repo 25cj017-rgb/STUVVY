@@ -51,6 +51,10 @@ export const parseCustomDate = (dateInput?: string | Date): Date => {
   return parseDateFlexible(dateInput);
 };
 
+export const _unusedParseCustomDate = (dateInput?: string | Date): Date => {
+  return parseDateFlexible(dateInput);
+};
+
 // Utility to generate upcoming dates starting from a specific start date (or default Nov 2, 2026)
 export const generateUpcomingDays = (count: number = 7, customStartDate?: string | Date): CalendarDay[] => {
   const days: CalendarDay[] = [];

@@ -252,22 +252,20 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
   };
 
   return (
-    <div className="w-screen min-h-screen bg-zinc-50/60 text-zinc-950 relative flex flex-col font-sans overflow-x-hidden select-none">
+    <div className="w-full min-h-screen text-zinc-950 relative flex flex-col font-sans select-none">
       
-      {/* SYNCHRONIZED HAND-DRAWN SKETCH BACKGROUND IMAGE */}
-      <div className="fixed inset-0 pointer-events-none z-0 flex items-center justify-start opacity-20 sm:opacity-30 -translate-x-10 sm:-translate-x-16 scale-100">
+      {/* STUVVY CUSTOM BACKGROUND IMAGE */}
+      <div className="fixed inset-0 pointer-events-none z-0">
         <img
-          src="/landing_page.png"
-          alt="Stuvvy Home Food Background Sketch"
-          className="w-full h-full object-contain max-h-screen mix-blend-multiply"
+          src="/stuvvy-bg-img.jpeg"
+          alt="Stuvvy Background"
+          className="w-full h-full object-cover object-center"
         />
+        <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px]" />
       </div>
 
-      {/* Subtle top ambient gradient to keep text readable */}
-      <div className="fixed inset-0 pointer-events-none z-0 bg-gradient-to-b from-white/60 via-transparent to-white/80" />
-
-      {/* MAIN SINGLE MENU CONTAINER */}
-      <div className="relative z-10 w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-32 sm:pb-36 flex-1 flex flex-col gap-6">
+      {/* MAIN SINGLE MENU CONTAINER (FULL FIT MAX-W-7XL) */}
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 sm:px-8 py-6 sm:py-8 pb-32 sm:pb-36 flex-1 flex flex-col gap-6">
         
         {/* FULL 4-WEEK MONTH CALENDAR SELECTOR BAR */}
         {showWeekBar && (

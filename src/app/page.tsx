@@ -597,16 +597,17 @@ export default function Home() {
         {/* VIEW 3: SUBSCRIPTION PLANS */}
         {/* ========================================================= */}
         {activeTab === 'plans' && (
-          <div className="w-screen min-h-screen relative flex items-center justify-center bg-white page-fade-in overflow-y-auto py-8">
-            <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-0 opacity-15 sm:opacity-25 sm:-translate-x-24 sm:scale-95">
+          <div className="w-full flex-1 relative flex flex-col items-center bg-transparent page-fade-in overflow-y-auto py-6 sm:py-8">
+            <div className="fixed inset-0 pointer-events-none z-0">
               <img
-                src="/landing_page.png"
-                alt="Stuvvy Background Synchronization"
-                className="w-full h-full object-contain max-h-screen"
+                src="/stuvvy-bg-img.jpeg"
+                alt="Stuvvy Background"
+                className="w-full h-full object-cover object-center"
               />
+              <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px]" />
             </div>
 
-            <div className="relative z-10 w-full max-w-6xl px-4 sm:px-6">
+            <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 sm:px-8">
               <PricingSection
                 selectedPlan={selectedPlan}
                 onSelectPlan={handleSelectPlan}
@@ -622,16 +623,17 @@ export default function Home() {
         {/* VIEW 4: CHECKOUT FLOW */}
         {/* ========================================================= */}
         {activeTab === 'checkout' && (
-          <div className="w-screen min-h-screen relative flex items-center justify-center bg-white page-fade-in overflow-y-auto py-8">
-            <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-0 opacity-15 sm:opacity-25 sm:-translate-x-24 sm:scale-95">
+          <div className="w-full flex-1 relative flex flex-col items-center bg-transparent page-fade-in overflow-y-auto py-6 sm:py-8">
+            <div className="fixed inset-0 pointer-events-none z-0">
               <img
-                src="/landing_page.png"
-                alt="Stuvvy Background Synchronization"
-                className="w-full h-full object-contain max-h-screen"
+                src="/stuvvy-bg-img.jpeg"
+                alt="Stuvvy Background"
+                className="w-full h-full object-cover object-center"
               />
+              <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px]" />
             </div>
 
-            <div className="relative z-10 w-full max-w-6xl px-4 sm:px-6">
+            <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 sm:px-8">
               <CheckoutFlow
                 plan={selectedPlan}
                 selectedDays={selectedDays}
@@ -660,16 +662,17 @@ export default function Home() {
         {/* VIEW 5: ACCOUNT DASHBOARD */}
         {/* ========================================================= */}
         {activeTab === 'dashboard' && (
-          <div className="w-screen min-h-screen relative flex items-center justify-center bg-white page-fade-in overflow-y-auto py-8">
-            <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-0 opacity-15 sm:opacity-20 sm:-translate-x-24 sm:scale-95">
+          <div className="w-full flex-1 relative flex flex-col items-center bg-transparent page-fade-in overflow-y-auto py-6 sm:py-8">
+            <div className="fixed inset-0 pointer-events-none z-0">
               <img
-                src="/landing_page.png"
-                alt="Stuvvy Background Synchronization"
-                className="w-full h-full object-contain max-h-screen"
+                src="/stuvvy-bg-img.jpeg"
+                alt="Stuvvy Background"
+                className="w-full h-full object-cover object-center"
               />
+              <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px]" />
             </div>
 
-            <div className="relative z-10 w-full max-w-4xl px-4 sm:px-6">
+            <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 sm:px-8">
               <AccountDashboard
                 activePlan={selectedPlan}
                 onNavigateToPlans={() => setActiveTab('plans')}
@@ -680,7 +683,7 @@ export default function Home() {
                   setShowLoginCard(true);
                   setActiveTab('landing');
                 }}
-                isGuestUser={isGuestUser || !user?.isVerified || user.fullName === 'Guest Explorer'}
+                isGuestUser={isGuestUser && (!user?.fullName || user.fullName.toLowerCase() === 'guest explorer')}
               />
             </div>
           </div>
