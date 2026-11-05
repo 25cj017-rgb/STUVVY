@@ -257,11 +257,11 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
       {/* STUVVY CUSTOM BACKGROUND IMAGE */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <img
-          src="/stuvvy-bg-img.jpeg"
+          src="/stuvvy-bg-img.jpeg?v=2"
           alt="Stuvvy Background"
           className="w-full h-full object-cover object-center"
         />
-        <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px]" />
+        <div className="absolute inset-0 bg-white/40" />
       </div>
 
       {/* MAIN SINGLE MENU CONTAINER (FULL FIT MAX-W-7XL) */}

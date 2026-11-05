@@ -600,11 +600,11 @@ export default function Home() {
           <div className="w-full flex-1 relative flex flex-col items-center bg-transparent page-fade-in overflow-y-auto py-6 sm:py-8">
             <div className="fixed inset-0 pointer-events-none z-0">
               <img
-                src="/stuvvy-bg-img.jpeg"
+                src="/stuvvy-bg-img.jpeg?v=2"
                 alt="Stuvvy Background"
                 className="w-full h-full object-cover object-center"
               />
-              <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px]" />
+              <div className="absolute inset-0 bg-white/40" />
             </div>
 
             <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 sm:px-8">
@@ -626,11 +626,11 @@ export default function Home() {
           <div className="w-full flex-1 relative flex flex-col items-center bg-transparent page-fade-in overflow-y-auto py-6 sm:py-8">
             <div className="fixed inset-0 pointer-events-none z-0">
               <img
-                src="/stuvvy-bg-img.jpeg"
+                src="/stuvvy-bg-img.jpeg?v=2"
                 alt="Stuvvy Background"
                 className="w-full h-full object-cover object-center"
               />
-              <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px]" />
+              <div className="absolute inset-0 bg-white/40" />
             </div>
 
             <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 sm:px-8">
@@ -665,11 +665,11 @@ export default function Home() {
           <div className="w-full flex-1 relative flex flex-col items-center bg-transparent page-fade-in overflow-y-auto py-6 sm:py-8">
             <div className="fixed inset-0 pointer-events-none z-0">
               <img
-                src="/stuvvy-bg-img.jpeg"
+                src="/stuvvy-bg-img.jpeg?v=2"
                 alt="Stuvvy Background"
                 className="w-full h-full object-cover object-center"
               />
-              <div className="absolute inset-0 bg-white/75 backdrop-blur-[1px]" />
+              <div className="absolute inset-0 bg-white/40" />
             </div>
 
             <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 sm:px-8">
