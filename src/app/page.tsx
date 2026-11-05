@@ -114,7 +114,7 @@ export default function Home() {
                   paymentStatus: matched.paymentStatus || prevUser.paymentStatus,
                   paymentAmount: matched.paymentAmount || prevUser.paymentAmount,
                   consecutiveMonths: prevUser.consecutiveMonths || 1,
-                  starsEarned: prevUser.starsEarned || (matched.plan?.toLowerCase().includes('month') ? 4 : 2)
+                  starsEarned: prevUser.starsEarned || 1
                 };
               }
             }
@@ -213,7 +213,7 @@ export default function Home() {
           paymentStatus: authResult.customer?.paymentStatus,
           paymentAmount: authResult.customer?.paymentAmount,
           consecutiveMonths: 1,
-          starsEarned: authResult.customer?.plan?.toLowerCase().includes('month') ? 4 : 2,
+          starsEarned: 1,
           isVerified: true
         };
 
@@ -770,4 +770,5 @@ export default function Home() {
     </div>
   );
 }
+
 

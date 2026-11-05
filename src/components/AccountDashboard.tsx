@@ -168,15 +168,45 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
     currentUser.selectedAddress || currentUser.address || (currentUser.addresses && currentUser.addresses[0]) || ''
   );
 
-  const currentPlan = activePlan || {
-    id: currentUser.plan?.toLowerCase() || 'monthly',
-    name: currentUser.plan ? `${currentUser.plan.toUpperCase()} PLAN` : 'Monthly Plan',
-    price: currentUser.plan?.toLowerCase().includes('week') ? 689 : (currentUser.plan?.toLowerCase().includes('day') ? 99 : 2500),
-    period: currentUser.plan?.toLowerCase().includes('week') ? '/ week' : (currentUser.plan?.toLowerCase().includes('day') ? '/ day' : '/ month'),
-    billingText: 'Billed periodically',
-    description: 'Active subscription for wholesome daily home meals.',
-    defaultDays: currentUser.plan?.toLowerCase().includes('week') ? 7 : (currentUser.plan?.toLowerCase().includes('day') ? 1 : 30),
-    ratePerDay: 98.43,
+  // Strictly resolve the exact subscription plan the user opted for from Google Sheets
+  const rawPlan = (currentUser.plan || '').trim().toLowerCase();
+  
+  let optedPlanName = 'Monthly Plan';
+  let optedPlanPrice = 2500;
+  let optedPlanPeriod = '/ month';
+  let optedPlanDefaultDays = 30;
+
+  if (rawPlan.includes('day') || rawPlan.includes('daily')) {
+    optedPlanName = 'Daily Plan';
+    optedPlanPrice = currentUser.paymentAmount ? parseInt(currentUser.paymentAmount.replace(/\D/g, '')) || 99 : 99;
+    optedPlanPeriod = '/ day';
+    optedPlanDefaultDays = 1;
+  } else if (rawPlan.includes('week')) {
+    optedPlanName = 'Weekly Plan';
+    optedPlanPrice = currentUser.paymentAmount ? parseInt(currentUser.paymentAmount.replace(/\D/g, '')) || 689 : 689;
+    optedPlanPeriod = '/ week';
+    optedPlanDefaultDays = 7;
+  } else if (rawPlan.includes('month')) {
+    optedPlanName = 'Monthly Plan';
+    optedPlanPrice = currentUser.paymentAmount ? parseInt(currentUser.paymentAmount.replace(/\D/g, '')) || 2500 : 2500;
+    optedPlanPeriod = '/ month';
+    optedPlanDefaultDays = 30;
+  } else if (activePlan) {
+    optedPlanName = activePlan.name;
+    optedPlanPrice = activePlan.price;
+    optedPlanPeriod = activePlan.period;
+    optedPlanDefaultDays = activePlan.defaultDays;
+  }
+
+  const currentPlan = {
+    id: optedPlanName.toLowerCase().replace(/\s+/g, '-'),
+    name: optedPlanName,
+    price: optedPlanPrice,
+    period: optedPlanPeriod,
+    billingText: 'Billed as opted in registration',
+    description: `Active ${optedPlanName} for wholesome daily home meals.`,
+    defaultDays: optedPlanDefaultDays,
+    ratePerDay: optedPlanDefaultDays === 1 ? 99 : 98.43,
     features: []
   };
 
@@ -184,7 +214,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
   const schedule = calculateSubscriptionSchedule(
     currentUser.startDate,
     currentUser.purchaseDate,
-    currentUser.plan || currentPlan.name
+    optedPlanName
   );
 
   // Extract Initials (e.g. "Yamuna J N" -> "Y J N")
@@ -317,23 +347,30 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
       )}
 
       {/* 2. SUBSCRIPTION DATES & SCHEDULE BREAKDOWN */}
-      <div className="bg-zinc-950 text-white rounded-[32px] p-6 sm:p-8 border border-zinc-900 shadow-xl relative overflow-hidden space-y-6">
+      <div 
+        className="rounded-[32px] p-6 sm:p-8 shadow-2xl relative overflow-hidden space-y-6 text-white border"
+        style={{
+          background: 'linear-gradient(135deg, #18042C 0%, #2E1065 50%, #3B0764 100%)',
+          borderColor: 'rgba(168, 85, 247, 0.45)',
+          boxShadow: '0 25px 50px -15px rgba(24, 4, 44, 0.8), inset 0 1px 0 rgba(244, 114, 182, 0.3)'
+        }}
+      >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
-              <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-0.5 rounded-full ${
-                isPaused ? 'bg-amber-400 text-zinc-950' : 'bg-emerald-400 text-zinc-950'
+              <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
+                isPaused ? 'bg-amber-400 text-zinc-950' : 'bg-[#F472B6]/20 text-[#FBCFE8] border border-[#F472B6]/40'
               }`}>
                 {isPaused ? 'Subscription Paused' : `${schedule.status.toUpperCase()} & PAID`}
               </span>
-              <span className="text-xs text-zinc-400 font-medium">Daily Kitchen Priority</span>
+              <span className="text-xs text-purple-200/90 font-medium">Daily Kitchen Priority</span>
             </div>
 
             <h2 className="text-2xl sm:text-3xl font-black font-heading text-white">
-              {currentUser.plan?.toUpperCase() || currentPlan.name} (₹{currentPlan.price.toLocaleString('en-IN')}{currentPlan.period})
+              {optedPlanName.toUpperCase()} (₹{optedPlanPrice.toLocaleString('en-IN')}{optedPlanPeriod})
             </h2>
 
-            <p className="text-xs text-zinc-400 font-medium mt-1">
+            <p className="text-xs text-purple-200/80 font-medium mt-1">
               {schedule.statusMessage}
             </p>
           </div>
@@ -341,67 +378,70 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
           <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={handleTogglePause}
-              className={`px-5 py-3 rounded-2xl text-xs font-black transition-all flex items-center gap-2 shadow-xs cursor-pointer ${
+              className={`px-5 py-3 rounded-2xl text-xs font-black transition-all flex items-center gap-2 shadow-sm cursor-pointer ${
                 isPaused
                   ? 'bg-emerald-500 hover:bg-emerald-600 text-zinc-950'
-                  : 'bg-zinc-800 hover:bg-zinc-700 text-white border border-zinc-700'
+                  : 'bg-purple-950/60 hover:bg-purple-900/80 text-white border border-purple-500/40'
               }`}
             >
-              {isPaused ? <PlayCircle className="w-4 h-4" /> : <PauseCircle className="w-4 h-4" />}
+              {isPaused ? <PlayCircle className="w-4 h-4 text-emerald-300" /> : <PauseCircle className="w-4 h-4 text-[#F472B6]" />}
               <span>{isPaused ? 'Resume Meals' : 'Pause Meals'}</span>
             </button>
           </div>
         </div>
 
         {/* 4-METRIC GRID: PURCHASE DATE, START DATE, END DATE, REMAINING DAYS */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-zinc-800/80 relative z-10 text-xs">
-          <div className="bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800">
-            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-zinc-400" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-purple-500/20 relative z-10 text-xs">
+          <div className="bg-[#18042C]/70 p-4 rounded-2xl border border-purple-900/40">
+            <div className="text-[10px] font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-purple-300" />
               <span>Purchase Date</span>
             </div>
             <div className="font-black text-white text-base mt-1">{schedule.purchaseDateStr}</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">Payment Verified</div>
+            <div className="text-[10px] text-purple-300/70 mt-0.5">Payment Verified</div>
           </div>
 
-          <div className="bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800">
-            <div className="text-[10px] font-bold text-orange-400 uppercase tracking-wider flex items-center gap-1.5">
-              <CalendarRange className="w-3.5 h-3.5 text-orange-400" />
+          <div className="bg-[#18042C]/70 p-4 rounded-2xl border border-[#F472B6]/40">
+            <div className="text-[10px] font-bold text-[#F472B6] uppercase tracking-wider flex items-center gap-1.5">
+              <CalendarRange className="w-3.5 h-3.5 text-[#F472B6]" />
               <span>Delivery Start Date</span>
             </div>
-            <div className="font-black text-orange-400 text-base mt-1">{schedule.startDateStr}</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">Selected First Meal</div>
+            <div className="font-black text-[#FBCFE8] text-base mt-1">{schedule.startDateStr}</div>
+            <div className="text-[10px] text-purple-300/70 mt-0.5">Selected First Meal</div>
           </div>
 
-          <div className="bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800">
-            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-zinc-400" />
+          <div className="bg-[#18042C]/70 p-4 rounded-2xl border border-purple-900/40">
+            <div className="text-[10px] font-bold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-purple-300" />
               <span>Subscription End Date</span>
             </div>
             <div className="font-black text-white text-base mt-1">{schedule.endDateStr}</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">{schedule.durationDays}-Day Period</div>
+            <div className="text-[10px] text-purple-300/70 mt-0.5">{schedule.durationDays}-Day Period</div>
           </div>
 
-          <div className="bg-zinc-900/80 p-4 rounded-2xl border border-zinc-800">
-            <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Timer className="w-3.5 h-3.5 text-emerald-400" />
+          <div className="bg-[#18042C]/70 p-4 rounded-2xl border border-purple-500/40">
+            <div className="text-[10px] font-bold text-[#F472B6] uppercase tracking-wider flex items-center gap-1.5">
+              <Timer className="w-3.5 h-3.5 text-[#F472B6]" />
               <span>Remaining Days</span>
             </div>
-            <div className="font-black text-emerald-400 text-base mt-1">{schedule.remainingDays} Days</div>
-            <div className="text-[10px] text-zinc-500 mt-0.5">{schedule.progressPercent}% of cycle active</div>
+            <div className="font-black text-white text-base mt-1">{schedule.remainingDays} Days</div>
+            <div className="text-[10px] text-purple-300/70 mt-0.5">{schedule.progressPercent}% of cycle active</div>
           </div>
         </div>
 
         {/* PROGRESS BAR */}
         <div className="space-y-1.5 pt-1 relative z-10">
-          <div className="flex justify-between text-[11px] font-bold text-zinc-400">
+          <div className="flex justify-between text-[11px] font-bold text-purple-200">
             <span>Cycle Progress ({schedule.elapsedDays} of {schedule.durationDays} days completed)</span>
-            <span className="text-white font-black">{schedule.progressPercent}%</span>
+            <span className="text-[#FBCFE8] font-black">{schedule.progressPercent}%</span>
           </div>
-          <div className="w-full bg-zinc-800 rounded-full h-2 overflow-hidden">
+          <div className="w-full bg-purple-950/80 rounded-full h-2.5 overflow-hidden border border-purple-900/40">
             <div
-              className="bg-gradient-to-r from-orange-500 to-emerald-400 h-2 rounded-full transition-all duration-700"
-              style={{ width: `${schedule.progressPercent}%` }}
+              className="h-2.5 rounded-full transition-all duration-700 shadow-sm"
+              style={{
+                width: `${schedule.progressPercent}%`,
+                background: 'linear-gradient(90deg, #A855F7 0%, #F472B6 100%)'
+              }}
             />
           </div>
         </div>
@@ -412,7 +452,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-black font-heading text-zinc-950 flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-orange-500" />
+              <CreditCard className="w-5 h-5 text-purple-600" />
               <span>Digital Stuvvy Subscriber Card</span>
             </h3>
             <p className="text-xs text-zinc-500 font-medium">
@@ -424,7 +464,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
         <StuvvyCard
           fullName={currentUser.fullName}
           mobileNumber={currentUser.mobileNumber}
-          planName={currentUser.plan ? `${currentUser.plan} Plan` : currentPlan.name}
+          planName={optedPlanName}
           startDateStr={schedule.startDateStr}
           endDateStr={schedule.endDateStr}
           status={schedule.status}
@@ -433,10 +473,10 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
         />
       </div>
 
-      {/* 4. STUVVY STAR REWARDS & SPECIAL MONTHLY OFFER (12 STARS) */}
+      {/* 4. STUVVY 12-STAR REWARDS & 4th MONTH FREE OFFER (UNDER THE STUVVY CARD) */}
       <StuvvyStarRewards
         consecutiveMonths={currentUser.consecutiveMonths || 1}
-        planName={currentUser.plan || currentPlan.name}
+        planName={optedPlanName}
       />
 
       {/* 5. SAVED & PAID CALENDAR (POST-PAYMENT SCHEDULE) */}
