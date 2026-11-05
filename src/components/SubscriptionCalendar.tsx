@@ -5,6 +5,7 @@ import {
   Calendar as CalendarIcon, Lock, ShieldAlert, Phone, Mail, 
   X, MessageSquare, CheckCircle2, ChevronLeft, ChevronRight 
 } from 'lucide-react';
+import { parseDateFlexible } from '../utils/subscriptionUtils';
 
 export interface CalendarDay {
   id: string;
@@ -47,28 +48,7 @@ const COL_START_MAP: Record<string, string> = {
  * Parses user start date string (e.g., "04-11-2026", "2026-11-04", "04/11/2026", "Nov 4, 2026")
  */
 export const parseCustomDate = (dateInput?: string | Date): Date => {
-  if (!dateInput) return new Date(2026, 10, 2); // Default: Nov 2, 2026
-  if (dateInput instanceof Date) return isNaN(dateInput.getTime()) ? new Date(2026, 10, 2) : dateInput;
-
-  const cleaned = dateInput.trim();
-  if (!cleaned) return new Date(2026, 10, 2);
-
-  // Pattern: DD-MM-YYYY or DD/MM/YYYY
-  const dmyMatch = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
-  if (dmyMatch) {
-    const [, d, m, y] = dmyMatch;
-    return new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
-  }
-
-  // Pattern: YYYY-MM-DD or YYYY/MM/DD
-  const ymdMatch = cleaned.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
-  if (ymdMatch) {
-    const [, y, m, d] = ymdMatch;
-    return new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
-  }
-
-  const parsed = new Date(cleaned);
-  return isNaN(parsed.getTime()) ? new Date(2026, 10, 2) : parsed;
+  return parseDateFlexible(dateInput);
 };
 
 // Utility to generate upcoming dates starting from a specific start date (or default Nov 2, 2026)

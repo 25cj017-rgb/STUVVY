@@ -72,76 +72,96 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
 
   const isVerifiedSubscriber = !isGuestUser && !!user.isVerified && user.fullName !== 'Guest Explorer';
 
-  // Compute schedule based on subscriber vs guest
+  // Compute fixed 26-day calendar covering the entire month (Nov 5 to Nov 30)
+  // Calendar days and dates strictly match the real calendar and NEVER shift!
   const rollingDays: RollingDayInfo[] = useMemo(() => {
     const list: RollingDayInfo[] = [];
+    const now = new Date();
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const fullDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-    if (isVerifiedSubscriber) {
-      // SUBSCRIBER ACCESS: Strictly from user's selected delivery startDate to endDate!
-      // All menu dates within paid plan are completely unlocked!
-      const totalDays = Math.max(1, schedule.durationDays);
-      const start = schedule.startDate;
+    // Generate fixed calendar starting from Today (Nov 5) to Nov 30 (full month)
+    for (let offset = 0; offset <= 25; offset++) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset, 0, 0, 0);
+      const dowIndex = d.getDay();
+      const dayOfWeek = DAY_OF_WEEK_NAMES[dowIndex];
+      const isToday = offset === 0;
+      const dayNum = d.getDate();
 
-      for (let offset = 0; offset < totalDays; offset++) {
-        const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + offset, 0, 0, 0);
-        const dowIndex = d.getDay();
-        const dayOfWeek = DAY_OF_WEEK_NAMES[dowIndex];
-        const weekNumber = Math.min(4, Math.floor(offset / 7) + 1);
-
-        list.push({
-          date: d,
-          dateStr: `${months[d.getMonth()]} ${d.getDate()}`,
-          dayOfWeek,
-          fullDayName: fullDays[dowIndex],
-          dayNumber: d.getDate(),
-          monthName: months[d.getMonth()],
-          offsetDays: offset,
-          weekNumber,
-          isToday: offset === 0,
-          isWithinRollingWindow: true,
-          isWithinSubscription: true,
-          isLocked: false, // ALL SUBSCRIBER DAYS ARE UNLOCKED
-          lockType: undefined,
-          unlockDateStr: undefined
-        });
+      // Week numbering accurately aligned with kitchen menu schedule:
+      // Nov 5-8: Launch Days (Week 1)
+      // Nov 9-15: Week 1
+      // Nov 16-22: Week 2
+      // Nov 23-29: Week 3
+      // Nov 30: Week 4
+      let weekNumber = 1;
+      if (d.getMonth() === 10) { // November
+        if (dayNum >= 16 && dayNum <= 22) weekNumber = 2;
+        else if (dayNum >= 23 && dayNum <= 29) weekNumber = 3;
+        else if (dayNum >= 30) weekNumber = 4;
+        else weekNumber = 1;
       }
-    } else {
-      // GUEST ACCESS: Rolling 28-day preview from Today. First 4 days (today + 3) available; rest locked!
-      const now = new Date();
-      for (let offset = 0; offset < 28; offset++) {
-        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset, 0, 0, 0);
-        const dowIndex = d.getDay();
-        const dayOfWeek = DAY_OF_WEEK_NAMES[dowIndex];
-        const isToday = offset === 0;
-        const isWithinRollingWindow = offset <= 3; // Today + next 3 days
-        const weekNumber = Math.min(4, Math.floor(offset / 7) + 1);
-        const isLocked = !isWithinRollingWindow;
 
-        const unlockDate = new Date(d.getTime() - 3 * 24 * 60 * 60 * 1000);
+      let isWithinSub = false;
+      let isLocked = false;
+      let lockType: RollingDayInfo['lockType'] = undefined;
 
-        list.push({
-          date: d,
-          dateStr: `${months[d.getMonth()]} ${d.getDate()}`,
-          dayOfWeek,
-          fullDayName: fullDays[dowIndex],
-          dayNumber: d.getDate(),
-          monthName: months[d.getMonth()],
-          offsetDays: offset,
-          weekNumber,
-          isToday,
-          isWithinRollingWindow,
-          isWithinSubscription: false,
-          isLocked,
-          lockType: isLocked ? 'guest_limit' : undefined,
-          unlockDateStr: formatDisplayDate(unlockDate)
-        });
+      if (!isVerifiedSubscriber) {
+        // GUEST RULES: Today + next 3 days (offset 0 to 3 -> Nov 5, 6, 7, 8) available, rest locked
+        const isWithinRollingWindow = offset <= 3;
+        if (!isWithinRollingWindow) {
+          isLocked = true;
+          lockType = 'guest_limit';
+        }
+      } else {
+        // SUBSCRIBER RULES: Unlocked strictly according to their plan and start date to end date!
+        isWithinSub = isDateWithinSubscription(d, schedule.startDate, schedule.endDate);
+
+        if (isWithinSub) {
+          // ANY date inside their paid subscription plan is UNLOCKED!
+          isLocked = false;
+          lockType = undefined;
+        } else {
+          // Date is outside their subscription period:
+          const dMidnight = d.getTime();
+          const startMidnight = new Date(schedule.startDate.getFullYear(), schedule.startDate.getMonth(), schedule.startDate.getDate()).getTime();
+          const endMidnight = new Date(schedule.endDate.getFullYear(), schedule.endDate.getMonth(), schedule.endDate.getDate()).getTime();
+
+          if (dMidnight < startMidnight) {
+            isLocked = true;
+            lockType = 'outside_sub_start';
+          } else if (dMidnight > endMidnight) {
+            isLocked = true;
+            lockType = 'outside_sub_end';
+          } else {
+            isLocked = true;
+            lockType = 'freshness_window';
+          }
+        }
       }
+
+      const unlockDate = new Date(d.getTime() - 3 * 24 * 60 * 60 * 1000);
+
+      list.push({
+        date: d,
+        dateStr: `${months[d.getMonth()]} ${d.getDate()}`,
+        dayOfWeek,
+        fullDayName: fullDays[dowIndex],
+        dayNumber: d.getDate(),
+        monthName: months[d.getMonth()],
+        offsetDays: offset,
+        weekNumber,
+        isToday,
+        isWithinRollingWindow: offset <= 3,
+        isWithinSubscription: isWithinSub,
+        isLocked,
+        lockType,
+        unlockDateStr: formatDisplayDate(unlockDate)
+      });
     }
 
     return list;
-  }, [isVerifiedSubscriber, schedule.startDate, schedule.durationDays]);
+  }, [isVerifiedSubscriber, schedule.startDate, schedule.endDate]);
 
   // Filtered rolling days if a specific week tab is selected
   const displayedDays = useMemo(() => {
@@ -188,6 +208,27 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
     return items.filter(i => i.days.includes(dow));
   }, [items, activeDayInfo.date, activeDayInfo.dayOfWeek]);
 
+  // When a verified subscriber logs in, automatically select their start date
+  React.useEffect(() => {
+    if (isVerifiedSubscriber && schedule.startDate) {
+      const startMidnight = new Date(
+        schedule.startDate.getFullYear(),
+        schedule.startDate.getMonth(),
+        schedule.startDate.getDate()
+      ).getTime();
+
+      const match = rollingDays.find(d => {
+        const dMidnight = new Date(d.date.getFullYear(), d.date.getMonth(), d.date.getDate()).getTime();
+        return dMidnight === startMidnight;
+      });
+
+      if (match) {
+        setSelectedDayOffset(match.offsetDays);
+        onSelectDay(match.dayOfWeek);
+      }
+    }
+  }, [isVerifiedSubscriber, schedule.startDate, rollingDays, onSelectDay]);
+
   const handleSelectOffset = (offset: number) => {
     setSelectedDayOffset(offset);
     const dayObj = rollingDays.find(d => d.offsetDays === offset);
@@ -198,9 +239,15 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
 
   const handleJumpToWeek = (weekNum: 1 | 2 | 3 | 4) => {
     setSelectedWeekFilter(weekNum);
-    const firstDayInWeek = rollingDays.find(d => d.weekNumber === weekNum);
-    if (firstDayInWeek) {
-      handleSelectOffset(firstDayInWeek.offsetDays);
+    const targetDay = rollingDays.find(d => {
+      if (weekNum === 1) return d.dayNumber === 9 || d.weekNumber === 1;
+      if (weekNum === 2) return d.dayNumber === 16;
+      if (weekNum === 3) return d.dayNumber === 23;
+      if (weekNum === 4) return d.dayNumber === 30;
+      return d.weekNumber === weekNum;
+    });
+    if (targetDay) {
+      handleSelectOffset(targetDay.offsetDays);
     }
   };
 
