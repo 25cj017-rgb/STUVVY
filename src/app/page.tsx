@@ -90,9 +90,39 @@ export default function Home() {
       .then(data => {
         if (data?.success && Array.isArray(data.customers) && data.customers.length > 0) {
           setDynamicCustomers(data.customers);
+          setUser(prevUser => {
+            if (prevUser?.isVerified && prevUser?.mobileNumber) {
+              const userDigits = prevUser.mobileNumber.replace(/\D/g, '').slice(-10);
+              const matched = data.customers.find((c: any) =>
+                c.mobileNo?.replace(/\D/g, '').slice(-10) === userDigits
+              );
+              if (matched) {
+                const addrs = matched.addresses && matched.addresses.length > 0
+                  ? matched.addresses
+                  : (matched.address ? [matched.address] : []);
+                return {
+                  ...prevUser,
+                  fullName: matched.name || prevUser.fullName,
+                  address: addrs[0] || matched.address || prevUser.address,
+                  addresses: addrs,
+                  selectedAddress: prevUser.selectedAddress || addrs[0] || matched.address,
+                  plan: matched.plan || prevUser.plan,
+                  startDate: matched.startDate || prevUser.startDate,
+                  purchaseDate: matched.purchaseDate || prevUser.purchaseDate,
+                  email: matched.email || prevUser.email,
+                  locality: matched.locality || prevUser.locality,
+                  paymentStatus: matched.paymentStatus || prevUser.paymentStatus,
+                  paymentAmount: matched.paymentAmount || prevUser.paymentAmount,
+                  consecutiveMonths: prevUser.consecutiveMonths || 1,
+                  starsEarned: prevUser.starsEarned || (matched.plan?.toLowerCase().includes('month') ? 4 : 2)
+                };
+              }
+            }
+            return prevUser;
+          });
         }
       })
-      .catch(err => console.log('Notice: Could not load customers from customers.csv API:', err));
+      .catch(err => console.log('Notice: Could not load customers from Google Sheets API:', err));
 
     // Handle Browser Back / Forward buttons
     const handlePopState = (event: PopStateEvent) => {
@@ -177,6 +207,13 @@ export default function Home() {
           selectedAddress: primaryAddr,
           plan: authResult.customer?.plan,
           startDate: authResult.customer?.startDate,
+          purchaseDate: authResult.customer?.purchaseDate,
+          email: authResult.customer?.email,
+          locality: authResult.customer?.locality,
+          paymentStatus: authResult.customer?.paymentStatus,
+          paymentAmount: authResult.customer?.paymentAmount,
+          consecutiveMonths: 1,
+          starsEarned: authResult.customer?.plan?.toLowerCase().includes('month') ? 4 : 2,
           isVerified: true
         };
 
@@ -507,7 +544,7 @@ export default function Home() {
               <div className="bg-zinc-900 text-white px-4 py-2 text-xs font-bold flex flex-col sm:flex-row items-center justify-between gap-2 border-b border-zinc-800">
                 <div className="flex items-center gap-2">
                   <Eye className="w-4 h-4 text-orange-400" />
-                  <span>Viewing as <strong>Guest Explorer</strong> • Preview available for Monday – Wednesday (Days 4–7 Locked)</span>
+                  <span>Viewing as <strong>Guest Explorer</strong> • Preview available for Today & Next 3 Days (Rolling 4-Day Window)</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <button
@@ -517,7 +554,7 @@ export default function Home() {
                     }}
                     className="bg-white text-zinc-950 px-3 py-1 rounded-xl text-[11px] font-black hover:bg-zinc-200 transition-all cursor-pointer"
                   >
-                    Log In (SRI RAM V K)
+                    Subscriber Log In
                   </button>
                   <button
                     onClick={() => setIsAdminContactOpen(true)}

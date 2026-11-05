@@ -14,6 +14,11 @@ export interface CustomerRow {
   addresses?: string[];
   plan?: string;
   startDate?: string;
+  purchaseDate?: string;
+  email?: string;
+  locality?: string;
+  paymentStatus?: string;
+  paymentAmount?: string;
 }
 
 const GOOGLE_SHEET_CSV_URL =
@@ -59,16 +64,21 @@ function parseCsvContent(fileContent: string): CustomerRow[] {
   // Header row normalized (collapsed spaces, upper-case)
   const headers = parseCsvLine(lines[0]).map(h => h.replace(/\s+/g, ' ').toUpperCase().trim());
 
+  const timestampIdx = headers.findIndex(h => h.includes('TIMESTAMP') || h.includes('PURCHASE') || h.includes('ORDER DATE'));
   const nameIdx = headers.findIndex(h => h.includes('FULL NAME') || h.includes('NAME'));
   const mobileIdx = headers.findIndex(h => h.includes('MOBILE') || h.includes('PHONE'));
   const dobIdx = headers.findIndex(h => h.includes('DATE OF BIRTH') || h.includes('DOB') || h.includes('BIRTH'));
+  const emailIdx = headers.findIndex(h => h.includes('EMAIL'));
   const addressIdx = headers.findIndex(h => !h.includes('EMAIL') && (h.includes('DELIVERY ADDRESS') || h.includes('ADDRESS')));
   const address2Idx = headers.findIndex(h => h.includes('ADDRESS 2') || h.includes('LOCATION 2') || h.includes('SECONDARY'));
+  const localityIdx = headers.findIndex(h => h.includes('AREA') || h.includes('LOCALITY') || h.includes('CITY'));
   const planIdx = headers.findIndex(h => h.includes('SUBSCRIPTION PLAN') || h.includes('PLAN'));
   const startDateIdx = headers.findIndex(
     h => !h.includes('DOB') && !h.includes('BIRTH') && (h.includes('START') || h.includes('WHEN WOULD YOU LIKE TO START') || h.includes('BEGIN'))
   );
-  const sNoIdx = headers.findIndex(h => h.includes('S.NO') || h.includes('SNO') || h === 'ID' || h.includes('TIMESTAMP'));
+  const paymentStatusIdx = headers.findIndex(h => h.includes('PAYMNET STATUS') || h.includes('PAYMENT STATUS') || h.includes('STATUS'));
+  const paymentAmountIdx = headers.findIndex(h => h === 'PAYMENT' || h.includes('AMOUNT'));
+  const sNoIdx = headers.findIndex(h => h.includes('S.NO') || h.includes('SNO') || h === 'ID');
 
   const customers: CustomerRow[] = [];
 
@@ -80,6 +90,8 @@ function parseCsvContent(fileContent: string): CustomerRow[] {
     const name = (nameIdx >= 0 ? parts[nameIdx] : parts[1] || '').replace(/^"|"$/g, '').trim().toUpperCase();
     const mobileNo = (mobileIdx >= 0 ? parts[mobileIdx] : parts[2] || '').replace(/\D/g, '').slice(-10);
     const dob = (dobIdx >= 0 ? parts[dobIdx] : parts[3] || '').replace(/^"|"$/g, '').trim();
+    const email = (emailIdx >= 0 ? parts[emailIdx] : '').replace(/^"|"$/g, '').trim();
+    const locality = (localityIdx >= 0 ? parts[localityIdx] : '').replace(/^"|"$/g, '').trim();
 
     const rawAddr1 = (addressIdx >= 0 ? parts[addressIdx] : parts[4] || '').replace(/^"|"$/g, '').trim();
     const rawAddr2 = (address2Idx >= 0 ? parts[address2Idx] : '').replace(/^"|"$/g, '').trim();
@@ -108,6 +120,9 @@ function parseCsvContent(fileContent: string): CustomerRow[] {
 
     const plan = planIdx >= 0 && parts[planIdx] ? parts[planIdx].replace(/^"|"$/g, '').trim() : undefined;
     const startDate = startDateIdx >= 0 && parts[startDateIdx] ? parts[startDateIdx].replace(/^"|"$/g, '').trim() : undefined;
+    const purchaseDate = timestampIdx >= 0 && parts[timestampIdx] ? parts[timestampIdx].replace(/^"|"$/g, '').trim() : undefined;
+    const paymentStatus = paymentStatusIdx >= 0 && parts[paymentStatusIdx] ? parts[paymentStatusIdx].replace(/^"|"$/g, '').trim() : undefined;
+    const paymentAmount = paymentAmountIdx >= 0 && parts[paymentAmountIdx] ? parts[paymentAmountIdx].replace(/^"|"$/g, '').trim() : undefined;
 
     if (name || mobileNo) {
       customers.push({
@@ -118,7 +133,12 @@ function parseCsvContent(fileContent: string): CustomerRow[] {
         address,
         addresses: addresses.length > 0 ? addresses : address ? [address] : [],
         plan: plan || undefined,
-        startDate: startDate || undefined
+        startDate: startDate || undefined,
+        purchaseDate: purchaseDate || undefined,
+        email: email || undefined,
+        locality: locality || undefined,
+        paymentStatus: paymentStatus || undefined,
+        paymentAmount: paymentAmount || undefined
       });
     }
   }
@@ -196,7 +216,10 @@ export async function GET() {
           mobileNo: '9344795832',
           dob: '26-10-2007',
           address: 'No. 14, 2nd Cross, Anna Nagar West, Chennai - 600040',
-          addresses: ['No. 14, 2nd Cross, Anna Nagar West, Chennai - 600040']
+          addresses: ['No. 14, 2nd Cross, Anna Nagar West, Chennai - 600040'],
+          plan: 'Weekly',
+          startDate: '03-11-2026',
+          purchaseDate: '28-10-2026'
         }
       ]
     });

@@ -4,7 +4,6 @@ export type CategoryId = 'south' | 'north' | 'healthy';
 
 export type MealTime = 'breakfast' | 'lunch' | 'dinner' | 'snacks' | 'beverages' | 'specials';
 
-
 export type BeneficiaryStatus = 'Standard' | 'Subsidized' | 'Needy';
 
 export interface NutritionalInfo {
@@ -54,6 +53,15 @@ export interface UserProfile {
   selectedAddress?: string;
   plan?: string;
   startDate?: string;
+  purchaseDate?: string;
+  endDate?: string;
+  email?: string;
+  locality?: string;
+  avatarUrl?: string;
+  consecutiveMonths?: number;
+  starsEarned?: number;
+  paymentStatus?: string;
+  paymentAmount?: string;
 }
 
 export interface CartItem {

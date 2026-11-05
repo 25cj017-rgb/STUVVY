@@ -7,6 +7,11 @@ export interface CustomerRecord {
   addresses?: string[]; // Multiple addresses if customer has 2+ locations
   plan?: string;     // e.g. "Weekly" or "Monthly" or "Daily"
   startDate?: string; // e.g. "03-11-2026" or "2026-11-03"
+  purchaseDate?: string;
+  email?: string;
+  locality?: string;
+  paymentStatus?: string;
+  paymentAmount?: string;
 }
 
 // Initial demo customers fallback
@@ -22,7 +27,8 @@ export const DEMO_CUSTOMERS_DATABASE: CustomerRecord[] = [
       'Plot 88, 5th Main Road, Anna Nagar, Chennai - 600040'
     ],
     plan: 'Weekly',
-    startDate: '03-11-2026'
+    startDate: '03-11-2026',
+    purchaseDate: '28-10-2026'
   },
   {
     sNo: 2,
@@ -34,7 +40,8 @@ export const DEMO_CUSTOMERS_DATABASE: CustomerRecord[] = [
       'Flat 4B, Green Meadows, T. Nagar, Chennai - 600017'
     ],
     plan: 'Daily',
-    startDate: '05-11-2026'
+    startDate: '05-11-2026',
+    purchaseDate: '01-11-2026'
   }
 ];
 
