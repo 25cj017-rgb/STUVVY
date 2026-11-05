@@ -9,7 +9,7 @@ export interface CustomerRecord {
   startDate?: string; // e.g. "03-11-2026" or "2026-11-03"
 }
 
-// Initial demo customers from customers.csv
+// Initial demo customers fallback
 export const DEMO_CUSTOMERS_DATABASE: CustomerRecord[] = [
   {
     sNo: 1,
@@ -57,7 +57,7 @@ export const lookupCustomerByMobile = (mobile: string): CustomerRecord | undefin
 
 /**
  * Normalizes input date strings into DD-MM-YYYY format for matching.
- * Accepts: YYYY/MM/DD, YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY
+ * Accepts: YYYY/MM/DD, YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY, M/D/YYYY
  */
 export const normalizeDob = (inputDob: string): string => {
   if (!inputDob) return '';
@@ -92,7 +92,7 @@ export const normalizeMobile = (mobile: string): string => {
 };
 
 /**
- * Validates login credentials against the demo CSV database.
+ * Validates login credentials against the live Google Sheet / CSV database.
  */
 export const validateCustomerLogin = (
   nameInput: string,
@@ -103,8 +103,8 @@ export const validateCustomerLogin = (
   const normMobile = normalizeMobile(mobileInput);
   const normDob = normalizeDob(dobInput);
 
-  if (!normName || !normMobile || normMobile.length < 10 || !normDob) {
-    return { isValid: false, message: 'Access Denied' };
+  if (!normName || !normMobile || normMobile.length < 10) {
+    return { isValid: false, message: 'Please enter your Full Name and 10-digit Mobile Number.' };
   }
 
   // Search in dynamic/CSV database
@@ -116,7 +116,10 @@ export const validateCustomerLogin = (
 
     const nameMatches = custName === normName || custName.includes(normName) || normName.includes(custName);
     const mobileMatches = custMobile === normMobile;
-    const dobMatches = custDob === normDob;
+    
+    // If the registered record in the sheet has a DOB, verify it matches.
+    // If no DOB was recorded in the Google Sheet (or left blank by subscriber), allow match.
+    const dobMatches = !custDob || (normDob && custDob === normDob);
 
     return nameMatches && mobileMatches && dobMatches;
   });
@@ -129,9 +132,8 @@ export const validateCustomerLogin = (
     };
   }
 
-  // Strict authentication: reject any user not registered in customers.csv!
   return {
     isValid: false,
-    message: 'Access Denied'
+    message: 'Access Denied: Credentials do not match any active subscriber in the database.'
   };
 };

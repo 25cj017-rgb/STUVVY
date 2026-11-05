@@ -445,10 +445,9 @@ export default function Home() {
                       </label>
                       <input
                         type="text"
-                        required
                         value={dob}
                         onChange={(e) => setDob(e.target.value)}
-                        placeholder="DOB (YYYY/MM/DD, e.g. 2007/10/26)"
+                        placeholder="DOB (YYYY/MM/DD, optional if not in Form)"
                         className="w-full px-4 py-2.5 bg-white border border-zinc-300 rounded-2xl text-xs font-bold text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-orange-500 transition-colors shadow-2xs"
                       />
                     </div>
