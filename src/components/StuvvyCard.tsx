@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { CheckCircle2 } from 'lucide-react';
-import QRCode from 'qrcode';
+import React from 'react';
+import { CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
+import { parseDateFlexible } from '../utils/subscriptionUtils';
 
 interface StuvvyCardProps {
   fullName: string;
@@ -11,9 +11,21 @@ interface StuvvyCardProps {
   startDateStr: string;
   endDateStr: string;
   status: 'Active' | 'Upcoming' | 'Expired';
-  location: string;
+  location?: string;
   avatarUrl?: string;
   subscriberId?: string;
+}
+
+/**
+ * Formats a date into ATM Month & Year representation (e.g. "NOV 2026")
+ */
+function formatAtmMonthYear(dateInput?: string | Date): string {
+  if (!dateInput) return 'NOV 2026';
+  const d = parseDateFlexible(dateInput);
+  const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+  const monthName = months[d.getMonth()] || 'NOV';
+  const year = d.getFullYear() || 2026;
+  return `${monthName} ${year}`;
 }
 
 export const StuvvyCard: React.FC<StuvvyCardProps> = ({
@@ -23,224 +35,107 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
   startDateStr,
   endDateStr,
   status,
-  location,
-  avatarUrl,
   subscriberId
 }) => {
-  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const last4 = mobileNumber ? mobileNumber.replace(/\D/g, '').slice(-4) : '6064';
+  const displayId = subscriberId || `STV-2026-${last4}`;
 
-  const displayId = subscriberId || `STV-2026-${mobileNumber ? mobileNumber.slice(-4) : '8899'}`;
-
-  // Extract initials (e.g. "Yamuna J N" -> "Y J N")
-  const initials = fullName
-    ? fullName
-        .trim()
-        .split(/\s+/)
-        .map(w => w[0]?.toUpperCase())
-        .filter(Boolean)
-        .join(' ')
-    : 'S';
-
-  useEffect(() => {
-    // Generate QR Code encoding subscription verification info
-    const qrPayload = JSON.stringify({
-      brand: 'STUVVY HOME FOOD',
-      subscriberId: displayId,
-      name: fullName,
-      phone: mobileNumber,
-      plan: planName,
-      validFrom: startDateStr,
-      validTo: endDateStr,
-      status: status,
-      verifyUrl: `https://stuvvy.in/#dashboard`
-    });
-
-    QRCode.toDataURL(qrPayload, {
-      width: 180,
-      margin: 1,
-      color: {
-        dark: '#24044A',
-        light: '#ffffff'
-      }
-    })
-      .then(url => setQrDataUrl(url))
-      .catch(err => console.error('QR code generation error:', err));
-  }, [displayId, fullName, mobileNumber, planName, startDateStr, endDateStr, status]);
+  const validFromMonthYear = formatAtmMonthYear(startDateStr);
+  const validThruMonthYear = formatAtmMonthYear(endDateStr);
 
   return (
-    <div className="w-full select-none">
+    <div id="stuvvy-card-section" className="w-full flex justify-center select-none py-2">
       {/* ========================================================================= */}
-      {/* DIGITAL STUVVY CARD: VIBRANT ELECTRIC PURPLE, DEEP VIOLET & SOFT PINK    */}
+      {/* SLEEK LIGHT-COLORED ATM-STYLE COMPACT STUVVY SUBSCRIBER CARD              */}
       {/* ========================================================================= */}
       <div
-        className="w-full rounded-[32px] p-6 sm:p-9 text-white relative overflow-hidden transition-all duration-300 shadow-2xl border"
+        className="w-full max-w-[420px] rounded-2xl p-5 sm:p-6 text-zinc-900 relative overflow-hidden transition-all duration-300 border shadow-lg"
         style={{
-          background: 'linear-gradient(135deg, #6A13F5 0%, #5B0ED6 50%, #4C09B8 100%)',
-          borderColor: 'rgba(242, 202, 226, 0.35)',
-          boxShadow: '0 25px 60px -15px rgba(106, 19, 245, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.3)'
+          background: 'linear-gradient(135deg, #FFFFFF 0%, #FAF5FF 55%, #F3E8FF 100%)',
+          borderColor: '#E9D5FF',
+          boxShadow: '0 12px 30px -8px rgba(124, 58, 237, 0.12), 0 4px 12px -2px rgba(0, 0, 0, 0.05)'
         }}
       >
-        {/* Deep Violet and Soft Pink Ambient Lighting */}
+        {/* Subtle holographic pearl sheen */}
         <div 
-          className="absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl pointer-events-none" 
-          style={{ background: 'radial-gradient(circle, rgba(242, 202, 226, 0.25) 0%, transparent 70%)' }}
-        />
-        <div 
-          className="absolute bottom-0 left-0 w-80 h-80 rounded-full blur-3xl pointer-events-none" 
-          style={{ background: 'radial-gradient(circle, rgba(36, 4, 74, 0.45) 0%, transparent 70%)' }}
+          className="absolute -top-16 -right-16 w-48 h-48 rounded-full pointer-events-none opacity-40 blur-2xl" 
+          style={{ background: 'radial-gradient(circle, #DDD6FE 0%, transparent 70%)' }}
         />
 
-        {/* TOP ROW: BRAND LOGO, BADGE & STATUS PILL */}
-        <div className="flex items-start justify-between gap-4 relative z-10">
-          <div className="flex items-center gap-3">
-            <div 
-              className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-2xl shadow-lg border shrink-0"
-              style={{
-                background: '#F2CAE2',
-                color: '#24044A',
-                borderColor: '#ffffff'
-              }}
-            >
+        {/* TOP ROW: STUVVY BRAND LOGO & STATUS */}
+        <div className="flex items-center justify-between gap-3 relative z-10">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-purple-900 text-white flex items-center justify-center font-black text-lg shadow-xs">
               S
             </div>
             <div>
-              <div className="text-2xl sm:text-3xl font-black font-heading tracking-tight text-white flex items-center gap-2.5">
-                <span>STUVVY</span>
-                <span 
-                  className="text-[10px] uppercase font-black tracking-widest px-3 py-1 rounded-full shadow-xs"
-                  style={{
-                    background: '#F2CAE2',
-                    color: '#24044A'
-                  }}
-                >
-                  SUBSCRIBER PASS
+              <div className="flex items-center gap-1.5">
+                <span className="text-xl font-black font-heading tracking-tight text-purple-950">
+                  STUVVY
+                </span>
+                <span className="text-[9px] font-black uppercase tracking-wider bg-purple-100 text-purple-800 px-2 py-0.5 rounded-md border border-purple-200">
+                  PASS
                 </span>
               </div>
-              <p className="text-[11px] font-medium tracking-wide" style={{ color: '#F2CAE2' }}>
-                Authentic South Indian Homely Food
-              </p>
+              <p className="text-[9.5px] text-zinc-500 font-medium">South Indian Homely Meals</p>
             </div>
           </div>
 
-          {/* STATUS PILL (MATCHING REFERENCE PILL BUTTON) */}
-          <div 
-            className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider shadow-sm border"
-            style={{
-              background: 'rgba(36, 4, 74, 0.45)',
-              borderColor: '#F2CAE2',
-              color: '#F2CAE2'
-            }}
-          >
-            <CheckCircle2 className="w-3.5 h-3.5" style={{ color: '#F2CAE2' }} />
-            <span>{status === 'Active' ? 'VERIFIED ACTIVE' : status}</span>
+          {/* STATUS BADGE */}
+          <div className="flex items-center gap-1 bg-white px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider text-purple-800 border border-purple-200 shadow-2xs">
+            <CheckCircle2 className="w-3 h-3 text-purple-600" />
+            <span>{status === 'Active' ? 'ACTIVE' : status.toUpperCase()}</span>
           </div>
         </div>
 
-        {/* CHIP & CARDHOLDER NAME ROW */}
-        <div className="my-7 flex items-center justify-between gap-4 relative z-10">
-          {/* Holographic Chip with Deep Violet Contrast */}
-          <div 
-            className="w-16 h-11 rounded-xl p-1 flex items-center justify-center shadow-lg border"
-            style={{
-              background: 'linear-gradient(135deg, rgba(242, 202, 226, 0.35) 0%, rgba(36, 4, 74, 0.7) 100%)',
-              borderColor: 'rgba(242, 202, 226, 0.5)'
-            }}
-          >
-            <div 
-              className="w-full h-full rounded-lg flex items-center justify-center text-[9px] font-mono font-bold tracking-widest"
-              style={{
-                background: 'rgba(36, 4, 74, 0.65)',
-                color: '#F2CAE2'
-              }}
-            >
-              STV-CHIP
+        {/* MIDDLE: METALLIC ATM CHIP & PLAN NAME */}
+        <div className="my-5 flex items-center justify-between gap-4 relative z-10">
+          {/* Metallic Silver-Gold ATM Smart Chip */}
+          <div className="w-12 h-9 rounded-lg bg-gradient-to-br from-amber-100 via-amber-200 to-amber-300 p-0.5 shadow-xs border border-amber-300/80">
+            <div className="w-full h-full border border-amber-600/30 rounded flex items-center justify-center text-[8px] font-mono font-bold text-amber-900 tracking-wider opacity-75">
+              CHIP
             </div>
           </div>
 
-          {/* User Name Badge (Deep Violet container with Soft Pink text) */}
-          <div 
-            className="flex items-center gap-2.5 px-4 py-2 rounded-2xl border shadow-md"
-            style={{
-              background: 'rgba(36, 4, 74, 0.6)',
-              borderColor: 'rgba(242, 202, 226, 0.35)'
-            }}
-          >
-            <div 
-              className="w-7 h-7 rounded-full flex items-center justify-center font-black text-xs shadow-sm"
-              style={{
-                background: '#F2CAE2',
-                color: '#24044A'
-              }}
-            >
-              {initials.slice(0, 3)}
-            </div>
-            <span className="text-xs font-black tracking-wider text-white">
-              {fullName}
-            </span>
+          <div className="text-right">
+            <div className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">Plan</div>
+            <div className="text-xs font-black text-purple-950">{planName}</div>
           </div>
         </div>
 
-        {/* SUBSCRIBER CARD DETAILS GRID */}
-        <div 
-          className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t relative z-10 text-xs"
-          style={{ borderColor: 'rgba(242, 202, 226, 0.25)' }}
-        >
+        {/* CARDHOLDER NAME */}
+        <div className="relative z-10 mb-3.5">
+          <div className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Cardholder</div>
+          <div className="text-base font-black text-zinc-900 font-heading tracking-wide truncate mt-0.5">
+            {fullName}
+          </div>
+        </div>
+
+        {/* ATM DATES ROW: VALID FRM & VALID THRU (MONTH AND YEAR) */}
+        <div className="flex items-center justify-between border-t border-purple-100 pt-3 relative z-10 text-xs">
           <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#F2CAE2' }}>
-              Plan Opted
+            <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">
+              VALID FRM
             </div>
-            <div className="font-black text-base mt-1 text-white">
-              {planName}
+            <div className="text-xs font-black text-purple-900 mt-0.5">
+              {validFromMonthYear}
             </div>
           </div>
 
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#F2CAE2' }}>
-              Starting Date
+          <div className="text-right">
+            <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">
+              VALID THRU
             </div>
-            <div className="font-extrabold text-base mt-1 text-white">
-              {startDateStr}
-            </div>
-          </div>
-
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#F2CAE2' }}>
-              Ending Date
-            </div>
-            <div className="font-extrabold text-base mt-1 text-white">
-              {endDateStr}
-            </div>
-          </div>
-
-          <div>
-            <div className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#F2CAE2' }}>
-              Delivery Area
-            </div>
-            <div className="font-extrabold text-sm mt-1 text-white truncate">
-              {location}
+            <div className="text-xs font-black text-purple-900 mt-0.5">
+              {validThruMonthYear}
             </div>
           </div>
         </div>
 
-        {/* BOTTOM ROW: QR CODE & PASS VERIFICATION */}
-        <div 
-          className="mt-6 pt-4 border-t flex items-center justify-between gap-4 relative z-10"
-          style={{ borderColor: 'rgba(242, 202, 226, 0.25)' }}
-        >
-          <div>
-            <div className="text-[11px] font-mono tracking-widest uppercase font-bold" style={{ color: '#F2CAE2' }}>
-              ID: {displayId}
-            </div>
-            <div className="text-xs text-white/90 font-medium mt-0.5">
-              Show this pass for kitchen verification
-            </div>
-          </div>
-
-          {qrDataUrl && (
-            <div className="bg-white p-1.5 rounded-2xl shadow-xl shrink-0">
-              <img src={qrDataUrl} alt="Stuvvy Subscriber QR" className="w-12 h-12 object-contain" />
-            </div>
-          )}
+        {/* BOTTOM ROW: ATM PASS ID */}
+        <div className="mt-3 pt-2.5 border-t border-purple-100/80 flex items-center justify-between text-[10px] font-mono text-zinc-500 relative z-10">
+          <span>STV •••• •••• {last4}</span>
+          <span className="font-bold text-purple-700 tracking-wider">{displayId}</span>
         </div>
       </div>
     </div>

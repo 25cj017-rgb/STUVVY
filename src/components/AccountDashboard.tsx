@@ -346,20 +346,13 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
         </div>
       )}
 
-      {/* 2. SUBSCRIPTION DATES & SCHEDULE BREAKDOWN */}
-      <div 
-        className="rounded-[32px] p-6 sm:p-8 shadow-2xl relative overflow-hidden space-y-6 text-white border"
-        style={{
-          background: 'linear-gradient(135deg, #6A13F5 0%, #5B0ED6 50%, #4C09B8 100%)',
-          borderColor: 'rgba(242, 202, 226, 0.35)',
-          boxShadow: '0 25px 60px -15px rgba(106, 19, 245, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.3)'
-        }}
-      >
+      {/* 2. SUBSCRIPTION DATES & SCHEDULE BREAKDOWN (CLEAN LIGHT DESIGN) */}
+      <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[32px] p-6 sm:p-8 shadow-sm relative overflow-hidden space-y-6 text-zinc-950">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
           <div>
             <div className="flex items-center gap-2 mb-1.5">
               <span 
-                className="text-[10px] font-black uppercase tracking-widest px-3.5 py-1 rounded-full shadow-xs"
+                className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full shadow-2xs border border-[#F2CAE2]"
                 style={{
                   background: '#F2CAE2',
                   color: '#24044A'
@@ -367,14 +360,14 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
               >
                 {isPaused ? 'Subscription Paused' : `${schedule.status.toUpperCase()} & PAID`}
               </span>
-              <span className="text-xs font-medium" style={{ color: '#F2CAE2' }}>Daily Kitchen Priority</span>
+              <span className="text-xs font-bold text-zinc-500">Daily Kitchen Priority</span>
             </div>
 
-            <h2 className="text-2xl sm:text-3xl font-black font-heading text-white">
+            <h2 className="text-2xl sm:text-3xl font-black font-heading text-zinc-950">
               {optedPlanName.toUpperCase()} (₹{optedPlanPrice.toLocaleString('en-IN')}{optedPlanPeriod})
             </h2>
 
-            <p className="text-xs text-white/90 font-medium mt-1">
+            <p className="text-xs text-zinc-500 font-medium mt-1">
               {schedule.statusMessage}
             </p>
           </div>
@@ -382,103 +375,65 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
           <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={handleTogglePause}
-              className="px-5 py-3 rounded-2xl text-xs font-black transition-all flex items-center gap-2 shadow-sm cursor-pointer border"
-              style={{
-                background: 'rgba(36, 4, 74, 0.6)',
-                borderColor: '#F2CAE2',
-                color: '#ffffff'
-              }}
+              className="px-4 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 shadow-2xs cursor-pointer border border-zinc-200 bg-zinc-50 hover:bg-zinc-100 text-zinc-800"
             >
-              {isPaused ? <PlayCircle className="w-4 h-4 text-emerald-300" /> : <PauseCircle className="w-4 h-4" style={{ color: '#F2CAE2' }} />}
+              {isPaused ? <PlayCircle className="w-4 h-4 text-emerald-600" /> : <PauseCircle className="w-4 h-4 text-purple-700" />}
               <span>{isPaused ? 'Resume Meals' : 'Pause Meals'}</span>
             </button>
           </div>
         </div>
 
         {/* 4-METRIC GRID: PURCHASE DATE, START DATE, END DATE, REMAINING DAYS */}
-        <div 
-          className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t relative z-10 text-xs"
-          style={{ borderColor: 'rgba(242, 202, 226, 0.25)' }}
-        >
-          <div 
-            className="p-4 rounded-2xl border"
-            style={{
-              background: 'rgba(36, 4, 74, 0.6)',
-              borderColor: 'rgba(242, 202, 226, 0.3)'
-            }}
-          >
-            <div className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: '#F2CAE2' }}>
-              <Calendar className="w-3.5 h-3.5" style={{ color: '#F2CAE2' }} />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-zinc-100 relative z-10 text-xs">
+          <div className="p-4 rounded-2xl bg-zinc-50/80 border border-zinc-200/80">
+            <div className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 text-zinc-500">
+              <Calendar className="w-3.5 h-3.5 text-purple-600" />
               <span>Purchase Date</span>
             </div>
-            <div className="font-black text-white text-base mt-1">{schedule.purchaseDateStr}</div>
-            <div className="text-[10px] mt-0.5" style={{ color: '#F2CAE2' }}>Payment Verified</div>
+            <div className="font-black text-zinc-900 text-base mt-1">{schedule.purchaseDateStr}</div>
+            <div className="text-[10px] text-zinc-400 mt-0.5">Payment Verified</div>
           </div>
 
-          <div 
-            className="p-4 rounded-2xl border"
-            style={{
-              background: 'rgba(36, 4, 74, 0.6)',
-              borderColor: '#F2CAE2'
-            }}
-          >
-            <div className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: '#F2CAE2' }}>
-              <CalendarRange className="w-3.5 h-3.5" style={{ color: '#F2CAE2' }} />
+          <div className="p-4 rounded-2xl bg-purple-50/60 border border-purple-200/80">
+            <div className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 text-purple-800">
+              <CalendarRange className="w-3.5 h-3.5 text-purple-700" />
               <span>Delivery Start Date</span>
             </div>
-            <div className="font-black text-white text-base mt-1">{schedule.startDateStr}</div>
-            <div className="text-[10px] mt-0.5" style={{ color: '#F2CAE2' }}>Selected First Meal</div>
+            <div className="font-black text-purple-950 text-base mt-1">{schedule.startDateStr}</div>
+            <div className="text-[10px] text-purple-600 mt-0.5">Selected First Meal</div>
           </div>
 
-          <div 
-            className="p-4 rounded-2xl border"
-            style={{
-              background: 'rgba(36, 4, 74, 0.6)',
-              borderColor: 'rgba(242, 202, 226, 0.3)'
-            }}
-          >
-            <div className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: '#F2CAE2' }}>
-              <Calendar className="w-3.5 h-3.5" style={{ color: '#F2CAE2' }} />
+          <div className="p-4 rounded-2xl bg-zinc-50/80 border border-zinc-200/80">
+            <div className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 text-zinc-500">
+              <Calendar className="w-3.5 h-3.5 text-purple-600" />
               <span>Subscription End Date</span>
             </div>
-            <div className="font-black text-white text-base mt-1">{schedule.endDateStr}</div>
-            <div className="text-[10px] mt-0.5" style={{ color: '#F2CAE2' }}>{schedule.durationDays}-Day Period</div>
+            <div className="font-black text-zinc-900 text-base mt-1">{schedule.endDateStr}</div>
+            <div className="text-[10px] text-zinc-400 mt-0.5">{schedule.durationDays}-Day Period</div>
           </div>
 
-          <div 
-            className="p-4 rounded-2xl border"
-            style={{
-              background: 'rgba(36, 4, 74, 0.6)',
-              borderColor: 'rgba(242, 202, 226, 0.4)'
-            }}
-          >
-            <div className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5" style={{ color: '#F2CAE2' }}>
-              <Timer className="w-3.5 h-3.5" style={{ color: '#F2CAE2' }} />
+          <div className="p-4 rounded-2xl bg-zinc-50/80 border border-zinc-200/80">
+            <div className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 text-zinc-500">
+              <Timer className="w-3.5 h-3.5 text-purple-600" />
               <span>Remaining Days</span>
             </div>
-            <div className="font-black text-white text-base mt-1">{schedule.remainingDays} Days</div>
-            <div className="text-[10px] mt-0.5" style={{ color: '#F2CAE2' }}>{schedule.progressPercent}% of cycle active</div>
+            <div className="font-black text-zinc-900 text-base mt-1">{schedule.remainingDays} Days</div>
+            <div className="text-[10px] text-zinc-400 mt-0.5">{schedule.progressPercent}% of cycle active</div>
           </div>
         </div>
 
         {/* PROGRESS BAR */}
         <div className="space-y-1.5 pt-1 relative z-10">
-          <div className="flex justify-between text-[11px] font-bold" style={{ color: '#F2CAE2' }}>
+          <div className="flex justify-between text-[11px] font-bold text-zinc-600">
             <span>Cycle Progress ({schedule.elapsedDays} of {schedule.durationDays} days completed)</span>
-            <span className="text-white font-black">{schedule.progressPercent}%</span>
+            <span className="text-zinc-900 font-black">{schedule.progressPercent}%</span>
           </div>
-          <div 
-            className="w-full rounded-full h-2.5 overflow-hidden border"
-            style={{
-              background: 'rgba(36, 4, 74, 0.8)',
-              borderColor: 'rgba(242, 202, 226, 0.3)'
-            }}
-          >
+          <div className="w-full rounded-full h-2.5 overflow-hidden bg-zinc-100 border border-zinc-200">
             <div
-              className="h-2.5 rounded-full transition-all duration-700 shadow-sm"
+              className="h-2.5 rounded-full transition-all duration-700 shadow-xs"
               style={{
                 width: `${schedule.progressPercent}%`,
-                background: 'linear-gradient(90deg, #F2CAE2 0%, #ffffff 100%)'
+                background: 'linear-gradient(90deg, #6A13F5 0%, #A855F7 100%)'
               }}
             />
           </div>
@@ -486,15 +441,15 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
       </div>
 
       {/* 3. DIGITAL STUVVY SUBSCRIBER CARD */}
-      <div className="space-y-3">
+      <div id="stuvvy-card-section" className="space-y-3 scroll-mt-24">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-lg font-black font-heading text-zinc-950 flex items-center gap-2">
-              <CreditCard className="w-5 h-5 text-[#6A13F5]" />
+              <CreditCard className="w-5 h-5 text-purple-700" />
               <span>Digital Stuvvy Subscriber Card</span>
             </h3>
             <p className="text-xs text-zinc-500 font-medium">
-              Your official digital subscription pass with QR code verification.
+              Your official digital subscription pass.
             </p>
           </div>
         </div>

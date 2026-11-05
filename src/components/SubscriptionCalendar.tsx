@@ -392,7 +392,7 @@ export const SubscriptionCalendar: React.FC<SubscriptionCalendarProps> = ({
 
               <div className="p-3 bg-white border border-zinc-200 rounded-2xl flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                  <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
                     <Mail className="w-4 h-4" />
                   </div>
                   <div>

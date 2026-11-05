@@ -156,8 +156,8 @@ export const Screen3MealDetails: React.FC<Screen3MealDetailsProps> = ({
                 <span className="block text-sm font-black text-amber-700">{item.nutritionalInfo.carbs}</span>
                 <span className="text-[10px] text-gray-500 font-semibold">Carbs</span>
               </div>
-              <div className="bg-blue-50 p-2.5 rounded-2xl border border-blue-100">
-                <span className="block text-sm font-black text-blue-700">{item.nutritionalInfo.fats}</span>
+              <div className="bg-purple-50 p-2.5 rounded-2xl border border-purple-100">
+                <span className="block text-sm font-black text-purple-700">{item.nutritionalInfo.fats}</span>
                 <span className="text-[10px] text-gray-500 font-semibold">Healthy Fats</span>
               </div>
             </div>

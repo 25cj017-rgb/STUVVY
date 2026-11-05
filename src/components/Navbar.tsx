@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { ArrowRight, Sparkles, User, ShoppingBag, Utensils, LogOut, ChevronDown } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ArrowRight, Sparkles, User, ShoppingBag, Utensils, LogOut, ChevronDown, CreditCard } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface NavbarProps {
@@ -27,6 +27,35 @@ export const Navbar: React.FC<NavbarProps> = ({
   onCheckout,
   onLogout
 }) => {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleNavigateToSection = (tab: 'dashboard', sectionId?: string) => {
+    setActiveTab(tab);
+    setIsDropdownOpen(false);
+    if (sectionId) {
+      setTimeout(() => {
+        const el = document.getElementById(sectionId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 150);
+    }
+  };
+
+  const displayName = user?.fullName || 'Guest';
+
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-zinc-200/90 shadow-2xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
@@ -83,20 +112,68 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         </nav>
 
-        {/* Right Section: User Badge, Cart Drawer Trigger, Checkout Button */}
+        {/* Right Section: User Badge with Dropdown, Cart Drawer Trigger, Checkout Button */}
         <div className="flex items-center gap-2 sm:gap-3">
           
-          {/* User Badge */}
-          <div 
-            onClick={() => setActiveTab('dashboard')}
-            className="hidden md:flex items-center gap-2 bg-zinc-100 hover:bg-zinc-200/80 px-2.5 py-1 rounded-full text-[11px] font-black text-zinc-800 border border-zinc-200 cursor-pointer transition-all"
-          >
-            <span className="w-5 h-5 rounded-full bg-zinc-950 text-white flex items-center justify-center text-[10px]">
-              {user?.fullName ? user.fullName.slice(0, 2).toUpperCase() : 'G'}
-            </span>
-            <span className="max-w-[90px] truncate">
-              {user?.fullName || 'Guest'}
-            </span>
+          {/* User Profile Badge with 3-option Dropdown (My Account, Stuvvy Card, Logout) */}
+          <div className="relative" ref={dropdownRef}>
+            <button 
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center gap-2 bg-zinc-100 hover:bg-zinc-200/90 px-3 py-1.5 rounded-full text-[11px] font-black text-zinc-800 border border-zinc-200 cursor-pointer transition-all shadow-2xs"
+              title="Click to view Account, Stuvvy Card, or Log Out"
+            >
+              <span className="w-6 h-6 rounded-full bg-zinc-950 text-white flex items-center justify-center text-[10px] font-black shrink-0">
+                {displayName.slice(0, 2).toUpperCase()}
+              </span>
+              <span className="max-w-[100px] truncate hidden sm:inline">
+                {displayName}
+              </span>
+              <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* 3-Option Profile Dropdown Menu */}
+            {isDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-xl border border-zinc-200/90 py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-3.5 py-2 border-b border-zinc-100">
+                  <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Signed in as</div>
+                  <div className="text-xs font-black text-zinc-900 truncate mt-0.5">{displayName}</div>
+                </div>
+
+                <div className="p-1 space-y-0.5">
+                  {/* Option 1: My Account */}
+                  <button
+                    onClick={() => handleNavigateToSection('dashboard')}
+                    className="w-full px-3 py-2 text-left text-xs font-bold text-zinc-800 hover:bg-zinc-100 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer"
+                  >
+                    <User className="w-4 h-4 text-purple-600" />
+                    <span>My Account</span>
+                  </button>
+
+                  {/* Option 2: Stuvvy Card */}
+                  <button
+                    onClick={() => handleNavigateToSection('dashboard', 'stuvvy-card-section')}
+                    className="w-full px-3 py-2 text-left text-xs font-bold text-zinc-800 hover:bg-zinc-100 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer"
+                  >
+                    <CreditCard className="w-4 h-4 text-purple-600" />
+                    <span>Stuvvy Card</span>
+                  </button>
+
+                  {/* Option 3: Logout */}
+                  {onLogout && (
+                    <button
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        onLogout();
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer border-t border-zinc-100 mt-1 pt-1.5"
+                    >
+                      <LogOut className="w-4 h-4 text-red-500" />
+                      <span>Log Out</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Cart Tray Button */}

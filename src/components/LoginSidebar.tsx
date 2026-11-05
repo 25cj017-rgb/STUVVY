@@ -101,7 +101,7 @@ export const LoginSidebar: React.FC<LoginSidebarProps> = ({
               Welcome to Stuvvy
             </h2>
             <p className="text-xs text-zinc-500 font-medium">
-              Enter your Name (CAPITAL), Mobile Number & DOB (YYYY/MM/DD) to verify.
+              Enter your Full Name, Mobile Number & DOB (YYYY/MM/DD) to verify.
             </p>
           </div>
 
@@ -115,7 +115,7 @@ export const LoginSidebar: React.FC<LoginSidebarProps> = ({
           >
             <div>
               <label className="block text-xs font-bold text-zinc-700 mb-1">
-                FULL NAME (IN CAPITAL LETTERS)
+                Full Name
               </label>
               <div className="relative">
                 <User className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -123,9 +123,9 @@ export const LoginSidebar: React.FC<LoginSidebarProps> = ({
                   type="text"
                   required
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value.toUpperCase())}
-                  placeholder="NAME IN CAPITAL (e.g. SRI RAM V K)"
-                  className="w-full pl-9 pr-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-xs font-black uppercase focus:ring-2 focus:ring-[#F97316] focus:border-[#F97316] outline-none transition-all text-zinc-900 placeholder:normal-case"
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Enter your full name"
+                  className="w-full pl-9 pr-3 py-2.5 bg-zinc-50 border border-zinc-200 rounded-2xl text-xs font-bold focus:ring-2 focus:ring-[#F97316] focus:border-[#F97316] outline-none transition-all text-zinc-900"
                 />
               </div>
             </div>

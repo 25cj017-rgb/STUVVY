@@ -72,86 +72,76 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
 
   const isVerifiedSubscriber = !isGuestUser && !!user.isVerified && user.fullName !== 'Guest Explorer';
 
-  // Compute Full 4-Week Month Schedule (28 Days) Starting from Today
+  // Compute schedule based on subscriber vs guest
   const rollingDays: RollingDayInfo[] = useMemo(() => {
     const list: RollingDayInfo[] = [];
-    const now = new Date();
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const fullDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-    // Generate 28 days to cover full 4-week month
-    for (let offset = 0; offset < 28; offset++) {
-      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset, 0, 0, 0);
-      const dowIndex = d.getDay();
-      const dayOfWeek = DAY_OF_WEEK_NAMES[dowIndex];
-      const isToday = offset === 0;
-      const isWithinRollingWindow = offset <= 3; // Today + next 3 days are available
+    if (isVerifiedSubscriber) {
+      // SUBSCRIBER ACCESS: Strictly from user's selected delivery startDate to endDate!
+      // All menu dates within paid plan are completely unlocked!
+      const totalDays = Math.max(1, schedule.durationDays);
+      const start = schedule.startDate;
 
-      // Determine week number (Week 1 = Days 0-6, Week 2 = Days 7-13, Week 3 = Days 14-20, Week 4 = Days 21-27)
-      const weekNumber = Math.min(4, Math.floor(offset / 7) + 1);
+      for (let offset = 0; offset < totalDays; offset++) {
+        const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + offset, 0, 0, 0);
+        const dowIndex = d.getDay();
+        const dayOfWeek = DAY_OF_WEEK_NAMES[dowIndex];
+        const weekNumber = Math.min(4, Math.floor(offset / 7) + 1);
 
-      let isWithinSub = false;
-      let isLocked = false;
-      let lockType: RollingDayInfo['lockType'] = undefined;
-
-      if (!isVerifiedSubscriber) {
-        // Guest user rules: Today + next 3 days unlocked preview; days beyond are locked
-        if (!isWithinRollingWindow) {
-          isLocked = true;
-          lockType = 'guest_limit';
-        }
-      } else {
-        // SUBSCRIBER RULES: Unlock according to their plan and start date to end date!
-        isWithinSub = isDateWithinSubscription(d, schedule.startDate, schedule.endDate);
-
-        if (isWithinSub) {
-          // ANY date inside their paid subscription plan is UNLOCKED!
-          isLocked = false;
-          lockType = undefined;
-        } else {
-          // Date is outside their subscription period:
-          const dMidnight = d.getTime();
-          const startMidnight = new Date(schedule.startDate.getFullYear(), schedule.startDate.getMonth(), schedule.startDate.getDate()).getTime();
-          const endMidnight = new Date(schedule.endDate.getFullYear(), schedule.endDate.getMonth(), schedule.endDate.getDate()).getTime();
-
-          if (isWithinRollingWindow) {
-            // Allow rolling 4-day freshness window for current kitchen meals
-            isLocked = false;
-          } else if (dMidnight < startMidnight) {
-            isLocked = true;
-            lockType = 'outside_sub_start';
-          } else if (dMidnight > endMidnight) {
-            isLocked = true;
-            lockType = 'outside_sub_end';
-          } else {
-            isLocked = true;
-            lockType = 'freshness_window';
-          }
-        }
+        list.push({
+          date: d,
+          dateStr: `${months[d.getMonth()]} ${d.getDate()}`,
+          dayOfWeek,
+          fullDayName: fullDays[dowIndex],
+          dayNumber: d.getDate(),
+          monthName: months[d.getMonth()],
+          offsetDays: offset,
+          weekNumber,
+          isToday: offset === 0,
+          isWithinRollingWindow: true,
+          isWithinSubscription: true,
+          isLocked: false, // ALL SUBSCRIBER DAYS ARE UNLOCKED
+          lockType: undefined,
+          unlockDateStr: undefined
+        });
       }
+    } else {
+      // GUEST ACCESS: Rolling 28-day preview from Today. First 4 days (today + 3) available; rest locked!
+      const now = new Date();
+      for (let offset = 0; offset < 28; offset++) {
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset, 0, 0, 0);
+        const dowIndex = d.getDay();
+        const dayOfWeek = DAY_OF_WEEK_NAMES[dowIndex];
+        const isToday = offset === 0;
+        const isWithinRollingWindow = offset <= 3; // Today + next 3 days
+        const weekNumber = Math.min(4, Math.floor(offset / 7) + 1);
+        const isLocked = !isWithinRollingWindow;
 
-      const unlockDate = new Date(d.getTime() - 3 * 24 * 60 * 60 * 1000);
+        const unlockDate = new Date(d.getTime() - 3 * 24 * 60 * 60 * 1000);
 
-      list.push({
-        date: d,
-        dateStr: `${months[d.getMonth()]} ${d.getDate()}`,
-        dayOfWeek,
-        fullDayName: fullDays[dowIndex],
-        dayNumber: d.getDate(),
-        monthName: months[d.getMonth()],
-        offsetDays: offset,
-        weekNumber,
-        isToday,
-        isWithinRollingWindow,
-        isWithinSubscription: isWithinSub,
-        isLocked,
-        lockType,
-        unlockDateStr: formatDisplayDate(unlockDate)
-      });
+        list.push({
+          date: d,
+          dateStr: `${months[d.getMonth()]} ${d.getDate()}`,
+          dayOfWeek,
+          fullDayName: fullDays[dowIndex],
+          dayNumber: d.getDate(),
+          monthName: months[d.getMonth()],
+          offsetDays: offset,
+          weekNumber,
+          isToday,
+          isWithinRollingWindow,
+          isWithinSubscription: false,
+          isLocked,
+          lockType: isLocked ? 'guest_limit' : undefined,
+          unlockDateStr: formatDisplayDate(unlockDate)
+        });
+      }
     }
 
     return list;
-  }, [isVerifiedSubscriber, schedule.startDate, schedule.endDate]);
+  }, [isVerifiedSubscriber, schedule.startDate, schedule.durationDays]);
 
   // Filtered rolling days if a specific week tab is selected
   const displayedDays = useMemo(() => {
@@ -257,65 +247,61 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
               </div>
             </div>
 
-            {/* 4-WEEK TABS SELECTOR (WEEK 1, WEEK 2, WEEK 3, WEEK 4) */}
+            {/* 4-WEEK TABS SELECTOR (WEEK 1, WEEK 2, WEEK 3, WEEK 4 - CLEAN WITHOUT DATES) */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
               <button
                 onClick={() => setSelectedWeekFilter('all')}
-                className={`px-3 py-1.5 rounded-xl font-black transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-3.5 py-1.5 rounded-xl font-black transition-all cursor-pointer whitespace-nowrap ${
                   selectedWeekFilter === 'all'
                     ? 'bg-zinc-950 text-white shadow-xs'
                     : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-100'
                 }`}
               >
-                All 4 Weeks
+                All Weeks
               </button>
 
               <button
                 onClick={() => handleJumpToWeek(1)}
-                className={`px-3 py-1.5 rounded-xl font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-xl font-black transition-all cursor-pointer whitespace-nowrap ${
                   selectedWeekFilter === 1
                     ? 'bg-purple-900 text-white shadow-xs'
                     : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-100'
                 }`}
               >
-                <span>Week 1</span>
-                <span className="text-[10px] opacity-75 font-normal">(Nov 9–15)</span>
+                Week 1
               </button>
 
               <button
                 onClick={() => handleJumpToWeek(2)}
-                className={`px-3 py-1.5 rounded-xl font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-xl font-black transition-all cursor-pointer whitespace-nowrap ${
                   selectedWeekFilter === 2
                     ? 'bg-purple-900 text-white shadow-xs'
                     : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-100'
                 }`}
               >
-                <span>Week 2</span>
-                <span className="text-[10px] opacity-75 font-normal">(Nov 16–22)</span>
+                Week 2
               </button>
 
               <button
                 onClick={() => handleJumpToWeek(3)}
-                className={`px-3 py-1.5 rounded-xl font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-xl font-black transition-all cursor-pointer whitespace-nowrap ${
                   selectedWeekFilter === 3
                     ? 'bg-purple-900 text-white shadow-xs'
                     : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-100'
                 }`}
               >
-                <span>Week 3</span>
-                <span className="text-[10px] opacity-75 font-normal">(Nov 23–29)</span>
+                Week 3
               </button>
 
               <button
                 onClick={() => handleJumpToWeek(4)}
-                className={`px-3 py-1.5 rounded-xl font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                className={`px-3.5 py-1.5 rounded-xl font-black transition-all cursor-pointer whitespace-nowrap ${
                   selectedWeekFilter === 4
                     ? 'bg-purple-900 text-white shadow-xs'
                     : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-100'
                 }`}
               >
-                <span>Week 4</span>
-                <span className="text-[10px] opacity-75 font-normal">(Nov 30)</span>
+                Week 4
               </button>
             </div>
 

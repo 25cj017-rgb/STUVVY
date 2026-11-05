@@ -199,7 +199,7 @@ export default function Home() {
 
         const updatedUser: UserProfile = {
           ...user,
-          fullName: authResult.customer?.name || fullName.toUpperCase(),
+          fullName: authResult.customer?.name || fullName.trim(),
           mobileNumber: authResult.customer?.mobileNo || mobileNumber,
           dob: dob,
           address: primaryAddr,
@@ -450,15 +450,15 @@ export default function Home() {
                   >
                     <div>
                       <label className="block text-left text-[11px] font-bold text-zinc-700 mb-1">
-                        FULL NAME (IN CAPITAL LETTERS)
+                        Full Name
                       </label>
                       <input
                         type="text"
                         required
                         value={fullName}
-                        onChange={(e) => setFullName(e.target.value.toUpperCase())}
-                        placeholder="NAME IN CAPITAL (e.g. SRI RAM V K)"
-                        className="w-full px-4 py-2.5 bg-white border border-zinc-300 rounded-2xl text-xs font-black tracking-wide uppercase text-zinc-900 placeholder:text-zinc-400 placeholder:normal-case focus:outline-none focus:border-orange-500 transition-colors shadow-2xs"
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Enter your full name"
+                        className="w-full px-4 py-2.5 bg-white border border-zinc-300 rounded-2xl text-xs font-bold text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:border-orange-500 transition-colors shadow-2xs"
                       />
                     </div>
 
