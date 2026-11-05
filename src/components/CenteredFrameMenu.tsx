@@ -221,8 +221,8 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
         {/* ======================================================== */}
         {/* LEFT FLOATING SIDEBAR CATEGORY MENU CARD                 */}
         {/* ======================================================== */}
-        <div className="w-full lg:w-64 bg-white/95 backdrop-blur-xl border border-zinc-200/90 shadow-xl rounded-[28px] p-3 shrink-0">
-          <div className="space-y-1">
+        <div className="w-full lg:w-64 bg-white/95 backdrop-blur-xl border border-zinc-200/90 shadow-xl rounded-[24px] sm:rounded-[28px] p-2 sm:p-3 shrink-0">
+          <div className="grid grid-cols-3 lg:flex lg:flex-col gap-1.5">
             {categories.map((cat) => {
               const isActive = activeCategory === cat.id;
 
@@ -235,7 +235,7 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
                       onSelectMealTime(cat.id as MealTime);
                     }
                   }}
-                  className={`w-full px-4 py-3.5 rounded-2xl text-sm font-extrabold transition-all flex items-center justify-between cursor-pointer ${
+                  className={`w-full px-2 sm:px-4 py-2.5 sm:py-3.5 rounded-2xl text-xs sm:text-sm font-extrabold transition-all flex items-center justify-center lg:justify-between cursor-pointer ${
                     isActive
                       ? 'bg-zinc-950 text-white shadow-md'
                       : 'text-zinc-700 hover:bg-zinc-100/80 hover:text-zinc-950'
@@ -247,7 +247,7 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
                   </div>
 
                   {isActive && (
-                    <ChevronRight className="w-4 h-4 text-white stroke-[3]" />
+                    <ChevronRight className="hidden lg:block w-4 h-4 text-white stroke-[3]" />
                   )}
                 </button>
               );
@@ -255,7 +255,7 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
           </div>
 
           {/* SUBSCRIBER STATUS MINI PILL */}
-          <div className="mt-4 pt-3 border-t border-zinc-100 px-2 text-[11px] text-zinc-500 font-medium space-y-1">
+          <div className="hidden lg:block mt-4 pt-3 border-t border-zinc-100 px-2 text-[11px] text-zinc-500 font-medium space-y-1">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black uppercase text-zinc-400">Schedule</span>
               <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-200">
@@ -508,7 +508,7 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
                   >
                     <div 
                       onClick={() => onSelectItemDetails(item)}
-                      className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-zinc-100 shrink-0 cursor-pointer border border-zinc-100 relative"
+                      className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-zinc-100 shrink-0 cursor-pointer border border-zinc-100 relative"
                     >
                       <img
                         src={item.image}

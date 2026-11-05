@@ -180,3 +180,4 @@ export function isDateWithinSubscription(targetDate: Date, startDate: Date, endD
 
   return targetMidnight >= startMidnight && targetMidnight <= endMidnight;
 }
+

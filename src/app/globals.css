@@ -17,6 +17,13 @@
   --font-heading: var(--font-outfit), var(--font-plus-jakarta), system-ui, sans-serif;
 }
 
+html, body {
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  scroll-behavior: smooth;
+}
+
 body {
   background-color: #090D16;
   color: var(--text-primary);
@@ -144,4 +151,3 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(249, 115, 22, 0.6);
 }
-

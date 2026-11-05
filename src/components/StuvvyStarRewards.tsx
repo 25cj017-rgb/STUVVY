@@ -281,3 +281,4 @@ export const StuvvyStarRewards: React.FC<StuvvyStarRewardsProps> = ({
     </div>
   );
 };
+

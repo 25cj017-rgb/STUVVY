@@ -226,7 +226,7 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
       {/* DIGITAL SUBSCRIBER CARD DISPLAY */}
       <div
         ref={cardRef}
-        className="relative overflow-hidden rounded-[32px] p-6 sm:p-8 text-white shadow-2xl border border-zinc-800 transition-all hover:scale-[1.01]"
+        className="relative overflow-hidden rounded-[26px] sm:rounded-[32px] p-5 sm:p-8 text-white shadow-2xl border border-zinc-800 transition-all hover:scale-[1.01]"
         style={{
           background: 'linear-gradient(135deg, #09090b 0%, #18181b 50%, #09090b 100%)',
           boxShadow: '0 20px 40px -15px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)'
@@ -323,7 +323,7 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
           type="button"
           onClick={handleDownloadCard}
           disabled={isDownloading}
-          className="bg-zinc-950 hover:bg-zinc-800 text-white font-black text-xs px-6 py-3 rounded-2xl shadow-lg border border-orange-500/40 transition-all flex items-center gap-2 cursor-pointer hover:scale-[1.02]"
+          className="w-full sm:w-auto bg-zinc-950 hover:bg-zinc-800 text-white font-black text-xs px-6 py-3.5 rounded-2xl shadow-lg border border-orange-500/40 transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02]"
         >
           <Download className="w-4 h-4 text-orange-400" />
           <span>{isDownloading ? 'Generating Card...' : 'Download Your Stuvvy Card'}</span>
@@ -332,3 +332,4 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
     </div>
   );
 };
+
