@@ -18,7 +18,6 @@ export const StuvvyStarRewards: React.FC<StuvvyStarRewardsProps> = ({
   const safeConsecutive = Math.max(1, consecutiveMonths);
 
   // Compute filled stars (1 to 12)
-  // For monthly subscribers: 1 consecutive month = Star 1 active. When they hit 3 months, Star 4 (4th Month Free) is unlocked!
   const isMonthly = (planName || '').toLowerCase().includes('month');
   const starsEarned = Math.min(
     12,
@@ -63,82 +62,106 @@ export const StuvvyStarRewards: React.FC<StuvvyStarRewardsProps> = ({
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 select-none">
       {/* ========================================================================= */}
-      {/* 1. SPECIAL OFFER BANNER: ELECTRIC PURPLE, DEEP VIOLET & SOFT PINK         */}
+      {/* 1. SPECIAL OFFER BANNER: VIBRANT ELECTRIC PURPLE, DEEP VIOLET & SOFT PINK */}
       {/* ========================================================================= */}
       <div 
         className="relative overflow-hidden rounded-[32px] text-white p-6 sm:p-8 shadow-2xl border"
         style={{
-          background: 'linear-gradient(135deg, #18042C 0%, #2E1065 50%, #3B0764 100%)',
-          borderColor: 'rgba(168, 85, 247, 0.4)',
-          boxShadow: '0 20px 50px -15px rgba(46, 16, 101, 0.6), inset 0 1px 0 rgba(244, 114, 182, 0.3)'
+          background: 'linear-gradient(135deg, #6A13F5 0%, #5B0ED6 50%, #4C09B8 100%)',
+          borderColor: 'rgba(242, 202, 226, 0.4)',
+          boxShadow: '0 25px 60px -15px rgba(106, 19, 245, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.3)'
         }}
       >
-        {/* Ambient electric purple & soft pink glowing orbs */}
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-72 h-72 bg-[#A855F7]/25 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-72 h-72 bg-[#F472B6]/20 rounded-full blur-3xl pointer-events-none" />
+        {/* Soft pink ambient lighting */}
+        <div 
+          className="absolute top-0 right-0 w-80 h-80 rounded-full blur-3xl pointer-events-none" 
+          style={{ background: 'radial-gradient(circle, rgba(242, 202, 226, 0.3) 0%, transparent 70%)' }}
+        />
+        <div 
+          className="absolute bottom-0 left-0 w-80 h-80 rounded-full blur-3xl pointer-events-none" 
+          style={{ background: 'radial-gradient(circle, rgba(36, 4, 74, 0.5) 0%, transparent 70%)' }}
+        />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2.5 max-w-xl">
-            {/* Soft pink pill tag with electric purple glow */}
-            <div className="inline-flex items-center gap-2 bg-[#F472B6]/15 backdrop-blur-md px-3.5 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider text-[#FBCFE8] border border-[#F472B6]/40 shadow-xs">
-              <Zap className="w-3.5 h-3.5 text-[#F472B6]" />
+          <div className="space-y-3 max-w-xl">
+            {/* Soft pink pill tag */}
+            <div 
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider shadow-sm"
+              style={{
+                background: '#F2CAE2',
+                color: '#24044A'
+              }}
+            >
+              <Zap className="w-3.5 h-3.5 text-[#24044A]" />
               <span>Special Customer Retention Offer</span>
             </div>
 
             <h3 className="text-2xl sm:text-3xl lg:text-4xl font-black font-heading tracking-tight leading-tight text-white">
               Subscribe for 3 Consecutive Months & Get the{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#F472B6] via-[#FBCFE8] to-[#A855F7] underline decoration-[#F472B6] underline-offset-4">
+              <span 
+                className="underline decoration-2 underline-offset-4"
+                style={{
+                  color: '#F2CAE2',
+                  textDecorationColor: '#F2CAE2'
+                }}
+              >
                 4th Month Food 100% FREE!
               </span>
             </h3>
 
-            <p className="text-xs sm:text-sm text-purple-200/90 font-medium leading-relaxed">
-              Maintain your active monthly subscription for 3 consecutive months. Upon completing Month 3, your <strong className="text-white font-extrabold">4th Month (30 Days) of wholesome home food is completely free</strong> delivered right to your door.
+            <p className="text-xs sm:text-sm font-medium leading-relaxed text-white/90">
+              Maintain your active monthly subscription for 3 consecutive months. Upon completing Month 3, your <strong className="text-white font-extrabold underline decoration-[#F2CAE2]">4th Month (30 Days) of wholesome home food is completely free</strong> delivered right to your door.
             </p>
           </div>
 
           {/* PROGRESS BADGE IN DEEP VIOLET WITH SOFT PINK ACCENTS */}
           <div 
-            className="rounded-3xl p-5 shrink-0 text-center space-y-3 min-w-[220px] border"
+            className="rounded-3xl p-5 shrink-0 text-center space-y-3 min-w-[220px] border shadow-xl"
             style={{
-              background: 'rgba(24, 4, 44, 0.85)',
-              borderColor: 'rgba(244, 114, 182, 0.35)',
+              background: 'rgba(36, 4, 74, 0.65)',
+              borderColor: 'rgba(242, 202, 226, 0.45)',
               backdropFilter: 'blur(12px)'
             }}
           >
-            <div className="text-[10px] font-extrabold uppercase tracking-widest text-[#FBCFE8]">
+            <div className="text-[10px] font-extrabold uppercase tracking-widest" style={{ color: '#F2CAE2' }}>
               Your Consecutive Streak
             </div>
             
             <div className="text-3xl font-black font-heading text-white flex items-center justify-center gap-1.5">
-              <span className="text-sm text-purple-300 font-bold uppercase tracking-wider">Month</span>
-              <span className="text-[#F472B6] text-4xl">{currentStreak}</span>
-              <span className="text-purple-400/60 font-light">/</span>
-              <span className="text-purple-200">{targetMonths}</span>
+              <span className="text-sm font-bold uppercase tracking-wider" style={{ color: '#F2CAE2' }}>Month</span>
+              <span className="text-4xl" style={{ color: '#F2CAE2' }}>{currentStreak}</span>
+              <span className="text-white/60 font-light">/</span>
+              <span className="text-white">{targetMonths}</span>
             </div>
 
             {/* Glowing Progress Bar */}
-            <div className="w-full bg-purple-950/80 rounded-full h-3 overflow-hidden p-0.5 border border-purple-800/40">
+            <div 
+              className="w-full rounded-full h-3 overflow-hidden p-0.5 border"
+              style={{
+                background: 'rgba(36, 4, 74, 0.8)',
+                borderColor: 'rgba(242, 202, 226, 0.3)'
+              }}
+            >
               <div
                 className="h-full rounded-full transition-all duration-700 shadow-md"
                 style={{
                   width: `${progressPercent}%`,
-                  background: 'linear-gradient(90deg, #A855F7 0%, #F472B6 100%)'
+                  background: 'linear-gradient(90deg, #F2CAE2 0%, #ffffff 100%)'
                 }}
               />
             </div>
 
-            <div className="text-[11px] font-black text-[#FBCFE8] flex items-center justify-center gap-1.5">
+            <div className="text-[11px] font-black flex items-center justify-center gap-1.5" style={{ color: '#F2CAE2' }}>
               {isFourthMonthUnlocked ? (
                 <>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-300" />
                   <span className="text-emerald-300">🎉 4th Month Free Food Unlocked!</span>
                 </>
               ) : (
                 <>
-                  <Clock className="w-3.5 h-3.5 text-[#F472B6]" />
+                  <Clock className="w-3.5 h-3.5" style={{ color: '#F2CAE2' }} />
                   <span>{targetMonths - currentStreak} more month{targetMonths - currentStreak > 1 ? 's' : ''} to unlock 4th Month Free</span>
                 </>
               )}
@@ -147,73 +170,119 @@ export const StuvvyStarRewards: React.FC<StuvvyStarRewardsProps> = ({
         </div>
 
         {/* 4-MONTH CONSECUTIVE JOURNEY ROADMAP */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 mt-6 border-t border-purple-500/20 relative z-10 text-xs">
+        <div 
+          className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 mt-6 border-t relative z-10 text-xs"
+          style={{ borderColor: 'rgba(242, 202, 226, 0.25)' }}
+        >
           {/* Month 1 */}
-          <div className={`rounded-2xl p-3.5 border transition-all ${
-            currentStreak >= 1 
-              ? 'bg-[#2E1065]/80 border-[#A855F7] shadow-lg' 
-              : 'bg-[#18042C]/60 border-purple-900/40 opacity-70'
-          }`}>
+          <div 
+            className={`rounded-2xl p-3.5 border transition-all ${
+              currentStreak >= 1 
+                ? 'shadow-lg' 
+                : 'opacity-70'
+            }`}
+            style={{
+              background: currentStreak >= 1 ? 'rgba(36, 4, 74, 0.65)' : 'rgba(36, 4, 74, 0.35)',
+              borderColor: currentStreak >= 1 ? '#F2CAE2' : 'rgba(242, 202, 226, 0.25)'
+            }}
+          >
             <div className="flex items-center gap-2 mb-1.5">
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs ${
-                currentStreak >= 1 ? 'bg-[#A855F7] text-white shadow-sm' : 'bg-purple-900/60 text-purple-300'
-              }`}>
+              <div 
+                className="w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs shadow-sm"
+                style={{
+                  background: currentStreak >= 1 ? '#F2CAE2' : 'rgba(242, 202, 226, 0.2)',
+                  color: currentStreak >= 1 ? '#24044A' : '#ffffff'
+                }}
+              >
                 {currentStreak >= 1 ? '✓' : '1'}
               </div>
               <span className="font-black text-white text-[11px]">Month 1</span>
             </div>
-            <div className="text-[10px] text-purple-200">Subscribed & Active</div>
+            <div className="text-[10px]" style={{ color: '#F2CAE2' }}>Subscribed & Active</div>
           </div>
 
           {/* Month 2 */}
-          <div className={`rounded-2xl p-3.5 border transition-all ${
-            currentStreak >= 2 
-              ? 'bg-[#2E1065]/80 border-[#A855F7] shadow-lg' 
-              : 'bg-[#18042C]/60 border-purple-900/40 opacity-70'
-          }`}>
+          <div 
+            className={`rounded-2xl p-3.5 border transition-all ${
+              currentStreak >= 2 
+                ? 'shadow-lg' 
+                : 'opacity-70'
+            }`}
+            style={{
+              background: currentStreak >= 2 ? 'rgba(36, 4, 74, 0.65)' : 'rgba(36, 4, 74, 0.35)',
+              borderColor: currentStreak >= 2 ? '#F2CAE2' : 'rgba(242, 202, 226, 0.25)'
+            }}
+          >
             <div className="flex items-center gap-2 mb-1.5">
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs ${
-                currentStreak >= 2 ? 'bg-[#A855F7] text-white shadow-sm' : 'bg-purple-900/60 text-purple-300'
-              }`}>
+              <div 
+                className="w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs shadow-sm"
+                style={{
+                  background: currentStreak >= 2 ? '#F2CAE2' : 'rgba(242, 202, 226, 0.2)',
+                  color: currentStreak >= 2 ? '#24044A' : '#ffffff'
+                }}
+              >
                 {currentStreak >= 2 ? '✓' : '2'}
               </div>
               <span className="font-black text-white text-[11px]">Month 2</span>
             </div>
-            <div className="text-[10px] text-purple-200">2nd Consecutive Month</div>
+            <div className="text-[10px]" style={{ color: '#F2CAE2' }}>2nd Consecutive Month</div>
           </div>
 
           {/* Month 3 */}
-          <div className={`rounded-2xl p-3.5 border transition-all ${
-            currentStreak >= 3 
-              ? 'bg-[#2E1065]/80 border-[#A855F7] shadow-lg' 
-              : 'bg-[#18042C]/60 border-purple-900/40 opacity-70'
-          }`}>
+          <div 
+            className={`rounded-2xl p-3.5 border transition-all ${
+              currentStreak >= 3 
+                ? 'shadow-lg' 
+                : 'opacity-70'
+            }`}
+            style={{
+              background: currentStreak >= 3 ? 'rgba(36, 4, 74, 0.65)' : 'rgba(36, 4, 74, 0.35)',
+              borderColor: currentStreak >= 3 ? '#F2CAE2' : 'rgba(242, 202, 226, 0.25)'
+            }}
+          >
             <div className="flex items-center gap-2 mb-1.5">
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs ${
-                currentStreak >= 3 ? 'bg-[#A855F7] text-white shadow-sm' : 'bg-purple-900/60 text-purple-300'
-              }`}>
+              <div 
+                className="w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs shadow-sm"
+                style={{
+                  background: currentStreak >= 3 ? '#F2CAE2' : 'rgba(242, 202, 226, 0.2)',
+                  color: currentStreak >= 3 ? '#24044A' : '#ffffff'
+                }}
+              >
                 {currentStreak >= 3 ? '✓' : '3'}
               </div>
               <span className="font-black text-white text-[11px]">Month 3</span>
             </div>
-            <div className="text-[10px] text-purple-200">3rd Consecutive Month</div>
+            <div className="text-[10px]" style={{ color: '#F2CAE2' }}>3rd Consecutive Month</div>
           </div>
 
           {/* Month 4 (REWARD) */}
-          <div className={`rounded-2xl p-3.5 border transition-all ${
-            isFourthMonthUnlocked
-              ? 'bg-gradient-to-br from-[#9333EA] to-[#F472B6] border-[#F472B6] text-white shadow-xl scale-[1.02]' 
-              : 'bg-[#18042C]/90 border-[#F472B6]/50 shadow-md'
-          }`}>
+          <div 
+            className={`rounded-2xl p-3.5 border transition-all shadow-xl ${
+              isFourthMonthUnlocked
+                ? 'scale-[1.03]' 
+                : ''
+            }`}
+            style={{
+              background: '#F2CAE2',
+              borderColor: '#ffffff',
+              color: '#24044A'
+            }}
+          >
             <div className="flex items-center gap-2 mb-1.5">
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs ${
-                isFourthMonthUnlocked ? 'bg-white text-[#9333EA] shadow-md' : 'bg-[#F472B6] text-zinc-950 font-black'
-              }`}>
+              <div 
+                className="w-6 h-6 rounded-lg flex items-center justify-center font-black text-xs shadow-md"
+                style={{
+                  background: '#24044A',
+                  color: '#F2CAE2'
+                }}
+              >
                 🎁
               </div>
-              <span className="font-black text-[#FBCFE8] text-[11px]">Month 4: REWARD</span>
+              <span className="font-black text-[11px]" style={{ color: '#24044A' }}>
+                Month 4: REWARD
+              </span>
             </div>
-            <div className="text-[10px] font-black text-[#F472B6] uppercase tracking-wide">
+            <div className="text-[10px] font-black uppercase tracking-wider" style={{ color: '#24044A' }}>
               {isFourthMonthUnlocked ? 'UNLOCKED! 100% FREE FOOD' : '30 DAYS FREE FOOD'}
             </div>
           </div>
@@ -226,34 +295,44 @@ export const StuvvyStarRewards: React.FC<StuvvyStarRewardsProps> = ({
       <div 
         className="rounded-[32px] p-6 sm:p-8 shadow-xl border space-y-6"
         style={{
-          background: 'linear-gradient(180deg, #18042C 0%, #1F0838 100%)',
-          borderColor: 'rgba(168, 85, 247, 0.35)'
+          background: 'linear-gradient(135deg, #6A13F5 0%, #5B0ED6 50%, #4C09B8 100%)',
+          borderColor: 'rgba(242, 202, 226, 0.4)',
+          boxShadow: '0 20px 50px -15px rgba(106, 19, 245, 0.5)'
         }}
       >
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-900/50 pb-4">
+        <div 
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4"
+          style={{ borderColor: 'rgba(242, 202, 226, 0.25)' }}
+        >
           <div>
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#9333EA] to-[#F472B6] flex items-center justify-center shadow-md">
-                <Crown className="w-4 h-4 text-white" />
+              <div 
+                className="w-8 h-8 rounded-xl flex items-center justify-center shadow-md"
+                style={{
+                  background: '#F2CAE2',
+                  color: '#24044A'
+                }}
+              >
+                <Crown className="w-4 h-4" />
               </div>
               <h3 className="text-xl sm:text-2xl font-black font-heading text-white tracking-tight">
                 Stuvvy 12-Star Rewards
               </h3>
             </div>
-            <p className="text-xs text-purple-300 font-medium mt-1">
+            <p className="text-xs font-medium mt-1" style={{ color: '#F2CAE2' }}>
               Every consecutive subscription earns stars. Complete 3 consecutive months to unlock the 4th month free!
             </p>
           </div>
 
           <div 
-            className="flex items-center gap-2 px-4 py-2 rounded-full self-start sm:self-center border"
+            className="flex items-center gap-2 px-4 py-2 rounded-full self-start sm:self-center border shadow-sm"
             style={{
-              background: 'rgba(46, 16, 101, 0.7)',
-              borderColor: 'rgba(244, 114, 182, 0.4)'
+              background: 'rgba(36, 4, 74, 0.65)',
+              borderColor: '#F2CAE2'
             }}
           >
-            <Star className="w-4 h-4 fill-[#F472B6] text-[#F472B6]" />
-            <span className="text-xs font-black text-[#FBCFE8]">
+            <Star className="w-4 h-4 fill-[#F2CAE2] text-[#F2CAE2]" />
+            <span className="text-xs font-black" style={{ color: '#F2CAE2' }}>
               {starsEarned} of 12 Stars Collected
             </span>
           </div>
@@ -277,13 +356,13 @@ export const StuvvyStarRewards: React.FC<StuvvyStarRewardsProps> = ({
                 style={
                   isFilled
                     ? {
-                        background: 'linear-gradient(135deg, #9333EA 0%, #C084FC 50%, #F472B6 100%)',
-                        borderColor: '#FBCFE8',
-                        boxShadow: '0 8px 20px -4px rgba(168, 85, 247, 0.5)'
+                        background: '#F2CAE2',
+                        borderColor: '#ffffff',
+                        boxShadow: '0 8px 20px -4px rgba(242, 202, 226, 0.6)'
                       }
                     : {
-                        background: 'rgba(24, 4, 44, 0.5)',
-                        borderColor: isFreeFoodMilestone ? 'rgba(244, 114, 182, 0.4)' : 'rgba(168, 85, 247, 0.2)'
+                        background: 'rgba(36, 4, 74, 0.45)',
+                        borderColor: isFreeFoodMilestone ? '#F2CAE2' : 'rgba(242, 202, 226, 0.3)'
                       }
                 }
                 title={
@@ -295,10 +374,10 @@ export const StuvvyStarRewards: React.FC<StuvvyStarRewardsProps> = ({
                 {/* Milestone Crown / Gift Pill */}
                 {isFreeFoodMilestone && (
                   <span 
-                    className="absolute -top-2.5 px-1.5 py-0.5 rounded-full text-[7.5px] font-black uppercase tracking-wider shadow-sm"
+                    className="absolute -top-2.5 px-2 py-0.5 rounded-full text-[7.5px] font-black uppercase tracking-wider shadow-sm"
                     style={{
-                      background: isFilled ? '#ffffff' : 'linear-gradient(90deg, #9333EA, #F472B6)',
-                      color: isFilled ? '#2E1065' : '#ffffff'
+                      background: isFilled ? '#24044A' : '#F2CAE2',
+                      color: isFilled ? '#F2CAE2' : '#24044A'
                     }}
                   >
                     {starIndex === 4 ? '4th FREE' : starIndex === 8 ? '8th FREE' : '12th FREE'}
@@ -307,13 +386,13 @@ export const StuvvyStarRewards: React.FC<StuvvyStarRewardsProps> = ({
 
                 <Star
                   className={`w-6 h-6 sm:w-7 sm:h-7 transition-all ${
-                    isFilled ? 'fill-white text-white drop-shadow-md' : 'text-purple-800/80 fill-purple-950/40'
+                    isFilled ? 'fill-[#24044A] text-[#24044A]' : 'text-white/30 fill-transparent'
                   }`}
                 />
 
                 <span 
                   className={`text-[10px] font-black mt-1 ${
-                    isFilled ? 'text-white' : isFreeFoodMilestone ? 'text-[#F472B6]' : 'text-purple-400/60'
+                    isFilled ? 'text-[#24044A]' : isFreeFoodMilestone ? 'text-[#F2CAE2]' : 'text-white/60'
                   }`}
                 >
                   #{starIndex}
@@ -330,24 +409,28 @@ export const StuvvyStarRewards: React.FC<StuvvyStarRewardsProps> = ({
               key={m.starNum}
               className={`p-4 rounded-2xl border transition-all ${
                 m.unlocked
-                  ? 'bg-gradient-to-br from-[#2E1065] to-[#3B0764] border-[#F472B6] shadow-md'
-                  : 'bg-[#18042C]/70 border-purple-900/40 opacity-80'
+                  ? 'shadow-md scale-[1.01]'
+                  : 'opacity-80'
               }`}
+              style={{
+                background: 'rgba(36, 4, 74, 0.6)',
+                borderColor: m.unlocked ? '#F2CAE2' : 'rgba(242, 202, 226, 0.25)'
+              }}
             >
               <div className="flex items-center justify-between mb-1.5">
                 <span 
                   className="text-[9.5px] font-black uppercase tracking-wider px-2.5 py-1 rounded-md"
                   style={{
-                    background: m.unlocked ? 'linear-gradient(90deg, #9333EA, #F472B6)' : 'rgba(46, 16, 101, 0.8)',
-                    color: '#ffffff'
+                    background: m.unlocked ? '#F2CAE2' : 'rgba(36, 4, 74, 0.8)',
+                    color: m.unlocked ? '#24044A' : '#F2CAE2'
                   }}
                 >
                   {m.badge}
                 </span>
-                {m.unlocked && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+                {m.unlocked && <CheckCircle2 className="w-4 h-4 text-emerald-300" />}
               </div>
               <div className="text-xs font-black text-white leading-snug">{m.reward}</div>
-              <div className="text-[10px] text-purple-300 font-medium mt-1">{m.condition}</div>
+              <div className="text-[10px] font-medium mt-1" style={{ color: '#F2CAE2' }}>{m.condition}</div>
             </div>
           ))}
         </div>
@@ -356,24 +439,24 @@ export const StuvvyStarRewards: React.FC<StuvvyStarRewardsProps> = ({
         <div 
           className="rounded-2xl p-4 sm:p-5 text-xs space-y-2 border"
           style={{
-            background: 'rgba(24, 4, 44, 0.75)',
-            borderColor: 'rgba(168, 85, 247, 0.25)'
+            background: 'rgba(36, 4, 74, 0.65)',
+            borderColor: 'rgba(242, 202, 226, 0.3)'
           }}
         >
-          <div className="font-black text-[#FBCFE8] flex items-center gap-2 uppercase tracking-wider text-[11px]">
-            <Sparkles className="w-3.5 h-3.5 text-[#F472B6]" />
+          <div className="font-black flex items-center gap-2 uppercase tracking-wider text-[11px]" style={{ color: '#F2CAE2' }}>
+            <Sparkles className="w-3.5 h-3.5" style={{ color: '#F2CAE2' }} />
             <span>Stuvvy Star Rewards Information & Rules</span>
           </div>
 
-          <ul className="space-y-1.5 text-[11px] leading-relaxed list-disc list-inside text-purple-200/90 font-medium">
+          <ul className="space-y-1.5 text-[11px] leading-relaxed list-disc list-inside text-white/90 font-medium">
             <li>
               <strong className="text-white">Star 1 to 12 Allocation:</strong> Stars remain unfilled initially. When you maintain your active subscription, each month completed fills one star on your customer profile.
             </li>
             <li>
-              <strong className="text-[#FBCFE8]">The 4th Month Free Rule:</strong> When you subscribe to the Monthly Plan for <strong>3 consecutive months</strong> without gap, the <strong>4th month food is 100% FREE</strong> (30 days of daily wholesome meals delivered at ₹0).
+              <strong style={{ color: '#F2CAE2' }}>The 4th Month Free Rule:</strong> When you subscribe to the Monthly Plan for <strong>3 consecutive months</strong> without gap, the <strong>4th month food is 100% FREE</strong> (30 days of daily wholesome meals delivered at ₹0).
             </li>
             <li>
-              <strong className="text-[#FBCFE8]">Ongoing Reward Milestones:</strong> Reaching Star 8 unlocks an additional 8th Month Free, and reaching Star 12 unlocks a 12th Month Free plus Stuvvy VIP Beneficiary perks.
+              <strong style={{ color: '#F2CAE2' }}>Ongoing Reward Milestones:</strong> Reaching Star 8 unlocks an additional 8th Month Free, and reaching Star 12 unlocks a 12th Month Free plus Stuvvy VIP Beneficiary perks.
             </li>
             <li>
               <strong className="text-white">Consecutive Requirement:</strong> To qualify for the free month reward, subscriptions must be consecutive. Pauses approved by the Kitchen Admin will freeze your streak without forfeiting your earned stars.
