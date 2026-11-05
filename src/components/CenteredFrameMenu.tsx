@@ -2,15 +2,15 @@
 
 import React, { useState, useMemo } from 'react';
 import { 
-  ChevronRight, Plus, Minus, Star, Sparkles, UtensilsCrossed, Lock, Phone, UserCheck, ArrowRight, ShoppingBag, Calendar, CheckCircle2, Clock
+  ChevronRight, Plus, Minus, Star, Sparkles, UtensilsCrossed, Lock, Phone, UserCheck, ArrowRight, ShoppingBag, Calendar, CheckCircle2, Clock, CalendarDays
 } from 'lucide-react';
 import { MenuItem, DayOfWeek, MealTime, UserProfile, CartItem } from '../types';
 import { calculateSubscriptionSchedule, isDateWithinSubscription, formatDisplayDate } from '../utils/subscriptionUtils';
 
 interface CenteredFrameMenuProps {
   items: MenuItem[];
-  user: UserProfile;
   cart: CartItem[];
+  user: UserProfile;
   onAddToCart: (item: MenuItem, day: DayOfWeek) => void;
   onRemoveFromCart: (itemId: string, day: DayOfWeek) => void;
   onSelectItemDetails: (item: MenuItem) => void;
@@ -21,34 +21,35 @@ interface CenteredFrameMenuProps {
   onOpenSubscriptions?: () => void;
   showWeekBar?: boolean;
   isGuestUser?: boolean;
-  onOpenLoginModal?: () => void;
   onOpenAdminContact?: () => void;
   onOpenCart?: () => void;
   onProceedToCheckout?: () => void;
+  onOpenLoginModal?: () => void;
 }
 
 const DAY_OF_WEEK_NAMES: DayOfWeek[] = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export interface RollingDayInfo {
+interface RollingDayInfo {
   date: Date;
-  dateStr: string;        // e.g. "Nov 5"
-  dayOfWeek: DayOfWeek;   // 'Thu'
-  fullDayName: string;    // 'Thursday'
-  dayNumber: number;      // 5
-  monthName: string;      // 'Nov'
-  offsetDays: number;     // 0 = Today, 1 = Tomorrow, 2, 3, 4, 5, 6
+  dateStr: string;
+  dayOfWeek: DayOfWeek;
+  fullDayName: string;
+  dayNumber: number;
+  monthName: string;
+  offsetDays: number;
+  weekNumber: number; // 1 to 4
   isToday: boolean;
-  isWithinRollingWindow: boolean; // offsetDays <= 3
-  isWithinSubscription: boolean;  // within subscriber active window
+  isWithinRollingWindow: boolean;
+  isWithinSubscription: boolean;
   isLocked: boolean;
-  lockType?: 'guest_limit' | 'freshness_window' | 'outside_sub_start' | 'outside_sub_end';
+  lockType?: 'guest_limit' | 'outside_sub_start' | 'outside_sub_end' | 'freshness_window';
   unlockDateStr?: string;
 }
 
 export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
   items,
-  user,
   cart,
+  user,
   onAddToCart,
   onRemoveFromCart,
   onSelectItemDetails,
@@ -57,57 +58,75 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
   onOpenSubscriptions,
   showWeekBar = true,
   isGuestUser = false,
-  onOpenLoginModal,
   onOpenAdminContact,
   onOpenCart,
   onProceedToCheckout,
+  onOpenLoginModal,
 }) => {
   const [selectedDayOffset, setSelectedDayOffset] = useState<number>(0); // 0 = Today
+  const [selectedWeekFilter, setSelectedWeekFilter] = useState<'all' | 1 | 2 | 3 | 4>('all');
 
   const schedule = useMemo(() => {
-    return calculateSubscriptionSchedule(user?.startDate, user?.purchaseDate, user?.plan);
-  }, [user?.startDate, user?.purchaseDate, user?.plan]);
+    return calculateSubscriptionSchedule(user.startDate, user.purchaseDate, user.plan);
+  }, [user.startDate, user.purchaseDate, user.plan]);
 
-  // Compute Rolling 7-Day Calendar Starting from Today
+  const isVerifiedSubscriber = !isGuestUser && !!user.isVerified && user.fullName !== 'Guest Explorer';
+
+  // Compute Full 4-Week Month Schedule (28 Days) Starting from Today
   const rollingDays: RollingDayInfo[] = useMemo(() => {
     const list: RollingDayInfo[] = [];
     const now = new Date();
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const fullDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-    for (let offset = 0; offset < 7; offset++) {
+    // Generate 28 days to cover full 4-week month
+    for (let offset = 0; offset < 28; offset++) {
       const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset, 0, 0, 0);
       const dowIndex = d.getDay();
       const dayOfWeek = DAY_OF_WEEK_NAMES[dowIndex];
       const isToday = offset === 0;
       const isWithinRollingWindow = offset <= 3; // Today + next 3 days are available
 
-      let isWithinSub = true;
+      // Determine week number (Week 1 = Days 0-6, Week 2 = Days 7-13, Week 3 = Days 14-20, Week 4 = Days 21-27)
+      const weekNumber = Math.min(4, Math.floor(offset / 7) + 1);
+
+      let isWithinSub = false;
       let isLocked = false;
       let lockType: RollingDayInfo['lockType'] = undefined;
 
-      if (isGuestUser) {
+      if (!isVerifiedSubscriber) {
+        // Guest user rules: Today + next 3 days unlocked preview; days beyond are locked
         if (!isWithinRollingWindow) {
           isLocked = true;
           lockType = 'guest_limit';
         }
       } else {
-        // Subscriber rules:
+        // SUBSCRIBER RULES: Unlock according to their plan and start date to end date!
         isWithinSub = isDateWithinSubscription(d, schedule.startDate, schedule.endDate);
 
-        const dMidnight = d.getTime();
-        const startMidnight = new Date(schedule.startDate.getFullYear(), schedule.startDate.getMonth(), schedule.startDate.getDate()).getTime();
-        const endMidnight = new Date(schedule.endDate.getFullYear(), schedule.endDate.getMonth(), schedule.endDate.getDate()).getTime();
+        if (isWithinSub) {
+          // ANY date inside their paid subscription plan is UNLOCKED!
+          isLocked = false;
+          lockType = undefined;
+        } else {
+          // Date is outside their subscription period:
+          const dMidnight = d.getTime();
+          const startMidnight = new Date(schedule.startDate.getFullYear(), schedule.startDate.getMonth(), schedule.startDate.getDate()).getTime();
+          const endMidnight = new Date(schedule.endDate.getFullYear(), schedule.endDate.getMonth(), schedule.endDate.getDate()).getTime();
 
-        if (dMidnight < startMidnight) {
-          isLocked = true;
-          lockType = 'outside_sub_start';
-        } else if (dMidnight > endMidnight) {
-          isLocked = true;
-          lockType = 'outside_sub_end';
-        } else if (!isWithinRollingWindow) {
-          isLocked = true;
-          lockType = 'freshness_window';
+          if (isWithinRollingWindow) {
+            // Allow rolling 4-day freshness window for current kitchen meals
+            isLocked = false;
+          } else if (dMidnight < startMidnight) {
+            isLocked = true;
+            lockType = 'outside_sub_start';
+          } else if (dMidnight > endMidnight) {
+            isLocked = true;
+            lockType = 'outside_sub_end';
+          } else {
+            isLocked = true;
+            lockType = 'freshness_window';
+          }
         }
       }
 
@@ -121,6 +140,7 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
         dayNumber: d.getDate(),
         monthName: months[d.getMonth()],
         offsetDays: offset,
+        weekNumber,
         isToday,
         isWithinRollingWindow,
         isWithinSubscription: isWithinSub,
@@ -131,10 +151,16 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
     }
 
     return list;
-  }, [isGuestUser, schedule.startDate, schedule.endDate]);
+  }, [isVerifiedSubscriber, schedule.startDate, schedule.endDate]);
+
+  // Filtered rolling days if a specific week tab is selected
+  const displayedDays = useMemo(() => {
+    if (selectedWeekFilter === 'all') return rollingDays;
+    return rollingDays.filter(d => d.weekNumber === selectedWeekFilter);
+  }, [rollingDays, selectedWeekFilter]);
 
   // Current active day info
-  const activeDayInfo = rollingDays[selectedDayOffset] || rollingDays[0];
+  const activeDayInfo = rollingDays.find(d => d.offsetDays === selectedDayOffset) || rollingDays[0];
   const activeDayOfWeek = activeDayInfo.dayOfWeek;
 
   const totalCartItems = cart.reduce((acc, c) => acc + c.quantity, 0);
@@ -143,16 +169,48 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
     0
   );
 
-  // SINGLE UNIFIED MENU: All dishes for the selected day in one single menu
+  // MATCH EXACT DISHES FOR THE SELECTED DATE ACROSS ALL 4 WEEKS OF THE MONTH
   const currentItems = useMemo(() => {
-    return items.filter(i => i.days.includes(activeDayOfWeek));
-  }, [items, activeDayOfWeek]);
+    const targetDate = activeDayInfo.date;
+    const dayNum = targetDate.getDate();
+    const dow = activeDayInfo.dayOfWeek;
+
+    // 1. Direct match by date prefix (e.g. nov9-, nov16-, nov23-, nov30-)
+    const datePrefix = `nov${dayNum}-`;
+    const exactDateItems = items.filter(i => i.id.startsWith(datePrefix));
+    if (exactDateItems.length > 0) {
+      return exactDateItems;
+    }
+
+    // 2. Fallback to day of week from Week 1 (nov9-15) for dates before Nov 9 (e.g. Nov 5-8):
+    const week1Fallback = items.filter(i => {
+      const isWeek1 = i.id.startsWith('nov9-') || i.id.startsWith('nov10-') || 
+                      i.id.startsWith('nov11-') || i.id.startsWith('nov12-') || 
+                      i.id.startsWith('nov13-') || i.id.startsWith('nov14-') || 
+                      i.id.startsWith('nov15-');
+      return isWeek1 && i.days.includes(dow);
+    });
+
+    if (week1Fallback.length > 0) {
+      return week1Fallback;
+    }
+
+    return items.filter(i => i.days.includes(dow));
+  }, [items, activeDayInfo.date, activeDayInfo.dayOfWeek]);
 
   const handleSelectOffset = (offset: number) => {
     setSelectedDayOffset(offset);
-    const dayObj = rollingDays[offset];
+    const dayObj = rollingDays.find(d => d.offsetDays === offset);
     if (dayObj) {
       onSelectDay(dayObj.dayOfWeek);
+    }
+  };
+
+  const handleJumpToWeek = (weekNum: 1 | 2 | 3 | 4) => {
+    setSelectedWeekFilter(weekNum);
+    const firstDayInWeek = rollingDays.find(d => d.weekNumber === weekNum);
+    if (firstDayInWeek) {
+      handleSelectOffset(firstDayInWeek.offsetDays);
     }
   };
 
@@ -174,14 +232,18 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
       {/* MAIN SINGLE MENU CONTAINER */}
       <div className="relative z-10 w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-32 sm:pb-36 flex-1 flex flex-col gap-6">
         
-        {/* DYNAMIC ROLLING 7-DAY CALENDAR SELECTOR BAR */}
+        {/* FULL 4-WEEK MONTH CALENDAR SELECTOR BAR */}
         {showWeekBar && (
-          <div className="space-y-2.5">
+          <div className="space-y-3">
+            {/* TOP BAR: DATE DISPLAY & SUBSCRIBER STATUS */}
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="text-[11px] font-extrabold text-zinc-700 bg-white/95 px-3.5 py-1.5 rounded-full border border-zinc-200/90 shadow-2xs flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-orange-500" />
+                <Calendar className="w-3.5 h-3.5 text-purple-600" />
                 <span>
                   Viewing: <strong className="text-zinc-950 font-black">{activeDayInfo.fullDayName}, {activeDayInfo.dateStr}</strong>
+                </span>
+                <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                  Week {activeDayInfo.weekNumber}
                 </span>
                 {activeDayInfo.isToday && (
                   <span className="bg-emerald-500 text-white text-[9px] font-black px-1.5 py-0.2 rounded-full uppercase ml-1">
@@ -190,25 +252,89 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
                 )}
               </div>
 
-              <div className="text-[10px] font-black uppercase tracking-wider text-zinc-400 bg-white/80 px-3 py-1 rounded-full border border-zinc-200">
-                {isGuestUser ? 'Guest Mode (4 Days Available)' : `${user.plan?.toUpperCase() || 'SUBSCRIBER'} MENU`}
+              <div className="text-[10px] font-black uppercase tracking-wider text-purple-700 bg-purple-50 px-3 py-1 rounded-full border border-purple-200">
+                {isVerifiedSubscriber ? `✓ ${user.plan?.toUpperCase() || 'SUBSCRIBER'} (Unlocked: ${schedule.startDateStr} – ${schedule.endDateStr})` : 'Guest Preview Mode'}
               </div>
             </div>
 
-            {/* 7-DAY ROLLING BUTTONS ROW */}
-            <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-2xl p-2 shadow-xs flex items-center justify-between gap-1.5 overflow-x-auto">
-              {rollingDays.map((dayItem) => {
+            {/* 4-WEEK TABS SELECTOR (WEEK 1, WEEK 2, WEEK 3, WEEK 4) */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+              <button
+                onClick={() => setSelectedWeekFilter('all')}
+                className={`px-3 py-1.5 rounded-xl font-black transition-all cursor-pointer whitespace-nowrap ${
+                  selectedWeekFilter === 'all'
+                    ? 'bg-zinc-950 text-white shadow-xs'
+                    : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-100'
+                }`}
+              >
+                All 4 Weeks
+              </button>
+
+              <button
+                onClick={() => handleJumpToWeek(1)}
+                className={`px-3 py-1.5 rounded-xl font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  selectedWeekFilter === 1
+                    ? 'bg-purple-900 text-white shadow-xs'
+                    : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-100'
+                }`}
+              >
+                <span>Week 1</span>
+                <span className="text-[10px] opacity-75 font-normal">(Nov 9–15)</span>
+              </button>
+
+              <button
+                onClick={() => handleJumpToWeek(2)}
+                className={`px-3 py-1.5 rounded-xl font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  selectedWeekFilter === 2
+                    ? 'bg-purple-900 text-white shadow-xs'
+                    : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-100'
+                }`}
+              >
+                <span>Week 2</span>
+                <span className="text-[10px] opacity-75 font-normal">(Nov 16–22)</span>
+              </button>
+
+              <button
+                onClick={() => handleJumpToWeek(3)}
+                className={`px-3 py-1.5 rounded-xl font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  selectedWeekFilter === 3
+                    ? 'bg-purple-900 text-white shadow-xs'
+                    : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-100'
+                }`}
+              >
+                <span>Week 3</span>
+                <span className="text-[10px] opacity-75 font-normal">(Nov 23–29)</span>
+              </button>
+
+              <button
+                onClick={() => handleJumpToWeek(4)}
+                className={`px-3 py-1.5 rounded-xl font-black transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  selectedWeekFilter === 4
+                    ? 'bg-purple-900 text-white shadow-xs'
+                    : 'bg-white text-zinc-600 border border-zinc-200 hover:bg-zinc-100'
+                }`}
+              >
+                <span>Week 4</span>
+                <span className="text-[10px] opacity-75 font-normal">(Nov 30)</span>
+              </button>
+            </div>
+
+            {/* HORIZONTAL DATE PILLS BAR FOR THE MONTH */}
+            <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-2xl p-2 shadow-xs flex items-center gap-2 overflow-x-auto scrollbar-thin">
+              {displayedDays.map((dayItem) => {
                 const isSelected = selectedDayOffset === dayItem.offsetDays;
 
                 return (
                   <button
                     key={dayItem.offsetDays}
                     onClick={() => handleSelectOffset(dayItem.offsetDays)}
-                    className={`flex-1 min-w-[105px] py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all flex flex-col items-center gap-1 cursor-pointer whitespace-nowrap relative ${
+                    className={`min-w-[110px] py-2.5 px-3 rounded-xl text-xs font-extrabold transition-all flex flex-col items-center gap-1 cursor-pointer whitespace-nowrap relative shrink-0 ${
                       isSelected
                         ? 'bg-zinc-950 text-white shadow-md scale-[1.02]'
                         : dayItem.isLocked
                         ? 'text-zinc-400 hover:text-zinc-700 bg-zinc-50 border border-zinc-200/60'
+                        : dayItem.isWithinSubscription
+                        ? 'text-purple-950 bg-purple-50/70 border border-purple-200 hover:bg-purple-100'
                         : 'text-zinc-700 hover:bg-zinc-100 hover:text-zinc-950 bg-white border border-zinc-200/80'
                     }`}
                   >
@@ -218,6 +344,8 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
                       </span>
                       {dayItem.isLocked ? (
                         <Lock className="w-3 h-3 text-amber-500" />
+                      ) : dayItem.isWithinSubscription ? (
+                        <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse" />
                       ) : (
                         <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-orange-500' : 'bg-emerald-500'}`} />
                       )}
@@ -230,9 +358,11 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
                         ? 'bg-white/20 text-white'
                         : dayItem.isLocked
                         ? 'bg-zinc-200/70 text-zinc-500'
+                        : dayItem.isWithinSubscription
+                        ? 'bg-purple-600 text-white'
                         : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                     }`}>
-                      {dayItem.isLocked ? 'Locked' : 'Available'}
+                      {dayItem.isLocked ? 'Locked' : dayItem.isWithinSubscription ? 'Subscribed' : 'Available'}
                     </span>
                   </button>
                 );
@@ -246,97 +376,82 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-3xl sm:text-4xl font-black text-zinc-950 font-heading tracking-tight">
-                {activeDayOfWeek === 'Sun' ? 'Sunday Royal Non-Veg Feast' : "Today's Wholesome Meal Menu"}
+                {activeDayOfWeek === 'Sun' ? 'Sunday Royal Non-Veg Feast' : `${activeDayInfo.fullDayName} Home Meal Menu`}
               </h1>
-              <span className="text-zinc-400 font-serif italic text-lg sm:text-xl font-bold">
-                \ | /
-              </span>
             </div>
-            <p className="text-xs sm:text-sm text-zinc-500 font-medium mt-1">
-              Stone-Ground · Freshly Prepared · Daily Schedule for <strong className="text-zinc-900 font-black">{
-                activeDayInfo.fullDayName
-              }, {activeDayInfo.dateStr}</strong>
+            <p className="text-xs text-zinc-500 font-medium mt-1">
+              {activeDayInfo.dateStr} • Week {activeDayInfo.weekNumber} Schedule • Prepared fresh daily in our certified kitchen.
             </p>
           </div>
 
-          <div className="hidden sm:flex shrink-0 w-24 h-24 rounded-full border-2 border-zinc-800/80 items-center justify-center p-2 text-center rotate-6 hover:rotate-0 transition-transform">
-            <span className="text-[10px] font-serif italic font-bold text-zinc-800 leading-tight">
-              Fresh Meals<br />Rotating Daily<br />Zero Preservatives ♡
-            </span>
+          <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-2xl p-3 shadow-xs shrink-0 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-500 text-white flex items-center justify-center font-black">
+              🍲
+            </div>
+            <div className="text-right">
+              <div className="text-[10px] font-extrabold uppercase text-zinc-400">Meals Today</div>
+              <div className="text-sm font-black text-zinc-950">
+                {activeDayInfo.isLocked ? 'Locked' : `${currentItems.length} Dishes`}
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* LOCKED DAY VIEW */}
+        {/* ========================================================================= */}
+        {/* CONDITIONAL DISPLAY: LOCKED VIEW VS ACTIVE MENU ITEMS GRID                */}
+        {/* ========================================================================= */}
         {activeDayInfo.isLocked ? (
-          <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[32px] p-8 sm:p-12 text-center space-y-6 shadow-xl relative overflow-hidden">
-            <div className="w-16 h-16 rounded-3xl bg-zinc-950 text-white mx-auto flex items-center justify-center text-2xl font-black shadow-md">
-              <Lock className="w-8 h-8 text-amber-400" />
+          /* LOCKED STATE CARD: WHEN DATE IS BEYOND ACCESSIBLE WINDOW */
+          <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[32px] p-8 sm:p-12 text-center space-y-6 shadow-sm max-w-xl mx-auto w-full my-4">
+            <div className="w-16 h-16 rounded-3xl bg-amber-50 border-2 border-amber-200 text-amber-600 mx-auto flex items-center justify-center shadow-inner">
+              <Lock className="w-8 h-8" />
             </div>
-            
-            <div className="space-y-2 max-w-lg mx-auto">
-              <span className="text-[10px] font-black uppercase tracking-widest text-amber-800 bg-amber-50 px-3.5 py-1 rounded-full border border-amber-200">
-                {activeDayInfo.lockType === 'guest_limit'
-                  ? 'Guest Preview Window • Days 5+ Locked'
-                  : activeDayInfo.lockType === 'outside_sub_start'
-                  ? 'Subscription Not Yet Started'
-                  : activeDayInfo.lockType === 'outside_sub_end'
-                  ? 'Subscription Cycle Ended'
-                  : 'Rolling 4-Day Freshness Window'}
+
+            <div className="space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-800 px-3 py-1 rounded-full border border-amber-200">
+                Menu Locked
               </span>
-
-              <h2 className="text-2xl sm:text-3xl font-black font-heading text-zinc-950">
-                {activeDayInfo.fullDayName}, {activeDayInfo.dateStr} Menu is Locked
-              </h2>
-
-              <p className="text-xs sm:text-sm text-zinc-600 font-medium leading-relaxed">
+              <h3 className="text-2xl font-black font-heading text-zinc-950">
+                {activeDayInfo.fullDayName}, {activeDayInfo.dateStr}
+              </h3>
+              <p className="text-xs text-zinc-600 max-w-md mx-auto leading-relaxed">
                 {activeDayInfo.lockType === 'guest_limit' ? (
                   <>
-                    As a Guest Explorer, you have preview access to Today and the next 3 days. To unlock the full ongoing daily menu schedule, subscribe to a Stuvvy meal plan!
+                    As a guest explorer, preview access is available for Today and the next 3 days. To unlock the full 4-week daily menu schedule, subscribe to a Stuvvy meal plan!
                   </>
                 ) : activeDayInfo.lockType === 'outside_sub_start' ? (
                   <>
-                    Your meal subscription is scheduled to start on <strong className="text-zinc-950 font-bold">{schedule.startDateStr}</strong>. Deliveries and meal customization will activate automatically on your start date.
+                    Your active subscription starts on <strong>{schedule.startDateStr}</strong>. This date falls before your selected delivery schedule.
                   </>
                 ) : activeDayInfo.lockType === 'outside_sub_end' ? (
                   <>
-                    Your current subscription ended on <strong className="text-zinc-950 font-bold">{schedule.endDateStr}</strong>. Please renew your plan to continue receiving home deliveries for this date.
+                    Your {user.plan || 'current'} subscription validity is active from <strong>{schedule.startDateStr}</strong> to <strong>{schedule.endDateStr}</strong>. Renew or extend your plan to view this future date.
                   </>
                 ) : (
                   <>
-                    To ensure meal ingredients are sourced 100% farm-fresh and seasonal, menus open on a rolling 4-day window. This menu will unlock on <strong className="text-zinc-950 font-black">{activeDayInfo.unlockDateStr}</strong>!
+                    This future date will automatically unlock 3 days prior on{' '}
+                    <strong>{activeDayInfo.unlockDateStr}</strong> as our kitchen team finalizes daily seasonal produce.
                   </>
                 )}
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-              {isGuestUser ? (
-                <>
-                  {onOpenSubscriptions && (
-                    <button
-                      onClick={onOpenSubscriptions}
-                      className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      <span>Subscribe to Unlock All Menus</span>
-                    </button>
-                  )}
-
-                  {onOpenLoginModal && (
-                    <button
-                      onClick={onOpenLoginModal}
-                      className="w-full sm:w-auto bg-zinc-950 hover:bg-zinc-800 text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <UserCheck className="w-4 h-4" />
-                      <span>Subscriber Log In</span>
-                    </button>
-                  )}
-                </>
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              {activeDayInfo.lockType === 'guest_limit' || activeDayInfo.lockType === 'outside_sub_end' ? (
+                onOpenSubscriptions && (
+                  <button
+                    onClick={onOpenSubscriptions}
+                    className="w-full sm:w-auto bg-zinc-950 hover:bg-zinc-800 text-white font-black text-xs py-3.5 px-6 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105"
+                  >
+                    <Sparkles className="w-4 h-4 text-orange-400" />
+                    <span>Explore Subscription Plans</span>
+                  </button>
+                )
               ) : (
                 <>
                   <button
                     onClick={() => handleSelectOffset(0)}
-                    className="w-full sm:w-auto bg-zinc-950 hover:bg-zinc-800 text-white font-extrabold text-xs py-3.5 px-6 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full sm:w-auto bg-zinc-950 hover:bg-zinc-800 text-white font-black text-xs py-3.5 px-6 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <ArrowRight className="w-4 h-4 rotate-180" />
                     <span>Back to Today&apos;s Menu</span>
@@ -385,6 +500,11 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
               const inCart = cart.find(c => c.item.id === item.id && c.selectedDays.includes(activeDayOfWeek));
               const quantity = inCart ? inCart.quantity : 0;
 
+              // Meal time badge
+              const isBf = item.mealTimes.includes('breakfast');
+              const isLn = item.mealTimes.includes('lunch');
+              const isDn = item.mealTimes.includes('dinner');
+
               return (
                 <div
                   key={item.id}
@@ -407,10 +527,17 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
                   </div>
 
                   <div className="flex-1 min-w-0 space-y-1.5">
+                    {/* Meal Time Tag */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-black uppercase tracking-wider bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded-md border border-zinc-200">
+                        {isBf ? '🌅 Breakfast' : isLn ? '🍛 Lunch' : isDn ? '🌙 Dinner' : 'Daily Meal'}
+                      </span>
+                    </div>
+
                     <div className="flex items-start justify-between gap-2">
                       <h4 
                         onClick={() => onSelectItemDetails(item)}
-                        className="font-black text-sm sm:text-base text-zinc-950 hover:text-orange-600 transition-colors cursor-pointer truncate"
+                        className="font-black text-sm sm:text-base text-zinc-950 hover:text-orange-600 transition-colors cursor-pointer line-clamp-2 leading-snug"
                       >
                         {item.name}
                       </h4>
@@ -469,31 +596,45 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
       </div>
 
       {/* FLOATING CART BAR ON BOTTOM IF CART HAS ITEMS */}
-      {totalCartItems > 0 && onOpenCart && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 w-full max-w-md px-4">
-          <div className="bg-zinc-950 text-white p-4 rounded-3xl shadow-2xl border border-zinc-800 flex items-center justify-between gap-4 animate-bounce">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-orange-500 flex items-center justify-center text-white font-black shadow-md">
-                <ShoppingBag className="w-5 h-5" />
+      {totalCartItems > 0 && (
+        <div className="fixed bottom-6 inset-x-4 max-w-xl mx-auto z-40 bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 text-white p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl shadow-2xl flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center text-white font-black">
+              <ShoppingBag className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs text-zinc-400 font-bold">
+                {totalCartItems} {totalCartItems === 1 ? 'item' : 'items'} in Tray
               </div>
-              <div>
-                <div className="text-xs font-black uppercase tracking-wider text-orange-400">
-                  {totalCartItems} Item{totalCartItems > 1 ? 's' : ''} Selected
-                </div>
-                <div className="text-sm font-black text-white">₹{totalCartPrice.toLocaleString('en-IN')}</div>
+              <div className="text-sm sm:text-base font-black text-white">
+                ₹{totalCartPrice}
               </div>
             </div>
+          </div>
 
-            <button
-              onClick={onOpenCart}
-              className="bg-white hover:bg-zinc-100 text-zinc-950 font-black text-xs px-5 py-2.5 rounded-2xl shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
-            >
-              <span>View Order</span>
-              <ChevronRight className="w-4 h-4 stroke-[3]" />
-            </button>
+          <div className="flex items-center gap-2">
+            {onOpenCart && (
+              <button
+                onClick={onOpenCart}
+                className="bg-zinc-800 hover:bg-zinc-700 text-white font-black text-xs py-2.5 px-4 rounded-xl transition-all cursor-pointer"
+              >
+                View Tray
+              </button>
+            )}
+
+            {onProceedToCheckout && (
+              <button
+                onClick={onProceedToCheckout}
+                className="bg-orange-500 hover:bg-orange-600 text-white font-black text-xs py-2.5 px-4 sm:px-5 rounded-xl transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
+              >
+                <span>Checkout</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       )}
+
     </div>
   );
 };

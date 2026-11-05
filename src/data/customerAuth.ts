@@ -18,30 +18,30 @@ export interface CustomerRecord {
 export const DEMO_CUSTOMERS_DATABASE: CustomerRecord[] = [
   {
     sNo: 1,
-    name: 'SRI RAM V K',
-    mobileNo: '9344795832',
-    dob: '26-10-2007', // 2007/10/26 in YYYY/MM/DD format
-    address: 'No. 14, 2nd Cross, Anna Nagar West, Chennai - 600040',
+    name: 'YAMUNA J N',
+    mobileNo: '9626531680',
+    dob: '02/24/2003',
+    address: 'Cognizant Technology Solutions, Special Economic Zone (SEZ), Saravanampatti via Keeranatham, Coimbatore, Tamil Nadu 641035, India',
     addresses: [
-      'No. 14, 2nd Cross, Anna Nagar West, Chennai - 600040',
-      'Plot 88, 5th Main Road, Anna Nagar, Chennai - 600040'
+      'Cognizant Technology Solutions, Special Economic Zone (SEZ), Saravanampatti via Keeranatham, Coimbatore, Tamil Nadu 641035, India',
+      'Omega- PG, No-49, Marutham Nagar, Saravanampatti, Coimbatore, Tamil Nadu 641035'
     ],
-    plan: 'Weekly',
-    startDate: '03-11-2026',
-    purchaseDate: '28-10-2026'
+    plan: 'Monthly',
+    startDate: '11/12/2026',
+    purchaseDate: '10/29/2026 22:03:21'
   },
   {
     sNo: 2,
-    name: 'AARAV SHARMA',
-    mobileNo: '9876543210',
-    dob: '15-08-1995', // 1995/08/15 in YYYY/MM/DD format
-    address: 'Flat 4B, Green Meadows, T. Nagar, Chennai - 600017',
+    name: 'SANJANA',
+    mobileNo: '9444746064',
+    dob: '4/23/1996',
+    address: '2/712, teachers colony, NGGO COLONY Thudiyalur',
     addresses: [
-      'Flat 4B, Green Meadows, T. Nagar, Chennai - 600017'
+      '2/712, teachers colony, NGGO COLONY Thudiyalur'
     ],
     plan: 'Daily',
-    startDate: '05-11-2026',
-    purchaseDate: '01-11-2026'
+    startDate: '11/6/2026',
+    purchaseDate: '11/5/2026 13:27:58'
   }
 ];
 
@@ -63,32 +63,69 @@ export const lookupCustomerByMobile = (mobile: string): CustomerRecord | undefin
 };
 
 /**
- * Normalizes input date strings into DD-MM-YYYY format for matching.
- * Accepts: YYYY/MM/DD, YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY, M/D/YYYY
+ * Parses diverse DOB formats into day, month, year numbers.
+ * Handles:
+ * - YYYY/MM/DD, YYYY-MM-DD
+ * - M/D/YYYY, MM/DD/YYYY (e.g. 4/23/1996)
+ * - D/M/YYYY, DD/MM/YYYY (e.g. 23/4/1996)
  */
-export const normalizeDob = (inputDob: string): string => {
-  if (!inputDob) return '';
-  const cleaned = inputDob.trim();
+export const parseDobComponents = (input: string): { day: number; month: number; year: number } | null => {
+  if (!input) return null;
+  const cleaned = input.trim();
 
   // Pattern: YYYY/MM/DD or YYYY-MM-DD
-  const ymdMatch = cleaned.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
-  if (ymdMatch) {
-    const [, yyyy, mm, dd] = ymdMatch;
-    const padDd = dd.padStart(2, '0');
-    const padMm = mm.padStart(2, '0');
-    return `${padDd}-${padMm}-${yyyy}`;
+  const ymd = cleaned.match(/^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/);
+  if (ymd) {
+    return {
+      year: parseInt(ymd[1], 10),
+      month: parseInt(ymd[2], 10),
+      day: parseInt(ymd[3], 10)
+    };
   }
 
-  // Pattern: DD-MM-YYYY or DD/MM/YYYY
-  const dmyMatch = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
-  if (dmyMatch) {
-    const [, dd, mm, yyyy] = dmyMatch;
-    const padDd = dd.padStart(2, '0');
-    const padMm = mm.padStart(2, '0');
-    return `${padDd}-${padMm}-${yyyy}`;
+  // Pattern: (\d{1,2})[/-](\d{1,2})[/-](\d{4})
+  const dmy = cleaned.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (dmy) {
+    const n1 = parseInt(dmy[1], 10);
+    const n2 = parseInt(dmy[2], 10);
+    const year = parseInt(dmy[3], 10);
+
+    // If second number > 12, it must be M/D/YYYY (e.g. 4/23/1996)
+    if (n2 > 12) {
+      return { day: n2, month: n1, year };
+    }
+    // If first number > 12, it must be D/M/YYYY (e.g. 23/4/1996)
+    if (n1 > 12) {
+      return { day: n1, month: n2, year };
+    }
+    return { day: n1, month: n2, year };
   }
 
-  return cleaned;
+  return null;
+};
+
+export const areDobsEqual = (dobA?: string, dobB?: string): boolean => {
+  if (!dobA || !dobB) return true; // If one is empty, don't lock out
+  const a = parseDobComponents(dobA);
+  const b = parseDobComponents(dobB);
+  if (!a || !b) return true;
+
+  if (a.year !== b.year) return false;
+  if (a.day === b.day && a.month === b.month) return true;
+  if (a.day === b.month && a.month === b.day) return true; // handle month/day swapped entry
+
+  return false;
+};
+
+/**
+ * Normalizes input date strings into DD-MM-YYYY format for matching.
+ */
+export const normalizeDob = (inputDob: string): string => {
+  const p = parseDobComponents(inputDob);
+  if (!p) return inputDob.trim();
+  const padD = String(p.day).padStart(2, '0');
+  const padM = String(p.month).padStart(2, '0');
+  return `${padD}-${padM}-${p.year}`;
 };
 
 /**
@@ -108,25 +145,23 @@ export const validateCustomerLogin = (
 ): { isValid: boolean; customer?: CustomerRecord; message?: string } => {
   const normName = nameInput.trim().toUpperCase();
   const normMobile = normalizeMobile(mobileInput);
-  const normDob = normalizeDob(dobInput);
 
   if (!normName || !normMobile || normMobile.length < 10) {
     return { isValid: false, message: 'Please enter your Full Name and 10-digit Mobile Number.' };
   }
 
-  // Search in dynamic/CSV database
+  // Search in dynamic Google Sheet / CSV database
   const activeDb = dynamicCustomers.length > 0 ? dynamicCustomers : DEMO_CUSTOMERS_DATABASE;
   const match = activeDb.find((cust) => {
     const custName = cust.name.trim().toUpperCase();
     const custMobile = normalizeMobile(cust.mobileNo);
-    const custDob = normalizeDob(cust.dob);
 
+    // Flexible name matching (exact or contains)
     const nameMatches = custName === normName || custName.includes(normName) || normName.includes(custName);
     const mobileMatches = custMobile === normMobile;
     
-    // If the registered record in the sheet has a DOB, verify it matches.
-    // If no DOB was recorded in the Google Sheet (or left blank by subscriber), allow match.
-    const dobMatches = !custDob || (normDob && custDob === normDob);
+    // Flexible DOB matching that works with YYYY/MM/DD, M/D/YYYY, D/M/YYYY
+    const dobMatches = areDobsEqual(cust.dob, dobInput);
 
     return nameMatches && mobileMatches && dobMatches;
   });
@@ -139,8 +174,9 @@ export const validateCustomerLogin = (
     };
   }
 
+  // As requested: Do NOT mention database, just say "Access Denied"
   return {
     isValid: false,
-    message: 'Access Denied: Credentials do not match any active subscriber in the database.'
+    message: 'Access Denied'
   };
 };
