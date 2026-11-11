@@ -406,7 +406,7 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
         <div className="flex items-start justify-between gap-4 border-b border-zinc-200/80 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl sm:text-4xl font-black text-zinc-950 font-heading tracking-tight">
+              <h1 className="font-ostrich text-4xl sm:text-5xl font-black text-zinc-950 tracking-wider">
                 {activeDayOfWeek === 'Sun' ? 'Sunday Royal Non-Veg Feast' : `${activeDayInfo.fullDayName} Home Meal Menu`}
               </h1>
             </div>

@@ -442,7 +442,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-base font-black font-heading text-zinc-950 group-hover:text-purple-950">
+                    <span className="font-ostrich text-2xl font-black text-purple-950 tracking-wider">
                       Stuvvy Cards
                     </span>
                     <span className="text-[9.5px] font-black uppercase bg-purple-100 text-purple-900 px-2.5 py-0.5 rounded-full border border-purple-200">
@@ -477,7 +477,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-base font-black font-heading text-zinc-950 group-hover:text-purple-950">
+                    <span className="font-ostrich text-2xl font-black text-purple-950 tracking-wider">
                       Monthly Delivery Calendar
                     </span>
                     <span className="text-[9.5px] font-black uppercase bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-200">
@@ -512,7 +512,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-base font-black font-heading text-zinc-950 group-hover:text-purple-950">
+                    <span className="font-ostrich text-2xl font-black text-purple-950 tracking-wider">
                       Stuvvy 12-Star Rewards
                     </span>
                     <span className="text-[9.5px] font-black uppercase bg-amber-50 text-amber-800 px-2.5 py-0.5 rounded-full border border-amber-200">
@@ -547,7 +547,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-base font-black font-heading text-zinc-950 group-hover:text-purple-950">
+                    <span className="font-ostrich text-2xl font-black text-purple-950 tracking-wider">
                       Subscription Schedule & Plan
                     </span>
                     <span className="text-[9.5px] font-black uppercase bg-zinc-100 text-zinc-700 px-2.5 py-0.5 rounded-full border border-zinc-200">
@@ -582,7 +582,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-base font-black font-heading text-zinc-950 group-hover:text-purple-950">
+                    <span className="font-ostrich text-2xl font-black text-purple-950 tracking-wider">
                       Dietary Preferences & Health
                     </span>
                     <span className="text-[9.5px] font-black uppercase bg-emerald-50 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200">
@@ -617,7 +617,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-base font-black font-heading text-zinc-950 group-hover:text-purple-950">
+                    <span className="font-ostrich text-2xl font-black text-purple-950 tracking-wider">
                       Kitchen Admin & Hotline Help
                     </span>
                     <span className="text-[9.5px] font-black uppercase bg-blue-50 text-blue-800 px-2.5 py-0.5 rounded-full border border-blue-200">

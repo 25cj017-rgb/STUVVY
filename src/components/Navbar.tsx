@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowRight, Sparkles, User, ShoppingBag, Utensils, LogOut, ChevronDown, CreditCard } from 'lucide-react';
+import { ArrowRight, Sparkles, User, ShoppingBag, Utensils, LogOut, ChevronDown, CreditCard, ShieldCheck } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface NavbarProps {
-  activeTab: 'landing' | 'discover' | 'plans' | 'checkout' | 'dashboard';
-  setActiveTab: (tab: 'landing' | 'discover' | 'plans' | 'checkout' | 'dashboard') => void;
+  activeTab: 'landing' | 'discover' | 'plans' | 'checkout' | 'dashboard' | 'admin';
+  setActiveTab: (tab: 'landing' | 'discover' | 'plans' | 'checkout' | 'dashboard' | 'admin') => void;
   selectedPlan: { name: string; price: number; period: string } | null;
   cartCount?: number;
   user?: UserProfile;
@@ -158,7 +158,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span>Stuvvy Card</span>
                   </button>
 
-                  {/* Option 3: Logout */}
+                  {/* Option 3: Kitchen Admin Logs */}
+                  <button
+                    onClick={() => {
+                      setIsDropdownOpen(false);
+                      setActiveTab('admin');
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs font-bold text-zinc-800 hover:bg-zinc-100 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-orange-500" />
+                    <span>Kitchen Admin Logs</span>
+                  </button>
+
+                  {/* Option 4: Logout */}
                   {onLogout && (
                     <button
                       onClick={() => {

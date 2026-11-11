@@ -70,10 +70,10 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-xl font-black font-heading tracking-tight text-purple-950">
+                <span className="font-ostrich text-2xl font-black tracking-widest text-purple-950">
                   STUVVY
                 </span>
-                <span className="text-[9px] font-black uppercase tracking-wider bg-purple-100 text-purple-800 px-2 py-0.5 rounded-md border border-purple-200">
+                <span className="font-ostrich text-[11px] font-black tracking-wider bg-purple-100 text-purple-900 px-2 py-0.5 rounded-md border border-purple-200">
                   PASS
                 </span>
               </div>
@@ -114,19 +114,19 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
         {/* ATM DATES ROW: VALID FRM & VALID THRU (MONTH AND YEAR) */}
         <div className="flex items-center justify-between border-t border-purple-100 pt-3 relative z-10 text-xs">
           <div>
-            <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">
+            <div className="font-ostrich text-[11px] font-bold tracking-widest text-zinc-400">
               VALID FRM
             </div>
-            <div className="text-xs font-black text-purple-900 mt-0.5">
+            <div className="font-ostrich text-base font-black tracking-wider text-purple-950 mt-0.5">
               {validFromMonthYear}
             </div>
           </div>
 
           <div className="text-right">
-            <div className="text-[9px] font-bold uppercase tracking-widest text-zinc-400">
+            <div className="font-ostrich text-[11px] font-bold tracking-widest text-zinc-400">
               VALID THRU
             </div>
-            <div className="text-xs font-black text-purple-900 mt-0.5">
+            <div className="font-ostrich text-base font-black tracking-wider text-purple-950 mt-0.5">
               {validThruMonthYear}
             </div>
           </div>

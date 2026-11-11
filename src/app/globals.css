@@ -1,5 +1,42 @@
 @import "tailwindcss";
 
+/* ========================================================================= */
+/* OSTRICH SANS OFFICIAL WEBFONT FAMILY                                      */
+/* ========================================================================= */
+@font-face {
+  font-family: 'Ostrich Sans';
+  src: url('/fonts/ostrich-sans-bold.woff') format('woff'),
+       url('/fonts/ostrich-sans-bold.otf') format('opentype'),
+       url('/fonts/ostrich-sans-bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Ostrich Sans';
+  src: url('/fonts/ostrich-sans-heavy.otf') format('opentype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Ostrich Sans';
+  src: url('/fonts/ostrich-sans-black.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Ostrich Sans';
+  src: url('/fonts/ostrich-sans-medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   /* Premium Stuvvy Color Palette */
   --bg-main: #0B0F17;
@@ -15,6 +52,35 @@
 
   --font-sans: var(--font-plus-jakarta), var(--font-outfit), system-ui, -apple-system, sans-serif;
   --font-heading: var(--font-outfit), var(--font-plus-jakarta), system-ui, sans-serif;
+  --font-ostrich: 'Ostrich Sans', var(--font-heading), system-ui, sans-serif;
+}
+
+/* Ostrich Sans Display Hierarchy Classes */
+.font-ostrich {
+  font-family: 'Ostrich Sans', var(--font-heading), sans-serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.font-ostrich-black {
+  font-family: 'Ostrich Sans', var(--font-heading), sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.font-ostrich-heavy {
+  font-family: 'Ostrich Sans', var(--font-heading), sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.font-ostrich-bold {
+  font-family: 'Ostrich Sans', var(--font-heading), sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 html, body {

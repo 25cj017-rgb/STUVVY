@@ -9,18 +9,20 @@ import { CenteredFrameMenu } from '../components/CenteredFrameMenu';
 import { PlanMenuModal } from '../components/PlanMenuModal';
 import { AdminContactModal } from '../components/AdminContactModal';
 import { CartDrawer } from '../components/CartDrawer';
+import { AdminDeliveryPortal } from '../components/AdminDeliveryPortal';
+import { MobileBottomNav } from '../components/MobileBottomNav';
 import { MOCK_MENU_ITEMS, INITIAL_USER } from '../data/mockData';
 import { MenuItem, DayOfWeek, MealTime, UserProfile, CartItem } from '../types';
-import { CheckCircle2, X, Eye, Phone, Lock, Sparkles, Utensils, LogIn, ChevronRight } from 'lucide-react';
+import { CheckCircle2, X, Eye, Phone, Lock, Sparkles, Utensils, LogIn, ChevronRight, ShieldCheck } from 'lucide-react';
 
 import { validateCustomerLogin, setDynamicCustomers } from '../data/customerAuth';
 import { CalendarDay } from '../components/SubscriptionCalendar';
 
 export default function Home() {
-  const [activeTab, _setActiveTab] = useState<'landing' | 'discover' | 'plans' | 'checkout' | 'dashboard'>('landing');
+  const [activeTab, _setActiveTab] = useState<'landing' | 'discover' | 'plans' | 'checkout' | 'dashboard' | 'admin'>('landing');
 
   // Push tab transitions into browser history so Back button returns to the previous page
-  const setActiveTab = (tab: 'landing' | 'discover' | 'plans' | 'checkout' | 'dashboard', pushHistory = true) => {
+  const setActiveTab = (tab: 'landing' | 'discover' | 'plans' | 'checkout' | 'dashboard' | 'admin', pushHistory = true) => {
     _setActiveTab(tab);
     if (typeof window !== 'undefined' && pushHistory) {
       if (window.history.state?.tab !== tab) {
@@ -66,8 +68,8 @@ export default function Home() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const validTabs: ('landing' | 'discover' | 'plans' | 'checkout' | 'dashboard')[] = [
-      'landing', 'discover', 'plans', 'checkout', 'dashboard'
+    const validTabs: ('landing' | 'discover' | 'plans' | 'checkout' | 'dashboard' | 'admin')[] = [
+      'landing', 'discover', 'plans', 'checkout', 'dashboard', 'admin'
     ];
 
     // Read URL hash (#discover, #checkout, etc.) or fallback to landing
@@ -689,6 +691,24 @@ export default function Home() {
           </div>
         )}
 
+        {/* 6. ADMIN DELIVERY LOGS & DISPATCH PORTAL */}
+        {activeTab === 'admin' && (
+          <div className="w-full flex-1 relative flex flex-col items-center bg-transparent page-fade-in overflow-y-auto py-6 sm:py-8">
+            <div className="fixed inset-0 pointer-events-none z-0">
+              <img
+                src="/stuvvy-bg-img.jpeg?v=2"
+                alt="Stuvvy Background"
+                className="w-full h-full object-cover object-center"
+              />
+              <div className="absolute inset-0 bg-white/40" />
+            </div>
+
+            <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 sm:px-8">
+              <AdminDeliveryPortal onBackToApp={() => setActiveTab('dashboard')} />
+            </div>
+          </div>
+        )}
+
       </main>
 
       {/* Cart Drawer */}
@@ -741,6 +761,13 @@ export default function Home() {
               >
                 Account
               </button>
+              <button 
+                onClick={() => setActiveTab('admin')} 
+                className="hover:text-purple-900 text-purple-700 font-extrabold cursor-pointer flex items-center gap-1"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Admin</span>
+              </button>
             </div>
           </div>
         </footer>
@@ -769,6 +796,15 @@ export default function Home() {
           const plan = SUBSCRIPTION_PLANS.find(p => p.id === planId) || SUBSCRIPTION_PLANS[0];
           handleSelectPlan(plan);
         }}
+      />
+
+      {/* MOBILE BOTTOM NAVIGATION BAR */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        cartCount={cart.reduce((sum, item) => sum + item.quantity, 0)}
+        onOpenCart={() => setIsCartOpen(true)}
+        isAdminMode={activeTab === 'admin'}
       />
     </div>
   );
