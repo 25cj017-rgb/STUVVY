@@ -136,34 +136,6 @@ function generateSeedLogs(): DeliveryLogItem[] {
       recipientNote: 'Handed to customer at doorstep',
       markedBy: 'admin',
       updatedAt: '2026-11-05T12:45:00Z'
-    },
-    {
-      id: 'LOG-2026-11-05-9876543210',
-      date: '2026-11-05',
-      customerName: 'KAVIN KUMAR',
-      customerMobile: '9876543210',
-      planName: 'Weekly',
-      deliveryAddress: 'No. 42, Green Park Avenue, Peelamedu, Coimbatore',
-      locality: 'Peelamedu',
-      mealSession: 'Lunch',
-      status: 'out_for_delivery',
-      recipientNote: 'With delivery rider Suresh',
-      markedBy: 'admin',
-      updatedAt: '2026-11-05T12:10:00Z'
-    },
-    {
-      id: 'LOG-2026-11-05-9123456789',
-      date: '2026-11-05',
-      customerName: 'PRIYA DHARSHINI',
-      customerMobile: '9123456789',
-      planName: 'Monthly',
-      deliveryAddress: 'Tidel Park, ELCOT SEZ, Civil Aerodrome Post, Coimbatore',
-      locality: 'ELCOT SEZ',
-      mealSession: 'Lunch',
-      status: 'not_received',
-      issueReason: 'Security did not allow food container entry. Driver contacting customer.',
-      markedBy: 'admin',
-      updatedAt: '2026-11-05T12:50:00Z'
     }
   ];
 }
