@@ -599,7 +599,7 @@ export default function Home() {
         {/* VIEW 3: SUBSCRIPTION PLANS */}
         {/* ========================================================= */}
         {activeTab === 'plans' && (
-          <div className="w-full flex-1 relative flex flex-col items-center bg-transparent page-fade-in overflow-y-auto py-6 sm:py-8">
+          <div className="w-full flex-1 relative flex flex-col items-center bg-transparent page-fade-in overflow-y-auto pt-6 sm:pt-8 pb-28 sm:pb-12">
             <div className="fixed inset-0 pointer-events-none z-0">
               <img
                 src="/stuvvy-bg-img.jpeg?v=2"
@@ -625,7 +625,7 @@ export default function Home() {
         {/* VIEW 4: CHECKOUT FLOW */}
         {/* ========================================================= */}
         {activeTab === 'checkout' && (
-          <div className="w-full flex-1 relative flex flex-col items-center bg-transparent page-fade-in overflow-y-auto py-6 sm:py-8">
+          <div className="w-full flex-1 relative flex flex-col items-center bg-transparent page-fade-in overflow-y-auto pt-6 sm:pt-8 pb-28 sm:pb-12">
             <div className="fixed inset-0 pointer-events-none z-0">
               <img
                 src="/stuvvy-bg-img.jpeg?v=2"
@@ -664,7 +664,7 @@ export default function Home() {
         {/* VIEW 5: ACCOUNT DASHBOARD */}
         {/* ========================================================= */}
         {activeTab === 'dashboard' && (
-          <div className="w-full flex-1 relative flex flex-col items-center bg-transparent page-fade-in overflow-y-auto py-6 sm:py-8">
+          <div className="w-full flex-1 relative flex flex-col items-center bg-transparent page-fade-in overflow-y-auto pt-6 sm:pt-8 pb-28 sm:pb-12">
             <div className="fixed inset-0 pointer-events-none z-0">
               <img
                 src="/stuvvy-bg-img.jpeg?v=2"
@@ -693,7 +693,7 @@ export default function Home() {
 
         {/* 6. ADMIN DELIVERY LOGS & DISPATCH PORTAL */}
         {activeTab === 'admin' && (
-          <div className="w-full flex-1 relative flex flex-col items-center bg-transparent page-fade-in overflow-y-auto py-6 sm:py-8">
+          <div className="w-full flex-1 relative flex flex-col items-center bg-transparent page-fade-in overflow-y-auto pt-6 sm:pt-8 pb-28 sm:pb-12">
             <div className="fixed inset-0 pointer-events-none z-0">
               <img
                 src="/stuvvy-bg-img.jpeg?v=2"

@@ -23,6 +23,13 @@ export interface DeliveryLogItem {
 }
 
 const LOGS_FILE_PATH = path.join(process.cwd(), 'src', 'data', 'delivery_logs.json');
+const EXCEL_CSV_FILE_PATH = path.join(process.cwd(), 'src', 'data', 'stuvvy_delivery_orders.csv');
+
+function escapeCsvField(val: string | undefined): string {
+  if (!val) return '""';
+  const str = String(val).replace(/"/g, '""');
+  return `"${str}"`;
+}
 
 // Ensure data directory and logs file exist
 function getSavedLogs(): DeliveryLogItem[] {
@@ -30,6 +37,7 @@ function getSavedLogs(): DeliveryLogItem[] {
     if (!fs.existsSync(LOGS_FILE_PATH)) {
       const defaultLogs = generateSeedLogs();
       fs.writeFileSync(LOGS_FILE_PATH, JSON.stringify(defaultLogs, null, 2), 'utf-8');
+      syncExcelCsv(defaultLogs);
       return defaultLogs;
     }
     const raw = fs.readFileSync(LOGS_FILE_PATH, 'utf-8');
@@ -40,6 +48,47 @@ function getSavedLogs(): DeliveryLogItem[] {
   }
 }
 
+function syncExcelCsv(logs: DeliveryLogItem[]) {
+  try {
+    const headers = [
+      'CUSTOMER NAME',
+      'DATE',
+      'STATUS',
+      'MOBILE NUMBER',
+      'SUBSCRIPTION PLAN',
+      'MEAL SESSION',
+      'DELIVERY ADDRESS',
+      'DELIVERED TIME',
+      'NOTES / ISSUE REASON'
+    ];
+
+    const rows = logs.map(l => {
+      let statusFormatted = 'PENDING';
+      if (l.status === 'delivered') statusFormatted = 'DELIVERED';
+      else if (l.status === 'not_received') statusFormatted = 'NOT DELIVERED';
+      else if (l.status === 'paused') statusFormatted = 'CANCELED';
+      else if (l.status === 'out_for_delivery') statusFormatted = 'OUT FOR DELIVERY';
+
+      return [
+        escapeCsvField(l.customerName),
+        escapeCsvField(l.date),
+        escapeCsvField(statusFormatted),
+        escapeCsvField(l.customerMobile),
+        escapeCsvField(l.planName),
+        escapeCsvField(l.mealSession),
+        escapeCsvField(l.deliveryAddress),
+        escapeCsvField(l.deliveredAt || '-'),
+        escapeCsvField(l.issueReason || l.recipientNote || '-')
+      ].join(',');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+    fs.writeFileSync(EXCEL_CSV_FILE_PATH, csvContent, 'utf-8');
+  } catch (err) {
+    console.error('Error writing Excel CSV file:', err);
+  }
+}
+
 function saveLogs(logs: DeliveryLogItem[]): boolean {
   try {
     const dir = path.dirname(LOGS_FILE_PATH);
@@ -47,6 +96,7 @@ function saveLogs(logs: DeliveryLogItem[]): boolean {
       fs.mkdirSync(dir, { recursive: true });
     }
     fs.writeFileSync(LOGS_FILE_PATH, JSON.stringify(logs, null, 2), 'utf-8');
+    syncExcelCsv(logs);
     return true;
   } catch (err) {
     console.error('Error saving delivery logs:', err);

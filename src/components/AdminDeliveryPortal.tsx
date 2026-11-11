@@ -5,7 +5,7 @@ import {
   ShieldCheck, CheckCircle2, AlertTriangle, Clock, Truck, 
   Search, Calendar, Filter, Phone, MessageSquare, RefreshCw, 
   MapPin, User, ChevronRight, Lock, Key, ArrowLeft, Plus,
-  FileText, Sparkles, X, Check
+  FileText, Sparkles, X, Check, FileSpreadsheet, Ban
 } from 'lucide-react';
 import { DeliveryLogItem } from '../app/api/admin/delivery-logs/route';
 
@@ -30,7 +30,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('2026-11-05');
   const [selectedMealSession, setSelectedMealSession] = useState<'All' | 'Lunch' | 'Dinner'>('All');
-  const [selectedStatusFilter, setSelectedStatusFilter] = useState<'All' | 'delivered' | 'out_for_delivery' | 'pending' | 'not_received'>('All');
+  const [selectedStatusFilter, setSelectedStatusFilter] = useState<'All' | 'delivered' | 'out_for_delivery' | 'pending' | 'not_received' | 'paused'>('All');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Issue modal state
@@ -85,7 +85,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
   // Update order delivery status
   const handleUpdateStatus = async (
     log: DeliveryLogItem, 
-    newStatus: 'delivered' | 'out_for_delivery' | 'pending' | 'not_received',
+    newStatus: 'delivered' | 'out_for_delivery' | 'pending' | 'not_received' | 'paused',
     issueText?: string
   ) => {
     try {
@@ -257,7 +257,18 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0 self-start md:self-center">
+        <div className="flex items-center gap-2.5 shrink-0 self-start md:self-center flex-wrap">
+          {/* EXCEL EXPORT BUTTON */}
+          <a
+            href={`/api/admin/export-excel?date=${selectedDate}`}
+            download
+            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-3.5 py-2.5 rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+            title="Download Separate Excel Spreadsheet (.csv)"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-200" />
+            <span>Export Excel</span>
+          </a>
+
           <button
             type="button"
             onClick={() => {
@@ -508,7 +519,13 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
                         {isNotReceived && (
                           <span className="text-[10px] font-black uppercase bg-red-100 text-red-800 px-2.5 py-0.5 rounded-full border border-red-300 flex items-center gap-1 animate-pulse">
                             <AlertTriangle className="w-3 h-3 text-red-600" />
-                            <span>Order Not Received</span>
+                            <span>Order Not Delivered</span>
+                          </span>
+                        )}
+                        {log.status === 'paused' && (
+                          <span className="text-[10px] font-black uppercase bg-zinc-200 text-zinc-800 px-2.5 py-0.5 rounded-full border border-zinc-300 flex items-center gap-1">
+                            <Ban className="w-3 h-3 text-zinc-600" />
+                            <span>Canceled / Paused</span>
                           </span>
                         )}
                       </div>
@@ -606,7 +623,21 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
                           }`}
                         >
                           <AlertTriangle className="w-3.5 h-3.5" />
-                          <span>Issue</span>
+                          <span>Not Delivered</span>
+                        </button>
+
+                        {/* CANCELED BUTTON */}
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateStatus(log, 'paused', 'Order paused or canceled by customer/admin')}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                            log.status === 'paused'
+                              ? 'bg-zinc-800 text-white'
+                              : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-200'
+                          }`}
+                        >
+                          <Ban className="w-3.5 h-3.5" />
+                          <span>Canceled</span>
                         </button>
                       </div>
 
@@ -705,3 +736,4 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
     </div>
   );
 };
+

@@ -72,44 +72,44 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
 
   const isVerifiedSubscriber = !isGuestUser && !!user.isVerified && user.fullName !== 'Guest Explorer';
 
-  // Compute fixed 26-day calendar covering the entire month (Nov 5 to Nov 30)
+  // Compute accurate calendar covering the entire month (1st to last day of current month)
   // Calendar days and dates strictly match the real calendar and NEVER shift!
   const rollingDays: RollingDayInfo[] = useMemo(() => {
     const list: RollingDayInfo[] = [];
     const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const daysInCurrentMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const fullDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-    // Generate fixed calendar starting from Today (Nov 5) to Nov 30 (full month)
-    for (let offset = 0; offset <= 25; offset++) {
-      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset, 0, 0, 0);
+    // Generate accurate calendar for all days of the current month (1st to last day)
+    for (let dayNum = 1; dayNum <= daysInCurrentMonth; dayNum++) {
+      const d = new Date(currentYear, currentMonth, dayNum, 0, 0, 0);
       const dowIndex = d.getDay();
       const dayOfWeek = DAY_OF_WEEK_NAMES[dowIndex];
-      const isToday = offset === 0;
-      const dayNum = d.getDate();
+      const isToday = d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      const offset = dayNum - now.getDate();
 
-      // Week numbering accurately aligned with kitchen menu schedule:
-      // Nov 5-8: Launch Days (Week 1)
-      // Nov 9-15: Week 1
-      // Nov 16-22: Week 2
-      // Nov 23-29: Week 3
-      // Nov 30: Week 4
+      // Standard calendar week numbering:
+      // Days 1-7: Week 1
+      // Days 8-14: Week 2
+      // Days 15-21: Week 3
+      // Days 22-30: Week 4
       let weekNumber = 1;
-      if (d.getMonth() === 10) { // November
-        if (dayNum >= 16 && dayNum <= 22) weekNumber = 2;
-        else if (dayNum >= 23 && dayNum <= 29) weekNumber = 3;
-        else if (dayNum >= 30) weekNumber = 4;
-        else weekNumber = 1;
-      }
+      if (dayNum >= 1 && dayNum <= 7) weekNumber = 1;
+      else if (dayNum >= 8 && dayNum <= 14) weekNumber = 2;
+      else if (dayNum >= 15 && dayNum <= 21) weekNumber = 3;
+      else weekNumber = 4;
 
       let isWithinSub = false;
       let isLocked = false;
       let lockType: RollingDayInfo['lockType'] = undefined;
 
       if (!isVerifiedSubscriber) {
-        // GUEST RULES: Today + next 3 days (offset 0 to 3 -> Nov 5, 6, 7, 8) available, rest locked
-        const isWithinRollingWindow = offset <= 3;
-        if (!isWithinRollingWindow) {
+        // GUEST RULES: Today + next 3 days are available, past or distant dates locked
+        const isGuestAccessible = offset >= 0 && offset <= 3;
+        if (!isGuestAccessible) {
           isLocked = true;
           lockType = 'guest_limit';
         }
@@ -118,11 +118,9 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
         isWithinSub = isDateWithinSubscription(d, schedule.startDate, schedule.endDate);
 
         if (isWithinSub) {
-          // ANY date inside their paid subscription plan is UNLOCKED!
           isLocked = false;
           lockType = undefined;
         } else {
-          // Date is outside their subscription period:
           const dMidnight = d.getTime();
           const startMidnight = new Date(schedule.startDate.getFullYear(), schedule.startDate.getMonth(), schedule.startDate.getDate()).getTime();
           const endMidnight = new Date(schedule.endDate.getFullYear(), schedule.endDate.getMonth(), schedule.endDate.getDate()).getTime();
@@ -152,7 +150,7 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
         offsetDays: offset,
         weekNumber,
         isToday,
-        isWithinRollingWindow: offset <= 3,
+        isWithinRollingWindow: offset >= 0 && offset <= 3,
         isWithinSubscription: isWithinSub,
         isLocked,
         lockType,
@@ -169,8 +167,8 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
     return rollingDays.filter(d => d.weekNumber === selectedWeekFilter);
   }, [rollingDays, selectedWeekFilter]);
 
-  // Current active day info
-  const activeDayInfo = rollingDays.find(d => d.offsetDays === selectedDayOffset) || rollingDays[0];
+  // Current active day info (defaults to Today)
+  const activeDayInfo = rollingDays.find(d => d.offsetDays === selectedDayOffset) || rollingDays.find(d => d.isToday) || rollingDays[0];
   const activeDayOfWeek = activeDayInfo.dayOfWeek;
 
   const totalCartItems = cart.reduce((acc, c) => acc + c.quantity, 0);
@@ -239,13 +237,7 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
 
   const handleJumpToWeek = (weekNum: 1 | 2 | 3 | 4) => {
     setSelectedWeekFilter(weekNum);
-    const targetDay = rollingDays.find(d => {
-      if (weekNum === 1) return d.dayNumber === 9 || d.weekNumber === 1;
-      if (weekNum === 2) return d.dayNumber === 16;
-      if (weekNum === 3) return d.dayNumber === 23;
-      if (weekNum === 4) return d.dayNumber === 30;
-      return d.weekNumber === weekNum;
-    });
+    const targetDay = rollingDays.find(d => d.weekNumber === weekNum);
     if (targetDay) {
       handleSelectOffset(targetDay.offsetDays);
     }
@@ -626,9 +618,9 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
         )}
       </div>
 
-      {/* FLOATING CART BAR ON BOTTOM IF CART HAS ITEMS */}
+      {/* FLOATING CART BAR ON BOTTOM IF CART HAS ITEMS (ABOVE MOBILE BOTTOM NAV) */}
       {totalCartItems > 0 && (
-        <div className="fixed bottom-6 inset-x-4 max-w-xl mx-auto z-40 bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 text-white p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl shadow-2xl flex items-center justify-between gap-4">
+        <div className="fixed bottom-20 md:bottom-6 inset-x-4 max-w-xl mx-auto z-40 bg-zinc-950/95 backdrop-blur-xl border border-zinc-800 text-white p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl shadow-2xl flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center text-white font-black">
               <ShoppingBag className="w-5 h-5" />

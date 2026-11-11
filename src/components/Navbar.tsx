@@ -45,12 +45,23 @@ export const Navbar: React.FC<NavbarProps> = ({
     setActiveTab(tab);
     setIsDropdownOpen(false);
     if (sectionId) {
+      if (typeof window !== 'undefined') {
+        if (sectionId === 'stuvvy-card-section') {
+          window.location.hash = '#stuvvy-cards';
+        } else {
+          window.location.hash = '#' + sectionId;
+        }
+      }
       setTimeout(() => {
         const el = document.getElementById(sectionId);
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }, 150);
+    } else {
+      if (typeof window !== 'undefined') {
+        window.location.hash = '#dashboard';
+      }
     }
   };
 

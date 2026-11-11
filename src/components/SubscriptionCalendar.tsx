@@ -89,8 +89,11 @@ export const SubscriptionCalendar: React.FC<SubscriptionCalendarProps> = ({
   planName = 'Monthly Plan',
   onDaysChange
 }) => {
-  // Current reference today is November 5, 2026 (matching the Stuvvy cycle)
-  const today = useMemo(() => new Date(2026, 10, 5, 0, 0, 0), []);
+  // Real today date matching system clock
+  const today = useMemo(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), n.getDate(), 0, 0, 0);
+  }, []);
 
   // Parse customer's subscription start date
   const parsedStartDate = useMemo(() => {
