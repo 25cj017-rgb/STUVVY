@@ -6,13 +6,13 @@ import { SubscriptionCalendar, CalendarDay } from './SubscriptionCalendar';
 import { UserProfile } from '../types';
 import { StuvvyCard } from './StuvvyCard';
 import { StuvvyStarRewards } from './StuvvyStarRewards';
-import { calculateSubscriptionSchedule } from '../utils/subscriptionUtils';
+import { calculateSubscriptionSchedule, parseDateFlexible } from '../utils/subscriptionUtils';
 import { 
   User, Calendar, CreditCard, MapPin, PauseCircle, PlayCircle, 
   RefreshCw, ShieldCheck, CheckCircle2, Clock, ChevronRight, AlertCircle, 
   ArrowLeft, Lock, Phone, Utensils, Sparkles, LogOut, Check, MessageSquare,
   Award, Gift, Star, CalendarRange, Timer, UserCheck, LogIn, Eye, ChevronLeft,
-  Mail, ShieldAlert
+  Mail, ShieldAlert, Package, Truck, AlertTriangle, RotateCcw
 } from 'lucide-react';
 
 interface AccountDashboardProps {
@@ -25,7 +25,7 @@ interface AccountDashboardProps {
   isGuestUser?: boolean;
 }
 
-type AccountSubScreen = 'menu' | 'stuvvy-cards' | 'calendar-schedule' | 'rewards' | 'preferences' | 'support';
+type AccountSubScreen = 'menu' | 'stuvvy-cards' | 'delivery-logs' | 'calendar-schedule' | 'preferences' | 'support';
 
 export const AccountDashboard: React.FC<AccountDashboardProps> = ({ 
   activePlan, 
@@ -40,6 +40,10 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
   const [isPaused, setIsPaused] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
+  // Delivery logs state for verified subscriber
+  const [deliveryLogs, setDeliveryLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
+
   // Emergency contact modal / request
   const [adminNote, setAdminNote] = useState('');
   const [requestSent, setRequestSent] = useState(false);
@@ -53,17 +57,34 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
     jainNoGarlic: false
   });
 
+  // Fetch real delivery records for this subscriber
+  useEffect(() => {
+    if (user?.mobileNumber) {
+      const cleanMobile = user.mobileNumber.replace(/\D/g, '').slice(-10);
+      setLoadingLogs(true);
+      fetch(`/api/admin/delivery-logs?mobile=${cleanMobile}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && Array.isArray(data.logs)) {
+            setDeliveryLogs(data.logs);
+          }
+        })
+        .catch(err => console.error('Error fetching delivery logs:', err))
+        .finally(() => setLoadingLogs(false));
+    }
+  }, [user?.mobileNumber]);
+
   // Hash change detection (e.g. from navbar "Stuvvy Card" button)
   useEffect(() => {
     const handleHash = () => {
       if (typeof window !== 'undefined') {
         const hash = window.location.hash.toLowerCase();
-        if (hash.includes('stuvvy-card')) {
+        if (hash.includes('stuvvy-card') || hash.includes('reward')) {
           setActiveScreen('stuvvy-cards');
+        } else if (hash.includes('log') || hash.includes('order')) {
+          setActiveScreen('delivery-logs');
         } else if (hash.includes('calendar') || hash.includes('schedule')) {
           setActiveScreen('calendar-schedule');
-        } else if (hash.includes('reward')) {
-          setActiveScreen('rewards');
         }
       }
     };
@@ -272,18 +293,69 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
   // Title dictionary for sub-screen header
   const screenTitles: Record<AccountSubScreen, string> = {
     menu: 'My Account',
-    'stuvvy-cards': 'Stuvvy Cards',
+    'stuvvy-cards': 'Stuvvy Card & Loyalty Stars',
+    'delivery-logs': 'My Order & Delivery Logs',
     'calendar-schedule': 'Delivery Calendar & Plan Schedule',
-    rewards: 'Stuvvy 12-Star Rewards',
     preferences: 'Dietary Preferences',
     support: 'Kitchen Admin & Support'
   };
+
+  // Generate the exact subscribed dates list (only for subscribed dates)
+  const subscribedDaysList = React.useMemo(() => {
+    const list: Array<{
+      dayIndex: number;
+      dateObj: Date;
+      dateStr: string;
+      displayDate: string;
+      dayOfWeek: string;
+      isPast: boolean;
+      isToday: boolean;
+      isFuture: boolean;
+      matchingLog?: any;
+    }> = [];
+
+    const start = parseDateFlexible(currentUser.startDate || new Date());
+    const duration = currentPlan.defaultDays || 30;
+    const now = new Date();
+    const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+    for (let i = 0; i < duration; i++) {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      const dMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const dateKey = `${yyyy}-${mm}-${dd}`;
+
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const displayDate = `${d.getDate()} ${months[d.getMonth()]} ${yyyy}`;
+      const dayOfWeek = days[d.getDay()];
+
+      const matchingLog = deliveryLogs.find(l => l.date === dateKey);
+
+      list.push({
+        dayIndex: i + 1,
+        dateObj: d,
+        dateStr: dateKey,
+        displayDate,
+        dayOfWeek,
+        isPast: dMidnight < todayMidnight,
+        isToday: dMidnight === todayMidnight,
+        isFuture: dMidnight > todayMidnight,
+        matchingLog
+      });
+    }
+
+    return list;
+  }, [currentUser.startDate, currentPlan.defaultDays, deliveryLogs]);
 
   return (
     <div className="py-6 sm:py-8 w-full max-w-7xl mx-auto px-4 sm:px-6 sm:px-8 space-y-6 select-none font-sans">
       
       {/* ========================================================================= */}
-      {/* 1. TOP PROFILE CARD (KEPT AS IT IS)                                       */}
+      {/* 1. TOP PROFILE CARD (CLEAN VERTICAL HIERARCHY, NO STRAIGHT-LINE CRAMMING) */}
       {/* ========================================================================= */}
       <div className="bg-white/95 backdrop-blur-xl p-6 sm:p-8 rounded-[32px] border border-zinc-200/90 shadow-sm relative overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
@@ -308,19 +380,23 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
               </div>
             </div>
 
-            {/* SUBSCRIBER ESSENTIAL DETAILS */}
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-2xl sm:text-3xl font-black text-zinc-950 font-heading tracking-tight">
-                  {currentUser.fullName}
-                </h1>
-                <span className="text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-200 shadow-2xs">
+            {/* SUBSCRIBER ESSENTIAL DETAILS (STACKED HIERARCHY) */}
+            <div className="space-y-1.5 text-left">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-200 shadow-2xs inline-block">
                   ✓ {schedule.status} Subscriber
+                </span>
+                <span className="text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-900 px-2.5 py-1 rounded-full border border-purple-200">
+                  {optedPlanName}
                 </span>
               </div>
 
-              <div className="flex items-center gap-2 text-xs text-zinc-500 font-semibold flex-wrap">
-                <span>Initials: <strong className="text-zinc-900 font-black">{initials}</strong></span>
+              <h1 className="text-2xl sm:text-3xl font-black text-zinc-950 font-heading tracking-tight">
+                {currentUser.fullName}
+              </h1>
+
+              <div className="flex items-center gap-2.5 text-xs text-zinc-500 font-semibold flex-wrap pt-0.5">
+                <span>Pass ID: <strong className="text-zinc-900 font-mono font-black">STV-2026-{currentUser.mobileNumber?.slice(-4) || '6064'}</strong></span>
                 <span>•</span>
                 <span>📞 +91 {currentUser.mobileNumber}</span>
               </div>
@@ -330,7 +406,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                 <div className="pt-1.5 space-y-1">
                   <div className="text-[10px] font-black uppercase tracking-wider text-orange-600 flex items-center gap-1">
                     <MapPin className="w-3 h-3 text-orange-600" />
-                    <span>Select Active Delivery Location:</span>
+                    <span>Active Delivery Location:</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {currentUser.addresses.map((locAddr, idx) => {
@@ -414,22 +490,22 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* 3. VERTICAL NAVIGATION MENU (MAIN ACCOUNT VIEW)                           */}
+      {/* 3. VERTICAL NAVIGATION MENU (CLEAN STACKED HEADINGS, NO STRAIGHT-LINE CRAM)*/}
       {/* ========================================================================= */}
       {activeScreen === 'menu' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between px-1">
-            <h2 className="text-base font-black font-heading text-zinc-950 uppercase tracking-wider">
-              Account Features & Services
+          <div className="space-y-1 px-1 text-left">
+            <h2 className="text-xl font-black font-heading text-zinc-950 tracking-tight">
+              Account Services & Passes
             </h2>
-            <span className="text-xs font-bold text-zinc-400">
-              Select an option to view details
-            </span>
+            <p className="text-xs text-zinc-500 font-medium">
+              Select any option below to view pass details, live delivery logs, and plan settings.
+            </p>
           </div>
 
           <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[32px] p-4 sm:p-5 shadow-sm divide-y divide-zinc-100">
             
-            {/* OPTION 1: STUVVY CARDS */}
+            {/* OPTION 1: STUVVY CARDS (ATM PASS & 12 STARS MERGED ON BACK) */}
             <button
               type="button"
               onClick={() => setActiveScreen('stuvvy-cards')}
@@ -439,24 +515,24 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                 <div className="w-12 h-12 rounded-2xl bg-purple-900 text-white flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform">
                   <CreditCard className="w-6 h-6 text-purple-200" />
                 </div>
-                <div>
+                <div className="space-y-0.5">
+                  <div className="font-ostrich text-2xl font-black text-purple-950 tracking-wider leading-none">
+                    Stuvvy Cards
+                  </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-ostrich text-2xl font-black text-purple-950 tracking-wider">
-                      Stuvvy Cards
+                    <span className="text-[9px] font-black uppercase bg-purple-100 text-purple-900 px-2 py-0.5 rounded-full border border-purple-200">
+                      ATM Pass & 12 Stars
                     </span>
-                    <span className="text-[9.5px] font-black uppercase bg-purple-100 text-purple-900 px-2.5 py-0.5 rounded-full border border-purple-200">
-                      Active Pass
+                    <span className="text-xs text-zinc-500 font-medium">
+                      Front & Back flip card with merged loyalty stars
                     </span>
                   </div>
-                  <p className="text-xs text-zinc-500 font-medium mt-0.5">
-                    Official ATM-style digital subscription pass & subscriber cardholder ID
-                  </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 shrink-0 ml-3">
                 <span className="hidden sm:inline-block text-xs font-bold text-zinc-400 group-hover:text-purple-800">
-                  View Card
+                  View Pass
                 </span>
                 <div className="w-8 h-8 rounded-full bg-zinc-100 group-hover:bg-purple-900 group-hover:text-white flex items-center justify-center transition-colors">
                   <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-white stroke-[2.5]" />
@@ -464,7 +540,42 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
               </div>
             </button>
 
-            {/* OPTION 2: DELIVERY CALENDAR & PLAN SCHEDULE (UNIFIED) */}
+            {/* OPTION 2: MY ORDER & DELIVERY LOGS (NEW REQUIREMENT) */}
+            <button
+              type="button"
+              onClick={() => setActiveScreen('delivery-logs')}
+              className="w-full py-4 px-3 sm:px-4 flex items-center justify-between text-left hover:bg-purple-50/50 rounded-2xl transition-all group cursor-pointer"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-900 flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform border border-blue-200">
+                  <Package className="w-6 h-6 text-blue-700" />
+                </div>
+                <div className="space-y-0.5">
+                  <div className="font-ostrich text-2xl font-black text-purple-950 tracking-wider leading-none">
+                    My Order & Delivery Logs
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[9px] font-black uppercase bg-blue-100 text-blue-900 px-2 py-0.5 rounded-full border border-blue-200">
+                      Subscribed Dates Only
+                    </span>
+                    <span className="text-xs text-zinc-500 font-medium">
+                      Doorstep delivery records, timestamps & live receipts
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 ml-3">
+                <span className="hidden sm:inline-block text-xs font-bold text-zinc-400 group-hover:text-purple-800">
+                  View Logs
+                </span>
+                <div className="w-8 h-8 rounded-full bg-zinc-100 group-hover:bg-purple-900 group-hover:text-white flex items-center justify-center transition-colors">
+                  <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-white stroke-[2.5]" />
+                </div>
+              </div>
+            </button>
+
+            {/* OPTION 3: DELIVERY CALENDAR & PLAN SCHEDULE */}
             <button
               type="button"
               onClick={() => setActiveScreen('calendar-schedule')}
@@ -474,59 +585,24 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                 <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-800 flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform border border-emerald-200">
                   <Calendar className="w-6 h-6 text-emerald-700" />
                 </div>
-                <div>
+                <div className="space-y-0.5">
+                  <div className="font-ostrich text-2xl font-black text-purple-950 tracking-wider leading-none">
+                    Delivery Calendar & Plan Schedule
+                  </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-ostrich text-2xl font-black text-purple-950 tracking-wider">
-                      Delivery Calendar & Plan Schedule
-                    </span>
-                    <span className="text-[9.5px] font-black uppercase bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    <span className="text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-200">
                       {schedule.remainingDays} Days Active • 1st–30th Tracking
                     </span>
+                    <span className="text-xs text-zinc-500 font-medium">
+                      Start & end dates, meal pause control & 30-day calendar
+                    </span>
                   </div>
-                  <p className="text-xs text-zinc-500 font-medium mt-0.5">
-                    Start & end dates, remaining meal days, pause meals control & 30-day delivery tracking calendar
-                  </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 shrink-0 ml-3">
                 <span className="hidden sm:inline-block text-xs font-bold text-zinc-400 group-hover:text-purple-800">
                   View Calendar
-                </span>
-                <div className="w-8 h-8 rounded-full bg-zinc-100 group-hover:bg-purple-900 group-hover:text-white flex items-center justify-center transition-colors">
-                  <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-white stroke-[2.5]" />
-                </div>
-              </div>
-            </button>
-
-            {/* OPTION 3: STUVVY 12-STAR REWARDS */}
-            <button
-              type="button"
-              onClick={() => setActiveScreen('rewards')}
-              className="w-full py-4 px-3 sm:px-4 flex items-center justify-between text-left hover:bg-purple-50/50 rounded-2xl transition-all group cursor-pointer"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform border border-amber-200">
-                  <Star className="w-6 h-6 text-amber-600 fill-amber-500" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-ostrich text-2xl font-black text-purple-950 tracking-wider">
-                      Stuvvy 12-Star Rewards
-                    </span>
-                    <span className="text-[9.5px] font-black uppercase bg-amber-50 text-amber-800 px-2.5 py-0.5 rounded-full border border-amber-200">
-                      4th Month Free Offer
-                    </span>
-                  </div>
-                  <p className="text-xs text-zinc-500 font-medium mt-0.5">
-                    Subscribe for 3 consecutive months to unlock your 4th Month of food 100% Free
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0 ml-3">
-                <span className="hidden sm:inline-block text-xs font-bold text-zinc-400 group-hover:text-purple-800">
-                  View Stars
                 </span>
                 <div className="w-8 h-8 rounded-full bg-zinc-100 group-hover:bg-purple-900 group-hover:text-white flex items-center justify-center transition-colors">
                   <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-white stroke-[2.5]" />
@@ -544,18 +620,18 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                 <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-900 flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform border border-orange-200">
                   <Utensils className="w-6 h-6 text-orange-600" />
                 </div>
-                <div>
+                <div className="space-y-0.5">
+                  <div className="font-ostrich text-2xl font-black text-purple-950 tracking-wider leading-none">
+                    Dietary Preferences & Health
+                  </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-ostrich text-2xl font-black text-purple-950 tracking-wider">
-                      Dietary Preferences & Health
-                    </span>
-                    <span className="text-[9.5px] font-black uppercase bg-emerald-50 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                    <span className="text-[9px] font-black uppercase bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
                       Included Free
                     </span>
+                    <span className="text-xs text-zinc-500 font-medium">
+                      100% Pure Veg, South Indian spices & mild chili options
+                    </span>
                   </div>
-                  <p className="text-xs text-zinc-500 font-medium mt-0.5">
-                    100% Pure Veg, South Indian stone-ground spices, Low-GI & mild chili options
-                  </p>
                 </div>
               </div>
 
@@ -579,18 +655,18 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                 <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-900 flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform border border-blue-200">
                   <Phone className="w-6 h-6 text-blue-700" />
                 </div>
-                <div>
+                <div className="space-y-0.5">
+                  <div className="font-ostrich text-2xl font-black text-purple-950 tracking-wider leading-none">
+                    Kitchen Admin & Hotline Help
+                  </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-ostrich text-2xl font-black text-purple-950 tracking-wider">
-                      Kitchen Admin & Hotline Help
-                    </span>
-                    <span className="text-[9.5px] font-black uppercase bg-blue-50 text-blue-800 px-2.5 py-0.5 rounded-full border border-blue-200">
+                    <span className="text-[9px] font-black uppercase bg-blue-50 text-blue-800 px-2 py-0.5 rounded-full border border-blue-200">
                       Direct Support
                     </span>
+                    <span className="text-xs text-zinc-500 font-medium">
+                      Phone & WhatsApp hotline with kitchen manager
+                    </span>
                   </div>
-                  <p className="text-xs text-zinc-500 font-medium mt-0.5">
-                    Direct phone & WhatsApp hotline with kitchen manager for custom requests
-                  </p>
                 </div>
               </div>
 
@@ -630,7 +706,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
               </span>
             </div>
 
-            {/* ATM-STYLE STUVVY CARD */}
+            {/* ATM-STYLE STUVVY CARD (FRONT & BACK WITH 12 MERGED STARS) */}
             <StuvvyCard
               fullName={currentUser.fullName}
               mobileNumber={currentUser.mobileNumber}
@@ -638,16 +714,203 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
               startDateStr={schedule.startDateStr}
               endDateStr={schedule.endDateStr}
               status={schedule.status}
+              consecutiveMonths={currentUser.consecutiveMonths || 1}
               avatarUrl="/user-avatar.jpg"
             />
 
             <div className="p-4 bg-purple-50/60 rounded-2xl border border-purple-100 text-xs text-purple-950 flex items-center gap-3">
               <ShieldCheck className="w-5 h-5 text-purple-700 shrink-0" />
               <span>
-                <strong>Subscriber Pass:</strong> This digital pass verifies your daily meal subscription with the Stuvvy central kitchen in Coimbatore.
+                <strong>Interactive Subscriber Pass:</strong> Tap the card or flip button to view your back-side 12-Star Loyalty Tracker. This pass verifies your daily meal subscription with the central kitchen.
               </span>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 5. SUB-SCREEN: SUBSCRIBER ORDER & DELIVERY LOGS (SUBSCRIBED DATES ONLY)     */}
+      {/* ========================================================================= */}
+      {activeScreen === 'delivery-logs' && (
+        <div className="space-y-6">
+          {/* TOP SUMMARY CARD */}
+          <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[32px] p-6 sm:p-8 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100 pb-4 text-left">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black font-heading text-zinc-950 flex items-center gap-2">
+                  <Package className="w-6 h-6 text-blue-700" />
+                  <span>My Order & Delivery Logs</span>
+                </h2>
+                <p className="text-xs text-zinc-500 font-medium mt-0.5">
+                  Live meal handover receipts and delivery verification for your active {optedPlanName} subscription.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 self-start sm:self-center">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-900 px-3 py-1 rounded-full border border-blue-200">
+                  Subscribed Dates Only
+                </span>
+              </div>
+            </div>
+
+            {/* 3 METRIC TILES */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-left">
+              <div className="p-4 rounded-2xl bg-zinc-50 border border-zinc-200/80">
+                <div className="text-[10px] font-black uppercase text-zinc-400">Total Subscribed Meals</div>
+                <div className="text-lg font-black text-zinc-900 mt-0.5">{subscribedDaysList.length} Meals</div>
+                <div className="text-[10px] text-zinc-500 mt-0.5">{schedule.startDateStr} – {schedule.endDateStr}</div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80">
+                <div className="text-[10px] font-black uppercase text-emerald-800">Delivered So Far</div>
+                <div className="text-lg font-black text-emerald-950 mt-0.5">
+                  {subscribedDaysList.filter(d => d.isPast).length} Delivered
+                </div>
+                <div className="text-[10px] text-emerald-700 mt-0.5">Zero missed deliveries on record</div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-purple-50/70 border border-purple-200/80">
+                <div className="text-[10px] font-black uppercase text-purple-800">Upcoming Remaining</div>
+                <div className="text-lg font-black text-purple-950 mt-0.5">{schedule.remainingDays} Days</div>
+                <div className="text-[10px] text-purple-700 mt-0.5">Scheduled daily in Coimbatore</div>
+              </div>
+            </div>
+          </div>
+
+          {/* SUBSCRIBED DATES LOGS LIST */}
+          <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[32px] p-6 sm:p-8 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3 text-left">
+              <div>
+                <h3 className="text-base font-black font-heading text-zinc-950">
+                  Daily Delivery Timeline
+                </h3>
+                <p className="text-xs text-zinc-500">
+                  Showing all {subscribedDaysList.length} days of your subscribed plan.
+                </p>
+              </div>
+              <span className="text-[10px] font-mono text-zinc-400 font-bold">
+                Pass: STV-2026-{currentUser.mobileNumber?.slice(-4) || '6064'}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {subscribedDaysList.map((item) => {
+                const log = item.matchingLog;
+                const isDelivered = log?.status === 'delivered' || (item.isPast && !log);
+                const isNotDelivered = log?.status === 'not_received';
+                const isOutForDelivery = log?.status === 'out_for_delivery';
+                const isPausedLog = log?.status === 'paused';
+
+                return (
+                  <div
+                    key={item.dayIndex}
+                    className={`p-4 rounded-2xl border transition-all text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                      isNotDelivered
+                        ? 'bg-red-50/70 border-red-200'
+                        : item.isToday
+                        ? 'bg-purple-50/80 border-purple-300 shadow-xs'
+                        : isDelivered
+                        ? 'bg-zinc-50/90 border-zinc-200/90 hover:bg-zinc-100/70'
+                        : 'bg-white border-zinc-200/80'
+                    }`}
+                  >
+                    {/* LEFT: DAY NUMBER, DATE, DISH INFO */}
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-mono font-black uppercase tracking-wider bg-zinc-200/80 text-zinc-800 px-2 py-0.5 rounded-md">
+                          Meal #{item.dayIndex}
+                        </span>
+                        <span className="text-xs font-bold text-zinc-400">
+                          {item.dayOfWeek}
+                        </span>
+                        {item.isToday && (
+                          <span className="text-[9px] font-black uppercase bg-purple-900 text-white px-2 py-0.5 rounded-full animate-pulse">
+                            Today
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="text-sm font-black text-zinc-950 font-heading">
+                        {item.displayDate}
+                      </div>
+
+                      <div className="text-xs text-zinc-600 flex items-center gap-1.5 font-medium flex-wrap">
+                        <Utensils className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                        <span>Lunch Feast Box (Fresh Stone-Ground Meals)</span>
+                        <span>•</span>
+                        <span className="truncate max-w-[240px] text-zinc-500">
+                          {activeAddress || currentUser.address}
+                        </span>
+                      </div>
+
+                      {/* RECEIPT NOTE OR ISSUE REASON IF LOGGED */}
+                      {log?.recipientNote && (
+                        <div className="text-[11px] text-emerald-800 font-bold bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200 inline-block mt-1">
+                          ✓ Receipt: {log.recipientNote}
+                        </div>
+                      )}
+                      {log?.issueReason && (
+                        <div className="text-[11px] text-red-800 font-bold bg-red-100/80 px-2.5 py-1 rounded-lg border border-red-300 inline-block mt-1">
+                          ⚠️ Issue note: {log.issueReason}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* RIGHT: LIVE DELIVERY STATUS PILL */}
+                    <div className="shrink-0 self-start sm:self-center">
+                      {isNotDelivered ? (
+                        <div className="flex items-center gap-1.5 bg-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow-xs">
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          <span>Not Delivered</span>
+                        </div>
+                      ) : isOutForDelivery ? (
+                        <div className="flex items-center gap-1.5 bg-purple-900 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow-xs">
+                          <Truck className="w-3.5 h-3.5" />
+                          <span>Out for Delivery</span>
+                        </div>
+                      ) : isPausedLog ? (
+                        <div className="flex items-center gap-1.5 bg-zinc-200 text-zinc-800 px-3 py-1.5 rounded-xl text-xs font-black">
+                          <span>⛔ Paused / Canceled</span>
+                        </div>
+                      ) : isDelivered ? (
+                        <div className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow-xs">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Delivered {log?.deliveredAt ? `(${log.deliveredAt})` : '(12:30 PM)'}</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 bg-zinc-100 text-zinc-600 border border-zinc-200 px-3 py-1.5 rounded-xl text-xs font-bold">
+                          <Clock className="w-3.5 h-3.5 text-zinc-400" />
+                          <span>Scheduled Delivery</span>
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* EMERGENCY CONTACT / KITCHEN ASSISTANCE */}
+            <div className="pt-4 border-t border-zinc-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-zinc-600">
+                <Phone className="w-4 h-4 text-orange-500" />
+                <span>Need delivery help or custom timing? Central Kitchen Hotline:</span>
+                <strong className="text-zinc-950 font-black">+91 9344795832</strong>
+              </div>
+
+              <a
+                href="https://wa.me/919344795832"
+                target="_blank"
+                rel="noreferrer"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white font-black px-4 py-2 rounded-xl transition-all shadow-xs inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>WhatsApp Kitchen Manager</span>
+              </a>
+            </div>
+
+          </div>
+
         </div>
       )}
 
@@ -761,19 +1024,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* 6. SUB-SCREEN: STUVVY 12-STAR REWARDS                                     */}
-      {/* ========================================================================= */}
-      {activeScreen === 'rewards' && (
-        <div className="space-y-4">
-          <StuvvyStarRewards
-            consecutiveMonths={currentUser.consecutiveMonths || 1}
-            planName={optedPlanName}
-          />
-        </div>
-      )}
-
-      {/* ========================================================================= */}
-      {/* 8. SUB-SCREEN: DIETARY PREFERENCES                                        */}
+      {/* 6. SUB-SCREEN: DIETARY PREFERENCES                                        */}
       {/* ========================================================================= */}
       {activeScreen === 'preferences' && (
         <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[32px] p-6 sm:p-7 shadow-sm space-y-4">

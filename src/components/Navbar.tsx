@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowRight, Sparkles, User, ShoppingBag, Utensils, LogOut, ChevronDown, CreditCard, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Sparkles, User, ShoppingBag, Utensils, LogOut, ChevronDown, CreditCard, ShieldCheck, Package } from 'lucide-react';
 import { UserProfile } from '../types';
 
 interface NavbarProps {
@@ -167,6 +167,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <CreditCard className="w-4 h-4 text-purple-600" />
                     <span>Stuvvy Card</span>
+                  </button>
+
+                  {/* Option 3: My Delivery Logs */}
+                  <button
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        window.location.hash = '#delivery-logs';
+                      }
+                      setActiveTab('dashboard');
+                      setIsDropdownOpen(false);
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs font-bold text-zinc-800 hover:bg-zinc-100 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer"
+                  >
+                    <Package className="w-4 h-4 text-blue-600" />
+                    <span>My Delivery Logs</span>
                   </button>
 
                   {/* Option 3: Kitchen Admin Logs */}
