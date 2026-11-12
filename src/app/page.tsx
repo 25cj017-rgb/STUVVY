@@ -446,14 +446,9 @@ export default function Home() {
             {!showLoginCard && (
               <div 
                 onClick={(e) => e.stopPropagation()}
-                className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex flex-col sm:flex-row items-center gap-3 bg-white/95 backdrop-blur-xl border border-zinc-200/90 shadow-2xl rounded-3xl p-3 px-5"
+                className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex flex-wrap items-center justify-center gap-2 bg-white/95 backdrop-blur-xl border border-zinc-200/90 shadow-2xl rounded-3xl p-2.5 px-3.5"
               >
-                <div className="flex items-center gap-2 text-xs font-black text-zinc-800">
-                  <span className="w-2 h-2 rounded-full bg-orange-500" />
-                  <span>Tap anywhere to log in, or choose:</span>
-                </div>
-
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap justify-center">
                   <button
                     onClick={handleContinueAsGuest}
                     className="bg-zinc-100 hover:bg-zinc-200 text-zinc-900 font-extrabold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer border border-zinc-300 shadow-2xs"
