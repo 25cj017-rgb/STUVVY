@@ -37,7 +37,7 @@ export const LandingReviewPopup: React.FC<LandingReviewPopupProps> = ({
   return (
     <div
       onClick={(e) => e.stopPropagation()}
-      className="fixed top-4 left-1/2 -translate-x-1/2 z-40 w-[94vw] max-w-xl animate-in fade-in duration-200"
+      className="fixed top-4 right-4 sm:top-6 sm:right-6 z-40 w-[92vw] max-w-sm animate-in fade-in duration-200"
       role="dialog"
       aria-label="Customer Review"
     >

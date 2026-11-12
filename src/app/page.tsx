@@ -427,7 +427,7 @@ export default function Home() {
           >
             {/* AUTO-OPENING LANDING PAGE REVIEW POPUP (SANJANA) */}
             <LandingReviewPopup
-              isOpen={showLandingReviewPopup}
+              isOpen={showLandingReviewPopup && !showLoginCard}
               onClose={() => setShowLandingReviewPopup(false)}
             />
 

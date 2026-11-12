@@ -206,8 +206,15 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
     return items.filter(i => i.days.includes(dow));
   }, [items, activeDayInfo.date, activeDayInfo.dayOfWeek]);
 
-  // When a verified subscriber logs in, automatically select their start date
+  // When a verified subscriber logs in, automatically select their start date ONCE
+  const hasAutoSelectedStartRef = React.useRef(false);
   React.useEffect(() => {
+    if (!isVerifiedSubscriber) {
+      hasAutoSelectedStartRef.current = false;
+      return;
+    }
+    if (hasAutoSelectedStartRef.current) return;
+
     if (isVerifiedSubscriber && schedule.startDate) {
       const startMidnight = new Date(
         schedule.startDate.getFullYear(),
@@ -221,6 +228,7 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
       });
 
       if (match) {
+        hasAutoSelectedStartRef.current = true;
         setSelectedDayOffset(match.offsetDays);
         onSelectDay(match.dayOfWeek);
       }

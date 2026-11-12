@@ -294,7 +294,7 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
           className="bg-white hover:bg-purple-50 text-purple-950 border border-purple-200 px-4 py-1.5 rounded-full text-xs font-black shadow-xs transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95"
         >
           <RotateCcw className="w-3.5 h-3.5 text-purple-700" />
-          <span>{isFlipped ? 'Flip to Front (ATM Details)' : 'Flip to Back (12 Stars)'}</span>
+          <span>{isFlipped ? 'Flip to Front' : 'Flip to Back (12 Stars)'}</span>
         </button>
       </div>
 

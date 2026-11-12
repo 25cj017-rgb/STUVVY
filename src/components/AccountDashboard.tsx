@@ -728,7 +728,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                   <span>Digital Stuvvy Subscriber Card</span>
                 </h2>
                 <p className="text-xs text-zinc-500 font-medium">
-                  Your official compact ATM-style subscriber pass. Valid for your subscription period.
+                  Your official compact subscriber pass. Valid for your subscription period.
                 </p>
               </div>
 
