@@ -1019,6 +1019,12 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
             startDate={currentUser.startDate}
             endDate={schedule.endDateStr}
             planName={optedPlanName}
+            deliveredDates={Array.from(
+              new Set(deliveryLogs.filter((l) => l.status === 'delivered').map((l) => l.date))
+            )}
+            notDeliveredDates={Array.from(
+              new Set(deliveryLogs.filter((l) => l.status === 'not_received').map((l) => l.date))
+            )}
           />
         </div>
       )}

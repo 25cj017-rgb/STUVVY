@@ -28,8 +28,11 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
   const [logs, setLogs] = useState<DeliveryLogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string>('2026-11-05');
-  const [selectedMealSession, setSelectedMealSession] = useState<'All' | 'Lunch' | 'Dinner'>('All');
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  });
+  const [selectedMealSession, setSelectedMealSession] = useState<'All' | 'Breakfast' | 'Lunch' | 'Dinner'>('All');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<'All' | 'delivered' | 'out_for_delivery' | 'pending' | 'not_received' | 'paused'>('All');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -59,15 +62,83 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
     }
   };
 
-  // Fetch delivery logs from API
+  // Fetch delivery logs + active customers so all 3 meals (Breakfast, Lunch, Dinner) are tracked per customer
   const fetchLogs = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/delivery-logs?date=${selectedDate}`);
-      const data = await res.json();
-      if (data.success && Array.isArray(data.logs)) {
-        setLogs(data.logs);
+      const [logsRes, custRes] = await Promise.all([
+        fetch(`/api/admin/delivery-logs?date=${selectedDate}`, { cache: 'no-store' }),
+        fetch('/api/customers', { cache: 'no-store' }).catch(() => null),
+      ]);
+      const data = await logsRes.json();
+      const existingLogs: DeliveryLogItem[] = data.success && Array.isArray(data.logs) ? data.logs : [];
+
+      let custList: Array<{ name: string; mobileNo: string; plan?: string; address?: string; locality?: string }> = [];
+      if (custRes && custRes.ok) {
+        const custData = await custRes.json();
+        if (custData?.success && Array.isArray(custData.customers)) {
+          custList = custData.customers;
+        }
       }
+
+      // Build unified 3-meal slots (Breakfast, Lunch, Dinner) for every customer in logs or sheet
+      const customerMap = new Map<string, { name: string; mobile: string; plan: string; address: string; locality: string }>();
+      for (const l of existingLogs) {
+        const mob = (l.customerMobile || '').replace(/\D/g, '').slice(-10);
+        if (mob && !customerMap.has(mob)) {
+          customerMap.set(mob, {
+            name: l.customerName,
+            mobile: mob,
+            plan: l.planName,
+            address: l.deliveryAddress,
+            locality: l.locality || '',
+          });
+        }
+      }
+      for (const c of custList) {
+        const mob = (c.mobileNo || '').replace(/\D/g, '').slice(-10);
+        if (mob && !customerMap.has(mob)) {
+          customerMap.set(mob, {
+            name: c.name,
+            mobile: mob,
+            plan: c.plan || 'Monthly',
+            address: c.address || '',
+            locality: c.locality || '',
+          });
+        }
+      }
+
+      const sessions: Array<'Breakfast' | 'Lunch' | 'Dinner'> = ['Breakfast', 'Lunch', 'Dinner'];
+      const mergedLogs: DeliveryLogItem[] = [];
+
+      for (const [mob, info] of customerMap.entries()) {
+        for (const session of sessions) {
+          const found = existingLogs.find(
+            (l) =>
+              (l.customerMobile || '').replace(/\D/g, '').slice(-10) === mob &&
+              l.mealSession === session
+          );
+          if (found) {
+            mergedLogs.push(found);
+          } else {
+            mergedLogs.push({
+              id: `LOG-${selectedDate}-${mob}-${session.toLowerCase()}`,
+              date: selectedDate,
+              customerName: info.name,
+              customerMobile: mob,
+              planName: info.plan,
+              deliveryAddress: info.address,
+              locality: info.locality,
+              mealSession: session,
+              status: 'pending',
+              markedBy: 'admin',
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        }
+      }
+
+      setLogs(mergedLogs.length > 0 ? mergedLogs : existingLogs);
     } catch (err) {
       console.error('Failed to load logs:', err);
     } finally {
@@ -388,7 +459,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
 
             {/* Session buttons */}
             <div className="flex items-center bg-zinc-100 p-1 rounded-xl border border-zinc-200 text-xs font-bold">
-              {(['All', 'Lunch', 'Dinner'] as const).map(session => (
+              {(['All', 'Breakfast', 'Lunch', 'Dinner'] as const).map(session => (
                 <button
                   key={session}
                   onClick={() => setSelectedMealSession(session)}
@@ -462,186 +533,192 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {filteredLogs.map((log) => {
-              const isDelivered = log.status === 'delivered';
-              const isOutForDelivery = log.status === 'out_for_delivery';
-              const isPending = log.status === 'pending';
-              const isNotReceived = log.status === 'not_received';
+          <div className="space-y-4">
+            {Array.from(
+              filteredLogs.reduce((acc, log) => {
+                const key = log.customerMobile || log.customerName;
+                const list = acc.get(key) || [];
+                list.push(log);
+                acc.set(key, list);
+                return acc;
+              }, new Map<string, DeliveryLogItem[]>())
+            ).map(([custKey, custLogs]) => {
+              const primary = custLogs[0];
+              const mealOrder: Record<string, number> = { Breakfast: 0, Lunch: 1, Dinner: 2 };
+              const sortedMeals = [...custLogs].sort(
+                (a, b) => (mealOrder[a.mealSession] ?? 9) - (mealOrder[b.mealSession] ?? 9)
+              );
 
               return (
                 <div
-                  key={log.id}
-                  className={`bg-white/95 backdrop-blur-xl border rounded-3xl p-4 sm:p-5 shadow-2xs transition-all ${
-                    isNotReceived 
-                      ? 'border-red-300 bg-red-50/30 ring-1 ring-red-200' 
-                      : isDelivered 
-                      ? 'border-emerald-200/90' 
-                      : 'border-zinc-200/90'
-                  }`}
+                  key={custKey}
+                  className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-3xl p-4 sm:p-5 shadow-2xs space-y-4"
                 >
-                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    
-                    {/* CUSTOMER & PLAN INFO */}
-                    <div className="space-y-1.5 flex-1 min-w-0">
+                  {/* CUSTOMER HEADER */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100">
+                    <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2.5 flex-wrap">
                         <span className="font-ostrich text-lg font-black text-purple-950 tracking-wider">
-                          {log.customerName}
+                          {primary.customerName}
                         </span>
-                        
                         <span className="text-[10px] font-black uppercase bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded-md border border-zinc-200">
-                          {log.planName} Plan
+                          {primary.planName} Plan
                         </span>
-
-                        <span className="text-[10px] font-bold bg-purple-50 text-purple-800 px-2 py-0.5 rounded-md border border-purple-100">
-                          {log.mealSession}
-                        </span>
-
-                        {/* STATUS BADGE */}
-                        {isDelivered && (
-                          <span className="text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            <span>Delivered ({log.deliveredAt || 'Confirmed'})</span>
-                          </span>
-                        )}
-                        {isOutForDelivery && (
-                          <span className="text-[10px] font-black uppercase bg-purple-100 text-purple-900 px-2.5 py-0.5 rounded-full border border-purple-300 flex items-center gap-1">
-                            <Truck className="w-3 h-3 text-purple-700" />
-                            <span>Out for Delivery</span>
-                          </span>
-                        )}
-                        {isPending && (
-                          <span className="text-[10px] font-bold bg-zinc-100 text-zinc-600 px-2.5 py-0.5 rounded-full border border-zinc-200 flex items-center gap-1">
-                            <Clock className="w-3 h-3 text-zinc-500" />
-                            <span>Pending Dispatch</span>
-                          </span>
-                        )}
-                        {isNotReceived && (
-                          <span className="text-[10px] font-black uppercase bg-red-100 text-red-800 px-2.5 py-0.5 rounded-full border border-red-300 flex items-center gap-1 animate-pulse">
-                            <AlertTriangle className="w-3 h-3 text-red-600" />
-                            <span>Order Not Delivered</span>
-                          </span>
-                        )}
-                        {log.status === 'paused' && (
-                          <span className="text-[10px] font-black uppercase bg-zinc-200 text-zinc-800 px-2.5 py-0.5 rounded-full border border-zinc-300 flex items-center gap-1">
-                            <Ban className="w-3 h-3 text-zinc-600" />
-                            <span>Canceled / Paused</span>
-                          </span>
-                        )}
                       </div>
-
-                      {/* DELIVERY ADDRESS */}
-                      <p className="text-xs text-zinc-600 font-medium flex items-start gap-1.5 pt-0.5">
+                      <p className="text-xs text-zinc-600 font-medium flex items-start gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0 mt-0.5" />
-                        <span className="line-clamp-2">{log.deliveryAddress}</span>
+                        <span className="line-clamp-2">{primary.deliveryAddress}</span>
                       </p>
-
-                      {/* NOTES OR ISSUE REASON */}
-                      {log.recipientNote && isDelivered && (
-                        <div className="text-[11px] text-emerald-800 bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-100 inline-block font-semibold">
-                          Receipt note: {log.recipientNote}
-                        </div>
-                      )}
-
-                      {log.issueReason && isNotReceived && (
-                        <div className="text-[11px] text-red-800 bg-red-100/80 px-3 py-1.5 rounded-xl border border-red-200 font-bold space-y-0.5">
-                          <div>Reason reported: {log.issueReason}</div>
-                          <div className="text-[10px] text-red-600 font-normal">Contact customer below to resolve immediately.</div>
-                        </div>
-                      )}
                     </div>
 
-                    {/* ACTION BUTTONS & COMMUNICATION */}
-                    <div className="flex flex-wrap items-center gap-2 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-zinc-100">
-                      
-                      {/* QUICK CALL & WHATSAPP BUTTONS */}
-                      <div className="flex items-center gap-1.5 bg-zinc-50 p-1 rounded-xl border border-zinc-200">
-                        <a
-                          href={`tel:+91${log.customerMobile}`}
-                          className="px-2.5 py-1.5 bg-zinc-950 text-white rounded-lg text-xs font-bold hover:bg-zinc-800 flex items-center gap-1 transition-all"
-                          title="Call Customer"
-                        >
-                          <Phone className="w-3 h-3 text-orange-400" />
-                          <span className="hidden sm:inline">+91 {log.customerMobile}</span>
-                          <span className="sm:hidden">Call</span>
-                        </a>
+                    {/* QUICK CALL & WHATSAPP BUTTONS */}
+                    <div className="flex items-center gap-1.5 bg-zinc-50 p-1 rounded-xl border border-zinc-200 shrink-0 self-start sm:self-center">
+                      <a
+                        href={`tel:+91${primary.customerMobile}`}
+                        className="px-2.5 py-1.5 bg-zinc-950 text-white rounded-lg text-xs font-bold hover:bg-zinc-800 flex items-center gap-1 transition-all"
+                        title="Call Customer"
+                      >
+                        <Phone className="w-3 h-3 text-orange-400" />
+                        <span>+91 {primary.customerMobile}</span>
+                      </a>
+                      <a
+                        href={`https://wa.me/91${primary.customerMobile}?text=${encodeURIComponent(
+                          `Hi ${primary.customerName}, this is Stuvvy Kitchen regarding your ${primary.planName} meal delivery today.`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 bg-emerald-600 text-white rounded-lg text-xs hover:bg-emerald-700 transition-all"
+                        title="Chat on WhatsApp"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  </div>
 
-                        <a
-                          href={`https://wa.me/91${log.customerMobile}?text=${encodeURIComponent(
-                            `Hi ${log.customerName}, this is Stuvvy Kitchen regarding your ${log.planName} meal delivery today.`
-                          )}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="p-1.5 bg-emerald-600 text-white rounded-lg text-xs hover:bg-emerald-700 transition-all"
-                          title="Chat on WhatsApp"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" />
-                        </a>
-                      </div>
+                  {/* SEPARATE 3-MEAL STATUS ROWS (BREAKFAST, LUNCH, DINNER) */}
+                  <div className="space-y-2.5">
+                    {sortedMeals.map((log) => {
+                      const isDelivered = log.status === 'delivered';
+                      const isOutForDelivery = log.status === 'out_for_delivery';
+                      const isPending = log.status === 'pending';
+                      const isNotReceived = log.status === 'not_received';
 
-                      {/* STATUS TOGGLE CONTROLS */}
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {/* MARK DELIVERED BUTTON */}
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateStatus(log, 'delivered')}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
-                            isDelivered
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
-                          }`}
-                        >
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
-                          <span>Delivered</span>
-                        </button>
-
-                        {/* OUT FOR DELIVERY BUTTON */}
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateStatus(log, 'out_for_delivery')}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
-                            isOutForDelivery
-                              ? 'bg-purple-900 text-white'
-                              : 'bg-purple-50 hover:bg-purple-100 text-purple-900 border border-purple-200'
-                          }`}
-                        >
-                          <Truck className="w-3.5 h-3.5" />
-                          <span>Out</span>
-                        </button>
-
-                        {/* REPORT ISSUE / NOT RECEIVED BUTTON */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setActiveIssueLog(log);
-                            setIssueReasonInput(log.issueReason || '');
-                          }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                      return (
+                        <div
+                          key={log.id}
+                          className={`rounded-2xl border p-3 sm:px-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 transition-all ${
                             isNotReceived
-                              ? 'bg-red-600 text-white'
-                              : 'bg-red-50 hover:bg-red-100 text-red-800 border border-red-200'
+                              ? 'bg-red-50 border-red-200 text-red-950'
+                              : isDelivered
+                              ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                              : 'bg-zinc-50/70 border-zinc-200/80'
                           }`}
                         >
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          <span>Not Delivered</span>
-                        </button>
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs font-black uppercase tracking-wider text-zinc-900 min-w-[76px]">
+                                {log.mealSession}
+                              </span>
 
-                        {/* CANCELED BUTTON */}
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateStatus(log, 'paused', 'Order paused or canceled by customer/admin')}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
-                            log.status === 'paused'
-                              ? 'bg-zinc-800 text-white'
-                              : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-200'
-                          }`}
-                        >
-                          <Ban className="w-3.5 h-3.5" />
-                          <span>Canceled</span>
-                        </button>
-                      </div>
+                              {isDelivered && (
+                                <span className="text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  <span>Delivered ({log.deliveredAt || 'Confirmed'})</span>
+                                </span>
+                              )}
+                              {isOutForDelivery && (
+                                <span className="text-[10px] font-black uppercase bg-purple-100 text-purple-900 px-2.5 py-0.5 rounded-full border border-purple-300 flex items-center gap-1">
+                                  <Truck className="w-3 h-3 text-purple-700" />
+                                  <span>Out for Delivery</span>
+                                </span>
+                              )}
+                              {isPending && (
+                                <span className="text-[10px] font-bold bg-white text-zinc-600 px-2.5 py-0.5 rounded-full border border-zinc-200 flex items-center gap-1">
+                                  <Clock className="w-3 h-3 text-zinc-500" />
+                                  <span>Pending</span>
+                                </span>
+                              )}
+                              {isNotReceived && (
+                                <span className="text-[10px] font-black uppercase bg-red-100 text-red-800 px-2.5 py-0.5 rounded-full border border-red-300 flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3 text-red-600" />
+                                  <span>Not Delivered</span>
+                                </span>
+                              )}
+                              {log.status === 'paused' && (
+                                <span className="text-[10px] font-black uppercase bg-zinc-200 text-zinc-800 px-2.5 py-0.5 rounded-full border border-zinc-300 flex items-center gap-1">
+                                  <Ban className="w-3 h-3 text-zinc-600" />
+                                  <span>Canceled</span>
+                                </span>
+                              )}
+                            </div>
 
-                    </div>
+                            {log.issueReason && isNotReceived && (
+                              <div className="text-[11px] text-red-700 font-semibold">
+                                Reason: {log.issueReason}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* PER-MEAL STATUS BUTTONS */}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateStatus(log, 'delivered')}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                                isDelivered
+                                  ? 'bg-emerald-600 text-white'
+                                  : 'bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
+                              }`}
+                            >
+                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              <span>Delivered</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateStatus(log, 'out_for_delivery')}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                                isOutForDelivery
+                                  ? 'bg-purple-900 text-white'
+                                  : 'bg-white hover:bg-purple-100 text-purple-900 border border-purple-200'
+                              }`}
+                            >
+                              <Truck className="w-3.5 h-3.5" />
+                              <span>Out</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveIssueLog(log);
+                                setIssueReasonInput(log.issueReason || '');
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                                isNotReceived
+                                  ? 'bg-red-600 text-white'
+                                  : 'bg-white hover:bg-red-100 text-red-800 border border-red-200'
+                              }`}
+                            >
+                              <AlertTriangle className="w-3.5 h-3.5" />
+                              <span>Not Delivered</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateStatus(log, 'paused', 'Order paused or canceled by customer/admin')}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                                log.status === 'paused'
+                                  ? 'bg-zinc-800 text-white'
+                                  : 'bg-white hover:bg-zinc-200 text-zinc-700 border border-zinc-200'
+                              }`}
+                            >
+                              <Ban className="w-3.5 h-3.5" />
+                              <span>Canceled</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );

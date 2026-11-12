@@ -65,7 +65,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
-  const displayName = user?.fullName || 'Guest';
+  const displayName = (isGuestUser || !user?.isVerified) ? 'Guest' : (user?.fullName || 'Guest');
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-zinc-200/90 shadow-2xs">
@@ -182,18 +182,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <Package className="w-4 h-4 text-blue-600" />
                     <span>My Delivery Logs</span>
-                  </button>
-
-                  {/* Option 3: Kitchen Admin Logs */}
-                  <button
-                    onClick={() => {
-                      setIsDropdownOpen(false);
-                      setActiveTab('admin');
-                    }}
-                    className="w-full px-3 py-2 text-left text-xs font-bold text-zinc-800 hover:bg-zinc-100 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer"
-                  >
-                    <ShieldCheck className="w-4 h-4 text-orange-500" />
-                    <span>Kitchen Admin Logs</span>
                   </button>
 
                   {/* Option 4: Logout */}

@@ -199,6 +199,25 @@ h1, h2, h3, h4, h5, h6, .font-heading {
   transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+@keyframes stuvvyLtrMarquee {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-review-ltr {
+  display: inline-block;
+  white-space: nowrap;
+  animation: stuvvyLtrMarquee 26s linear infinite;
+}
+
+.animate-review-ltr:hover {
+  animation-play-state: paused;
+}
+
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
   width: 6px;

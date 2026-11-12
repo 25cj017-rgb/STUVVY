@@ -13,7 +13,7 @@ export interface DeliveryLogItem {
   planName: string; // "Daily", "Weekly", "Monthly"
   deliveryAddress: string;
   locality?: string;
-  mealSession: 'Lunch' | 'Dinner';
+  mealSession: 'Breakfast' | 'Lunch' | 'Dinner';
   status: 'delivered' | 'out_for_delivery' | 'pending' | 'not_received' | 'paused';
   deliveredAt?: string; // e.g. "12:35 PM"
   recipientNote?: string; // e.g. "Handed to security gate", "Received directly"
@@ -193,19 +193,24 @@ export async function POST(request: Request) {
     }
 
     const logDate = date || new Date().toISOString().split('T')[0];
-    const logId = id || `LOG-${logDate}-${customerMobile}-${mealSession.toLowerCase()}`;
+    const normMobile = customerMobile.replace(/\D/g, '').slice(-10);
+    const logId = id || `LOG-${logDate}-${normMobile}-${String(mealSession).toLowerCase()}`;
 
     const logs = getSavedLogs();
-    const existingIndex = logs.findIndex(l => l.id === logId);
+    const existingIndex = logs.findIndex(
+      (l) =>
+        l.id === logId ||
+        (l.date === logDate && l.customerMobile === normMobile && l.mealSession === mealSession)
+    );
 
     const nowStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     const timestampIso = new Date().toISOString();
 
     const updatedRecord: DeliveryLogItem = {
-      id: logId,
+      id: existingIndex >= 0 ? logs[existingIndex].id : logId,
       date: logDate,
       customerName: customerName || (existingIndex >= 0 ? logs[existingIndex].customerName : 'Subscriber'),
-      customerMobile: customerMobile.replace(/\D/g, '').slice(-10),
+      customerMobile: normMobile,
       planName: planName || (existingIndex >= 0 ? logs[existingIndex].planName : 'Monthly'),
       deliveryAddress: deliveryAddress || (existingIndex >= 0 ? logs[existingIndex].deliveryAddress : ''),
       locality: locality || (existingIndex >= 0 ? logs[existingIndex].locality : ''),

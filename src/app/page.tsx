@@ -8,6 +8,8 @@ import { AccountDashboard } from '../components/AccountDashboard';
 import { CenteredFrameMenu } from '../components/CenteredFrameMenu';
 import { PlanMenuModal } from '../components/PlanMenuModal';
 import { AdminContactModal } from '../components/AdminContactModal';
+import { CustomerTestimonialPopup } from '../components/CustomerTestimonialPopup';
+import { LandingReviewPopup } from '../components/LandingReviewPopup';
 import { CartDrawer } from '../components/CartDrawer';
 import { AdminDeliveryPortal } from '../components/AdminDeliveryPortal';
 import { MobileBottomNav } from '../components/MobileBottomNav';
@@ -34,6 +36,11 @@ export default function Home() {
   const [showLoginCard, setShowLoginCard] = useState(false);
   const [isGuestUser, setIsGuestUser] = useState(false);
   const [isAdminContactOpen, setIsAdminContactOpen] = useState(false);
+  const [isTestimonialPopupOpen, setIsTestimonialPopupOpen] = useState(false);
+  const [showLandingReviewPopup, setShowLandingReviewPopup] = useState(true);
+  const [loginMode, setLoginMode] = useState<'subscriber' | 'admin'>('subscriber');
+  const [adminCodeInput, setAdminCodeInput] = useState('');
+  const [adminCodeError, setAdminCodeError] = useState('');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [checkoutMode, setCheckoutMode] = useState<'subscription' | 'cart'>('subscription');
   const [user, setUser] = useState<UserProfile>(INITIAL_USER);
@@ -129,6 +136,10 @@ export default function Home() {
     // Handle Browser Back / Forward buttons
     const handlePopState = (event: PopStateEvent) => {
       // If a modal or drawer is open when back is pressed, close it first
+      if (isTestimonialPopupOpen) {
+        setIsTestimonialPopupOpen(false);
+        return;
+      }
       if (isAdminContactOpen) {
         setIsAdminContactOpen(false);
         return;
@@ -158,10 +169,14 @@ export default function Home() {
     return () => {
       window.removeEventListener('popstate', handlePopState);
     };
-  }, [isAdminContactOpen, isCartOpen, planMenuModal.isOpen, showLoginCard, activeTab]);
+  }, [isTestimonialPopupOpen, isAdminContactOpen, isCartOpen, planMenuModal.isOpen, showLoginCard, activeTab]);
 
-  // Save current active tab whenever it changes
+  // Save current active tab whenever it changes & reset login transient state on landing
   useEffect(() => {
+    if (activeTab === 'landing') {
+      setIsSuccess(false);
+      setIsVerifying(false);
+    }
     try {
       if (activeTab === 'landing') {
         sessionStorage.removeItem('stuvvy_tab');
@@ -239,18 +254,38 @@ export default function Home() {
         } catch {}
 
         setActiveTab('discover');
+        setIsSuccess(false);
       }, 500);
     }, 800);
   };
 
   const handleContinueAsGuest = () => {
     setIsGuestUser(true);
+    try {
+      localStorage.removeItem('stuvvy_user');
+    } catch {}
     setUser({
-      ...user,
+      ...INITIAL_USER,
       fullName: 'Guest Explorer',
       isVerified: false
     });
     setActiveTab('discover');
+  };
+
+  const handleAdminCodeLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleaned = adminCodeInput.trim();
+    if (cleaned === '9344' || cleaned === '1234') {
+      setAdminCodeError('');
+      setAdminCodeInput('');
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('stuvvy_admin_auth', 'true');
+      }
+      setShowLoginCard(false);
+      setActiveTab('admin');
+    } else {
+      setAdminCodeError('Invalid 4-digit Admin Code.');
+    }
   };
 
 
@@ -317,12 +352,33 @@ export default function Home() {
   const handleLogout = () => {
     setIsGuestUser(true);
     setShowLoginCard(false);
+    setIsSuccess(false);
+    setIsVerifying(false);
+    setAuthStatusMessage('');
+    try {
+      localStorage.removeItem('stuvvy_user');
+    } catch {}
     setUser({
-      ...user,
+      ...INITIAL_USER,
       fullName: 'Guest Explorer',
       isVerified: false
     });
     setActiveTab('landing');
+  };
+
+  const handleOpenRegister = () => {
+    setIsTestimonialPopupOpen(true);
+  };
+
+  const handleProceedToRegistration = () => {
+    setIsTestimonialPopupOpen(false);
+    const googleFormUrl = process.env.NEXT_PUBLIC_GOOGLE_FORM_URL;
+    if (googleFormUrl) {
+      window.open(googleFormUrl, '_blank', 'noopener,noreferrer');
+    }
+    setShowLoginCard(false);
+    setIsGuestUser(true);
+    setActiveTab('plans');
   };
 
   const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
@@ -369,6 +425,12 @@ export default function Home() {
             onClick={handleLandingScreenClick}
             className="w-screen h-screen bg-white relative flex items-center justify-center overflow-hidden select-none cursor-pointer"
           >
+            {/* AUTO-OPENING LANDING PAGE REVIEW POPUP (SANJANA) */}
+            <LandingReviewPopup
+              isOpen={showLandingReviewPopup}
+              onClose={() => setShowLandingReviewPopup(false)}
+            />
+
             {/* Background Image Artwork Synchronized */}
             <div className={`w-full h-full flex items-center justify-center landing-image-transition ${
               showLoginCard ? 'sm:-translate-x-24 sm:scale-95 opacity-90' : 'translate-x-0 scale-100 opacity-100'
@@ -401,11 +463,33 @@ export default function Home() {
                   </button>
 
                   <button
-                    onClick={() => setShowLoginCard(true)}
+                    onClick={() => {
+                      setLoginMode('subscriber');
+                      setShowLoginCard(true);
+                    }}
                     className="bg-zinc-950 hover:bg-zinc-800 text-white font-black text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md hover:scale-105"
                   >
                     <LogIn className="w-3.5 h-3.5 text-orange-400" />
                     <span>Subscriber Login</span>
+                  </button>
+
+                  <button
+                    onClick={handleOpenRegister}
+                    className="bg-orange-600 hover:bg-orange-700 text-white font-black text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md hover:scale-105"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-white" />
+                    <span>Register / Sign Up</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setLoginMode('admin');
+                      setShowLoginCard(true);
+                    }}
+                    className="bg-purple-900 hover:bg-purple-950 text-white font-black text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md hover:scale-105"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-purple-200" />
+                    <span>Admin Login</span>
                   </button>
                 </div>
               </div>
@@ -437,6 +521,86 @@ export default function Home() {
                     </button>
                   </div>
 
+                  {/* SUBSCRIBER VS ADMIN LOGIN SWITCHER */}
+                  <div className="grid grid-cols-2 gap-1.5 bg-zinc-100 p-1 rounded-2xl border border-zinc-200">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoginMode('subscriber');
+                        setAdminCodeError('');
+                      }}
+                      className={`py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                        loginMode === 'subscriber'
+                          ? 'bg-zinc-950 text-white shadow-xs'
+                          : 'text-zinc-600 hover:text-zinc-950'
+                      }`}
+                    >
+                      Subscriber Login
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoginMode('admin');
+                        setAuthStatusMessage('');
+                      }}
+                      className={`py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                        loginMode === 'admin'
+                          ? 'bg-purple-900 text-white shadow-xs'
+                          : 'text-zinc-600 hover:text-zinc-950'
+                      }`}
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>Admin Login</span>
+                    </button>
+                  </div>
+
+                  {loginMode === 'admin' ? (
+                    <form onSubmit={handleAdminCodeLogin} className="space-y-3 pt-1">
+                      <div className="bg-purple-50 border border-purple-200 rounded-2xl p-3 text-left">
+                        <div className="text-[11px] font-black text-purple-950 uppercase tracking-wider">
+                          Kitchen Admin Access
+                        </div>
+                        <p className="text-[11px] text-purple-700 font-medium mt-0.5">
+                          Enter the 4-digit admin passcode to open Delivery Logs.
+                        </p>
+                      </div>
+
+                      {adminCodeError && (
+                        <div className="py-2 px-4 bg-red-50 border border-red-200 text-red-600 rounded-2xl text-xs font-black text-center">
+                          {adminCodeError}
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-left text-[11px] font-bold text-zinc-700 mb-1">
+                          4-DIGIT ADMIN CODE
+                        </label>
+                        <input
+                          type="password"
+                          inputMode="numeric"
+                          maxLength={4}
+                          required
+                          autoFocus
+                          value={adminCodeInput}
+                          onChange={(e) => {
+                            setAdminCodeInput(e.target.value.replace(/\D/g, '').slice(0, 4));
+                            setAdminCodeError('');
+                          }}
+                          placeholder="••••"
+                          className="w-full text-center tracking-[0.6em] font-mono text-lg font-black px-4 py-3 bg-white border border-zinc-300 rounded-2xl text-zinc-950 placeholder:text-zinc-400 focus:outline-none focus:border-purple-700 transition-colors shadow-2xs"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full bg-purple-900 hover:bg-purple-950 text-white font-extrabold py-3.5 rounded-2xl text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Lock className="w-4 h-4 text-purple-200" />
+                        <span>Unlock Admin Portal</span>
+                      </button>
+                    </form>
+                  ) : (
+                    <>
                   {authStatusMessage && (
                     <div className="py-2 px-4 bg-red-50 border border-red-200 text-red-600 rounded-2xl text-xs font-black tracking-wider text-center animate-shake uppercase">
                       {authStatusMessage}
@@ -508,6 +672,16 @@ export default function Home() {
                         </button>
                       )}
 
+                      {/* REGISTER / SIGN UP BUTTON (OPENS CUSTOMER TESTIMONIAL POPUP FIRST) */}
+                      <button
+                        type="button"
+                        onClick={handleOpenRegister}
+                        className="w-full bg-orange-50 hover:bg-orange-100 text-orange-800 font-extrabold py-2.5 rounded-2xl text-xs border border-orange-200 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Sparkles className="w-4 h-4 text-orange-600" />
+                        <span>New Visitor? Register / Sign Up</span>
+                      </button>
+
                       {/* GUEST PERSPECTIVE SELECTION BUTTON */}
                       <button
                         type="button"
@@ -519,6 +693,8 @@ export default function Home() {
                       </button>
                     </div>
                   </form>
+                    </>
+                  )}
 
                   <div className="pt-2 border-t border-zinc-100 flex items-center justify-center text-[11px] font-bold text-zinc-500">
                     <button
@@ -761,17 +937,16 @@ export default function Home() {
               >
                 Account
               </button>
-              <button 
-                onClick={() => setActiveTab('admin')} 
-                className="hover:text-purple-900 text-purple-700 font-extrabold cursor-pointer flex items-center gap-1"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Admin</span>
-              </button>
             </div>
           </div>
         </footer>
       )}
+
+      {/* CUSTOMER TESTIMONIAL & UPGRADE JOURNEY POPUP */}
+      <CustomerTestimonialPopup
+        isOpen={isTestimonialPopupOpen}
+        onCloseAndContinue={handleProceedToRegistration}
+      />
 
       {/* ADMIN CONTACT MODAL FOR GUESTS & SUBSCRIBERS */}
       <AdminContactModal

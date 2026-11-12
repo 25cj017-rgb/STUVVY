@@ -25,6 +25,8 @@ export interface SubscriptionCalendarProps {
   startDate?: string | Date;
   endDate?: string | Date;
   planName?: string;
+  deliveredDates?: string[];
+  notDeliveredDates?: string[];
   onDaysChange?: (updatedDays: CalendarDay[], activeCount: number) => void;
 }
 
@@ -87,6 +89,8 @@ export const SubscriptionCalendar: React.FC<SubscriptionCalendarProps> = ({
   startDate,
   endDate,
   planName = 'Monthly Plan',
+  deliveredDates = [],
+  notDeliveredDates = [],
   onDaysChange
 }) => {
   // Real today date matching system clock
@@ -216,17 +220,21 @@ export const SubscriptionCalendar: React.FC<SubscriptionCalendarProps> = ({
 
     for (let dayNum = 1; dayNum <= daysInMonth; dayNum++) {
       const currentDayDate = new Date(selectedYear, selectedMonth, dayNum, 0, 0, 0);
+      const isoDate = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
       const isBeforeStart = currentDayDate.getTime() < startMidnight.getTime();
       const isAfterEnd = currentDayDate.getTime() > endMidnight.getTime();
       const isActivePlan = !isBeforeStart && !isAfterEnd;
 
       // Delivery tracking criteria:
-      // If within active subscription and day <= today: DELIVERED (Strike-through mark!)
-      // If within active subscription and day > today: UPCOMING (Normal bold styling)
-      // If before start: BEFORE SUBSCRIPTION (Muted, normal text)
-      // If after end: OUTSIDE SUBSCRIPTION (Muted, normal text)
-      const isDelivered = isActivePlan && currentDayDate.getTime() <= todayMidnight.getTime();
-      const isUpcoming = isActivePlan && currentDayDate.getTime() > todayMidnight.getTime();
+      // 1. If Admin marked any meal on this date as Delivered -> DELIVERED (Strike-through mark!)
+      // 2. If within active subscription and day < today (and not explicitly marked Not Delivered) -> DELIVERED
+      // 3. Otherwise UPCOMING / OUTSIDE SUBSCRIPTION
+      const isExplicitDelivered = deliveredDates.includes(isoDate);
+      const isExplicitNotDelivered = !isExplicitDelivered && notDeliveredDates.includes(isoDate);
+      const isDelivered =
+        isExplicitDelivered ||
+        (isActivePlan && !isExplicitNotDelivered && currentDayDate.getTime() < todayMidnight.getTime());
+      const isUpcoming = isActivePlan && !isDelivered;
       const isToday = currentDayDate.getTime() === todayMidnight.getTime();
 
       let statusType: 'delivered' | 'upcoming' | 'before_sub' | 'after_sub' = 'after_sub';
@@ -251,7 +259,7 @@ export const SubscriptionCalendar: React.FC<SubscriptionCalendarProps> = ({
     }
 
     return list;
-  }, [selectedYear, selectedMonth, daysInMonth, parsedStartDate, parsedEndDate, today]);
+  }, [selectedYear, selectedMonth, daysInMonth, parsedStartDate, parsedEndDate, today, deliveredDates, notDeliveredDates]);
 
   // Aggregate monthly counts
   const deliveredCount = useMemo(() => {
