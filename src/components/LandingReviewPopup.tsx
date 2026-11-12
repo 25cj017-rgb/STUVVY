@@ -70,11 +70,11 @@ export const LandingReviewPopup: React.FC<LandingReviewPopupProps> = ({
           </button>
         </div>
 
-        {/* MOVING REVIEW TRACK (LEFT TO RIGHT) */}
-        <div className="overflow-hidden rounded-2xl bg-zinc-50 border border-zinc-200/80 py-2.5 px-3">
-          <div className="animate-review-ltr text-xs sm:text-[13px] font-semibold text-zinc-800 italic">
+        {/* REVIEW PARAGRAPH (STATIC, CLEAN & READABLE) */}
+        <div className="rounded-2xl bg-zinc-50 border border-zinc-200/80 p-3.5 sm:p-4">
+          <p className="text-xs sm:text-[13px] leading-relaxed font-medium text-zinc-800">
             &ldquo;{currentReview.reviewText}&rdquo;
-          </div>
+          </p>
         </div>
       </div>
     </div>
