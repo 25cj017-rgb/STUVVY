@@ -667,16 +667,6 @@ export default function Home() {
                         </button>
                       )}
 
-                      {/* REGISTER / SIGN UP BUTTON (OPENS CUSTOMER TESTIMONIAL POPUP FIRST) */}
-                      <button
-                        type="button"
-                        onClick={handleOpenRegister}
-                        className="w-full bg-orange-50 hover:bg-orange-100 text-orange-800 font-extrabold py-2.5 rounded-2xl text-xs border border-orange-200 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        <Sparkles className="w-4 h-4 text-orange-600" />
-                        <span>New Visitor? Register / Sign Up</span>
-                      </button>
-
                       {/* GUEST PERSPECTIVE SELECTION BUTTON */}
                       <button
                         type="button"

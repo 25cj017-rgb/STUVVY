@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { DeliveryLogItem } from '../delivery-logs/route';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-const LOGS_FILE_PATH = path.join(process.cwd(), 'src', 'data', 'delivery_logs.json');
+const REPO_LOGS_PATH = path.join(process.cwd(), 'src', 'data', 'delivery_logs.json');
+const TMP_LOGS_PATH = path.join(os.tmpdir(), 'stuvvy_delivery_logs.json');
 
 function escapeCsvField(val: string | undefined): string {
   if (!val) return '""';
@@ -20,8 +22,13 @@ export async function GET(request: Request) {
     const filterDate = searchParams.get('date');
 
     let logs: DeliveryLogItem[] = [];
-    if (fs.existsSync(LOGS_FILE_PATH)) {
-      const raw = fs.readFileSync(LOGS_FILE_PATH, 'utf-8');
+    if (Array.isArray((globalThis as any).__stuvvyDeliveryLogs) && (globalThis as any).__stuvvyDeliveryLogs.length > 0) {
+      logs = (globalThis as any).__stuvvyDeliveryLogs;
+    } else if (fs.existsSync(TMP_LOGS_PATH)) {
+      const raw = fs.readFileSync(TMP_LOGS_PATH, 'utf-8');
+      logs = JSON.parse(raw);
+    } else if (fs.existsSync(REPO_LOGS_PATH)) {
+      const raw = fs.readFileSync(REPO_LOGS_PATH, 'utf-8');
       logs = JSON.parse(raw);
     }
 

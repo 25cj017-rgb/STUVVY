@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { PlanOption } from './PricingSection';
 import { SubscriptionCalendar, CalendarDay } from './SubscriptionCalendar';
 import { UserProfile } from '../types';
+import type { DeliveryLogItem } from '../app/api/admin/delivery-logs/route';
 import { StuvvyCard } from './StuvvyCard';
 import { StuvvyStarRewards } from './StuvvyStarRewards';
 import { calculateSubscriptionSchedule, parseDateFlexible } from '../utils/subscriptionUtils';
@@ -57,21 +58,51 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
     jainNoGarlic: false
   });
 
-  // Fetch real delivery records for this subscriber
+  // Fetch real delivery records for this subscriber + sync with local Admin updates
   useEffect(() => {
-    if (user?.mobileNumber) {
-      const cleanMobile = user.mobileNumber.replace(/\D/g, '').slice(-10);
+    if (!user?.mobileNumber) return;
+    const cleanMobile = user.mobileNumber.replace(/\D/g, '').slice(-10);
+
+    const loadAndMergeLogs = () => {
       setLoadingLogs(true);
-      fetch(`/api/admin/delivery-logs?mobile=${cleanMobile}`)
+      fetch(`/api/admin/delivery-logs?mobile=${cleanMobile}`, { cache: 'no-store' })
         .then(res => res.json())
         .then(data => {
-          if (data.success && Array.isArray(data.logs)) {
-            setDeliveryLogs(data.logs);
+          const serverLogs: DeliveryLogItem[] = data.success && Array.isArray(data.logs) ? data.logs : [];
+          let localLogs: DeliveryLogItem[] = [];
+          try {
+            const rawLocal = localStorage.getItem('stuvvy_delivery_logs');
+            if (rawLocal) {
+              const parsed = JSON.parse(rawLocal) as DeliveryLogItem[];
+              if (Array.isArray(parsed)) {
+                localLogs = parsed.filter(
+                  (l) => (l.customerMobile || '').replace(/\D/g, '').slice(-10) === cleanMobile
+                );
+              }
+            }
+          } catch {}
+
+          const merged = new Map<string, DeliveryLogItem>();
+          for (const l of serverLogs) merged.set(l.id, l);
+          for (const l of localLogs) {
+            const prev = merged.get(l.id);
+            if (!prev || new Date(l.updatedAt).getTime() >= new Date(prev.updatedAt).getTime()) {
+              merged.set(l.id, l);
+            }
           }
+          setDeliveryLogs(Array.from(merged.values()));
         })
         .catch(err => console.error('Error fetching delivery logs:', err))
         .finally(() => setLoadingLogs(false));
-    }
+    };
+
+    loadAndMergeLogs();
+    window.addEventListener('stuvvy-logs-updated', loadAndMergeLogs);
+    window.addEventListener('storage', loadAndMergeLogs);
+    return () => {
+      window.removeEventListener('stuvvy-logs-updated', loadAndMergeLogs);
+      window.removeEventListener('storage', loadAndMergeLogs);
+    };
   }, [user?.mobileNumber]);
 
   // Hash change detection (e.g. from navbar "Stuvvy Card" button)

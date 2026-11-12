@@ -73,6 +73,30 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
       const data = await logsRes.json();
       const existingLogs: DeliveryLogItem[] = data.success && Array.isArray(data.logs) ? data.logs : [];
 
+      // Merge any locally persisted logs for this date (ensures persistence even on serverless cold starts)
+      let localLogsForDate: DeliveryLogItem[] = [];
+      try {
+        const rawLocal = localStorage.getItem('stuvvy_delivery_logs');
+        if (rawLocal) {
+          const parsedLocal = JSON.parse(rawLocal) as DeliveryLogItem[];
+          if (Array.isArray(parsedLocal)) {
+            localLogsForDate = parsedLocal.filter((l) => l.date === selectedDate);
+          }
+        }
+      } catch {}
+
+      const mergedById = new Map<string, DeliveryLogItem>();
+      for (const l of existingLogs) {
+        mergedById.set(l.id, l);
+      }
+      for (const l of localLogsForDate) {
+        const prev = mergedById.get(l.id);
+        if (!prev || new Date(l.updatedAt).getTime() >= new Date(prev.updatedAt).getTime()) {
+          mergedById.set(l.id, l);
+        }
+      }
+      const combinedExisting = Array.from(mergedById.values());
+
       let custList: Array<{ name: string; mobileNo: string; plan?: string; address?: string; locality?: string }> = [];
       if (custRes && custRes.ok) {
         const custData = await custRes.json();
@@ -113,7 +137,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
 
       for (const [mob, info] of customerMap.entries()) {
         for (const session of sessions) {
-          const found = existingLogs.find(
+          const found = combinedExisting.find(
             (l) =>
               (l.customerMobile || '').replace(/\D/g, '').slice(-10) === mob &&
               l.mealSession === session
@@ -138,7 +162,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         }
       }
 
-      setLogs(mergedLogs.length > 0 ? mergedLogs : existingLogs);
+      setLogs(mergedLogs.length > 0 ? mergedLogs : combinedExisting);
     } catch (err) {
       console.error('Failed to load logs:', err);
     } finally {
@@ -183,7 +207,19 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
 
       if (data.success && data.log) {
         setLogs(prev => prev.map(item => item.id === log.id ? data.log : item));
-        showToast(`Status updated to "${newStatus.replace(/_/g, ' ').toUpperCase()}" for ${log.customerName}`);
+        try {
+          const rawLocal = localStorage.getItem('stuvvy_delivery_logs');
+          const parsedLocal: DeliveryLogItem[] = rawLocal ? JSON.parse(rawLocal) : [];
+          const idx = parsedLocal.findIndex((item) => item.id === data.log.id);
+          if (idx >= 0) {
+            parsedLocal[idx] = data.log;
+          } else {
+            parsedLocal.unshift(data.log);
+          }
+          localStorage.setItem('stuvvy_delivery_logs', JSON.stringify(parsedLocal));
+          window.dispatchEvent(new Event('stuvvy-logs-updated'));
+        } catch {}
+        showToast(`Auto-saved "${newStatus.replace(/_/g, ' ').toUpperCase()}" to Excel for ${log.customerName}`);
       }
     } catch (err) {
       console.error('Error updating status:', err);
@@ -329,29 +365,10 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0 self-start md:self-center flex-wrap">
-          {/* EXCEL EXPORT BUTTON */}
-          <a
-            href={`/api/admin/export-excel?date=${selectedDate}`}
-            download
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-3.5 py-2.5 rounded-xl transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
-            title="Download Separate Excel Spreadsheet (.csv)"
-          >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-200" />
-            <span>Export Excel</span>
-          </a>
-
-          <button
-            type="button"
-            onClick={() => {
-              setRefreshing(true);
-              fetchLogs();
-            }}
-            className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-extrabold text-xs px-3.5 py-2.5 rounded-xl transition-all flex items-center gap-2 border border-zinc-200 cursor-pointer shadow-2xs"
-            title="Refresh Logs"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </button>
+          <div className="bg-emerald-50 text-emerald-800 border border-emerald-200 font-black text-xs px-3.5 py-2.5 rounded-xl flex items-center gap-1.5">
+            <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+            <span>Auto-Saved to Excel</span>
+          </div>
 
           {onBackToApp && (
             <button

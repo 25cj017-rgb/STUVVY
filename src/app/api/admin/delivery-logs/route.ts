@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -22,8 +23,15 @@ export interface DeliveryLogItem {
   updatedAt: string;
 }
 
-const LOGS_FILE_PATH = path.join(process.cwd(), 'src', 'data', 'delivery_logs.json');
-const EXCEL_CSV_FILE_PATH = path.join(process.cwd(), 'src', 'data', 'stuvvy_delivery_orders.csv');
+const REPO_LOGS_PATH = path.join(process.cwd(), 'src', 'data', 'delivery_logs.json');
+const REPO_CSV_PATH = path.join(process.cwd(), 'src', 'data', 'stuvvy_delivery_orders.csv');
+const TMP_LOGS_PATH = path.join(os.tmpdir(), 'stuvvy_delivery_logs.json');
+const TMP_CSV_PATH = path.join(os.tmpdir(), 'stuvvy_delivery_orders.csv');
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __stuvvyDeliveryLogs: DeliveryLogItem[] | undefined;
+}
 
 function escapeCsvField(val: string | undefined): string {
   if (!val) return '""';
@@ -31,17 +39,27 @@ function escapeCsvField(val: string | undefined): string {
   return `"${str}"`;
 }
 
-// Ensure data directory and logs file exist
+// Read logs from in-memory cache, /tmp (Vercel writable), or repo seed file
 function getSavedLogs(): DeliveryLogItem[] {
   try {
-    if (!fs.existsSync(LOGS_FILE_PATH)) {
-      const defaultLogs = generateSeedLogs();
-      fs.writeFileSync(LOGS_FILE_PATH, JSON.stringify(defaultLogs, null, 2), 'utf-8');
-      syncExcelCsv(defaultLogs);
-      return defaultLogs;
+    if (Array.isArray(globalThis.__stuvvyDeliveryLogs) && globalThis.__stuvvyDeliveryLogs.length > 0) {
+      return globalThis.__stuvvyDeliveryLogs;
     }
-    const raw = fs.readFileSync(LOGS_FILE_PATH, 'utf-8');
-    return JSON.parse(raw) as DeliveryLogItem[];
+    if (fs.existsSync(TMP_LOGS_PATH)) {
+      const raw = fs.readFileSync(TMP_LOGS_PATH, 'utf-8');
+      const parsed = JSON.parse(raw) as DeliveryLogItem[];
+      globalThis.__stuvvyDeliveryLogs = parsed;
+      return parsed;
+    }
+    if (fs.existsSync(REPO_LOGS_PATH)) {
+      const raw = fs.readFileSync(REPO_LOGS_PATH, 'utf-8');
+      const parsed = JSON.parse(raw) as DeliveryLogItem[];
+      globalThis.__stuvvyDeliveryLogs = parsed;
+      return parsed;
+    }
+    const defaultLogs = generateSeedLogs();
+    globalThis.__stuvvyDeliveryLogs = defaultLogs;
+    return defaultLogs;
   } catch (err) {
     console.error('Error reading delivery logs:', err);
     return generateSeedLogs();
@@ -83,25 +101,33 @@ function syncExcelCsv(logs: DeliveryLogItem[]) {
     });
 
     const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
-    fs.writeFileSync(EXCEL_CSV_FILE_PATH, csvContent, 'utf-8');
+    try {
+      fs.writeFileSync(TMP_CSV_PATH, csvContent, 'utf-8');
+    } catch {}
+    try {
+      fs.writeFileSync(REPO_CSV_PATH, csvContent, 'utf-8');
+    } catch {}
   } catch (err) {
     console.error('Error writing Excel CSV file:', err);
   }
 }
 
 function saveLogs(logs: DeliveryLogItem[]): boolean {
+  globalThis.__stuvvyDeliveryLogs = logs;
+  let wrote = false;
   try {
-    const dir = path.dirname(LOGS_FILE_PATH);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(TMP_LOGS_PATH, JSON.stringify(logs, null, 2), 'utf-8');
+    wrote = true;
+  } catch {}
+  try {
+    const dir = path.dirname(REPO_LOGS_PATH);
+    if (fs.existsSync(dir)) {
+      fs.writeFileSync(REPO_LOGS_PATH, JSON.stringify(logs, null, 2), 'utf-8');
+      wrote = true;
     }
-    fs.writeFileSync(LOGS_FILE_PATH, JSON.stringify(logs, null, 2), 'utf-8');
-    syncExcelCsv(logs);
-    return true;
-  } catch (err) {
-    console.error('Error saving delivery logs:', err);
-    return false;
-  }
+  } catch {}
+  syncExcelCsv(logs);
+  return wrote;
 }
 
 // Seed initial logs for active customers for demo & testing
@@ -230,6 +256,16 @@ export async function POST(request: Request) {
     }
 
     saveLogs(logs);
+
+    // Optional automatic Google Sheets / Excel Web App sync
+    const webhookUrl = process.env.GOOGLE_DELIVERY_WEBHOOK_URL;
+    if (webhookUrl) {
+      fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedRecord),
+      }).catch((err) => console.warn('Google Delivery Webhook sync warning:', err));
+    }
 
     return NextResponse.json({
       success: true,
