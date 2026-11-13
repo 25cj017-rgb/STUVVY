@@ -103,11 +103,39 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
       else weekNumber = 4;
 
       let isWithinSub = false;
-      const isLocked = false;
-      const lockType: RollingDayInfo['lockType'] = undefined;
+      let isLocked = false;
+      let lockType: RollingDayInfo['lockType'] = undefined;
 
-      if (isVerifiedSubscriber) {
+      if (!isVerifiedSubscriber) {
+        // GUEST RULES: Today + next 3 days are available, past or distant dates locked
+        const isGuestAccessible = offset >= 0 && offset <= 3;
+        if (!isGuestAccessible) {
+          isLocked = true;
+          lockType = 'guest_limit';
+        }
+      } else {
+        // SUBSCRIBER RULES: Unlocked strictly according to their plan and start date to end date!
         isWithinSub = isDateWithinSubscription(d, schedule.startDate, schedule.endDate);
+
+        if (isWithinSub) {
+          isLocked = false;
+          lockType = undefined;
+        } else {
+          const dMidnight = d.getTime();
+          const startMidnight = new Date(schedule.startDate.getFullYear(), schedule.startDate.getMonth(), schedule.startDate.getDate()).getTime();
+          const endMidnight = new Date(schedule.endDate.getFullYear(), schedule.endDate.getMonth(), schedule.endDate.getDate()).getTime();
+
+          if (dMidnight < startMidnight) {
+            isLocked = true;
+            lockType = 'outside_sub_start';
+          } else if (dMidnight > endMidnight) {
+            isLocked = true;
+            lockType = 'outside_sub_end';
+          } else {
+            isLocked = true;
+            lockType = 'freshness_window';
+          }
+        }
       }
 
       const unlockDate = new Date(d.getTime() - 3 * 24 * 60 * 60 * 1000);
@@ -401,9 +429,88 @@ export const CenteredFrameMenu: React.FC<CenteredFrameMenuProps> = ({
         </div>
 
         {/* ========================================================================= */}
-        {/* COMPLETE MENU ITEMS GRID FOR THE SELECTED DAY                             */}
+        {/* CONDITIONAL DISPLAY: LOCKED VIEW VS ACTIVE MENU ITEMS GRID                */}
         {/* ========================================================================= */}
-        {currentItems.length === 0 ? (
+        {activeDayInfo.isLocked ? (
+          /* LOCKED STATE CARD: WHEN DATE IS BEYOND ACCESSIBLE WINDOW */
+          <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[32px] p-8 sm:p-12 text-center space-y-6 shadow-sm max-w-xl mx-auto w-full my-4">
+            <div className="w-16 h-16 rounded-3xl bg-amber-50 border-2 border-amber-200 text-amber-600 mx-auto flex items-center justify-center shadow-inner">
+              <Lock className="w-8 h-8" />
+            </div>
+
+            <div className="space-y-2">
+              <span className="text-[10px] font-black uppercase tracking-widest bg-amber-100 text-amber-800 px-3 py-1 rounded-full border border-amber-200">
+                Menu Locked
+              </span>
+              <h3 className="text-2xl font-black font-heading text-zinc-950">
+                {activeDayInfo.fullDayName}, {activeDayInfo.dateStr}
+              </h3>
+              <p className="text-xs text-zinc-600 max-w-md mx-auto leading-relaxed">
+                {activeDayInfo.lockType === 'guest_limit' ? (
+                  <>
+                    As a guest explorer, preview access is available for Today and the next 3 days. To unlock the full 4-week daily menu schedule, subscribe to a Stuvvy meal plan!
+                  </>
+                ) : activeDayInfo.lockType === 'outside_sub_start' ? (
+                  <>
+                    Your active subscription starts on <strong>{schedule.startDateStr}</strong>. This date falls before your selected delivery schedule.
+                  </>
+                ) : activeDayInfo.lockType === 'outside_sub_end' ? (
+                  <>
+                    Your {user.plan || 'current'} subscription validity is active from <strong>{schedule.startDateStr}</strong> to <strong>{schedule.endDateStr}</strong>. Renew or extend your plan to view this future date.
+                  </>
+                ) : (
+                  <>
+                    This future date will automatically unlock 3 days prior on{' '}
+                    <strong>{activeDayInfo.unlockDateStr}</strong> as our kitchen team finalizes daily seasonal produce.
+                  </>
+                )}
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
+              {activeDayInfo.lockType === 'guest_limit' || activeDayInfo.lockType === 'outside_sub_end' ? (
+                onOpenSubscriptions && (
+                  <button
+                    onClick={onOpenSubscriptions}
+                    className="w-full sm:w-auto bg-zinc-950 hover:bg-zinc-800 text-white font-black text-xs py-3.5 px-6 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-105"
+                  >
+                    <Sparkles className="w-4 h-4 text-orange-400" />
+                    <span>Explore Subscription Plans</span>
+                  </button>
+                )
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleSelectOffset(0)}
+                    className="w-full sm:w-auto bg-zinc-950 hover:bg-zinc-800 text-white font-black text-xs py-3.5 px-6 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <ArrowRight className="w-4 h-4 rotate-180" />
+                    <span>Back to Today&apos;s Menu</span>
+                  </button>
+
+                  {onOpenAdminContact && (
+                    <button
+                      onClick={onOpenAdminContact}
+                      className="w-full sm:w-auto bg-zinc-100 hover:bg-zinc-200 text-zinc-800 font-extrabold text-xs py-3.5 px-6 rounded-2xl border border-zinc-300 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Phone className="w-4 h-4" />
+                      <span>Contact Kitchen Admin</span>
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+
+            <div className="bg-zinc-50 border border-zinc-200/80 rounded-2xl p-4 max-w-md mx-auto text-xs text-zinc-600 flex items-center justify-center gap-3">
+              <Phone className="w-4 h-4 text-orange-500" />
+              <span>Kitchen Hotline: <strong>+91 9344795832</strong></span>
+              <span>•</span>
+              <a href="https://wa.me/919344795832" target="_blank" rel="noopener noreferrer" className="text-emerald-700 font-bold hover:underline">
+                WhatsApp Support
+              </a>
+            </div>
+          </div>
+        ) : currentItems.length === 0 ? (
           <div className="bg-zinc-50 border border-zinc-200/90 rounded-[28px] p-8 sm:p-12 text-center space-y-4 shadow-xs">
             <div className="w-16 h-16 rounded-3xl bg-zinc-100 text-zinc-800 mx-auto flex items-center justify-center text-3xl font-black border border-zinc-200">
               🍲
