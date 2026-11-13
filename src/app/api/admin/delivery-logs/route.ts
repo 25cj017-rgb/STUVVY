@@ -23,6 +23,7 @@ export interface DeliveryLogItem {
   updatedAt: string;
 }
 
+const PUBLIC_CSV_PATH = path.join(process.cwd(), 'public', 'stuvvy_delivery_orders.csv');
 const REPO_LOGS_PATH = path.join(process.cwd(), 'src', 'data', 'delivery_logs.json');
 const REPO_CSV_PATH = path.join(process.cwd(), 'src', 'data', 'stuvvy_delivery_orders.csv');
 const TMP_LOGS_PATH = path.join(os.tmpdir(), 'stuvvy_delivery_logs.json');
@@ -107,6 +108,9 @@ function syncExcelCsv(logs: DeliveryLogItem[]) {
     try {
       fs.writeFileSync(REPO_CSV_PATH, csvContent, 'utf-8');
     } catch {}
+    try {
+      fs.writeFileSync(PUBLIC_CSV_PATH, csvContent, 'utf-8');
+    } catch {}
   } catch (err) {
     console.error('Error writing Excel CSV file:', err);
   }
@@ -178,7 +182,8 @@ export async function GET(request: Request) {
     logs = logs.filter(l => l.date === filterDate);
   }
   if (filterMobile) {
-    logs = logs.filter(l => l.customerMobile === filterMobile);
+    const cleanFilter = filterMobile.replace(/\D/g, '').slice(-10);
+    logs = logs.filter(l => (l.customerMobile || '').replace(/\D/g, '').slice(-10) === cleanFilter);
   }
 
   // Sort by updatedAt descending

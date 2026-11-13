@@ -386,14 +386,14 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
     <div className="py-6 sm:py-8 w-full max-w-7xl mx-auto px-4 sm:px-6 sm:px-8 space-y-6 select-none font-sans">
       
       {/* ========================================================================= */}
-      {/* 1. TOP PROFILE CARD (CLEAN VERTICAL HIERARCHY, NO STRAIGHT-LINE CRAMMING) */}
+      {/* 1. TOP PROFILE CARD (CLEAN VERTICAL HIERARCHY, MOBILE RESPONSIVE)         */}
       {/* ========================================================================= */}
-      <div className="bg-white/95 backdrop-blur-xl p-6 sm:p-8 rounded-[32px] border border-zinc-200/90 shadow-sm relative overflow-hidden">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-          <div className="flex items-start sm:items-center gap-4 sm:gap-5">
+      <div className="bg-white/95 backdrop-blur-xl p-4 sm:p-8 rounded-[28px] sm:rounded-[32px] border border-zinc-200/90 shadow-sm relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3.5 sm:gap-5 min-w-0 flex-1 w-full">
             {/* PROFILE PHOTO / AVATAR WITH INITIALS */}
             <div className="relative shrink-0">
-              <div className="w-20 h-20 sm:w-22 sm:h-22 rounded-3xl bg-zinc-950 text-white font-black text-2xl flex items-center justify-center border-3 border-orange-500 shadow-xl overflow-hidden">
+              <div className="w-16 h-16 sm:w-22 sm:h-22 rounded-2xl sm:rounded-3xl bg-zinc-950 text-white font-black text-xl sm:text-2xl flex items-center justify-center border-2 sm:border-3 border-orange-500 shadow-xl overflow-hidden">
                 <img
                   src="/user-avatar.jpg"
                   alt={currentUser.fullName}
@@ -402,36 +402,36 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                   }}
                   className="w-full h-full object-cover"
                 />
-                <span className="absolute inset-0 flex items-center justify-center font-black text-2xl bg-zinc-950 text-white">
+                <span className="absolute inset-0 flex items-center justify-center font-black text-xl sm:text-2xl bg-zinc-950 text-white">
                   {initials}
                 </span>
               </div>
-              <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white rounded-full p-1 border-2 border-white shadow-xs">
-                <CheckCircle2 className="w-3.5 h-3.5" />
+              <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white rounded-full p-0.5 sm:p-1 border-2 border-white shadow-xs">
+                <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               </div>
             </div>
 
             {/* SUBSCRIBER ESSENTIAL DETAILS (STACKED HIERARCHY) */}
-            <div className="space-y-1.5 text-left">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-200 shadow-2xs inline-block">
+            <div className="space-y-1.5 text-left min-w-0 flex-1 w-full">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 px-2.5 sm:px-3 py-0.5 sm:py-1 rounded-full border border-emerald-200 shadow-2xs inline-block">
                   ✓ {schedule.status} Subscriber
                 </span>
-                <span className="text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-900 px-2.5 py-1 rounded-full border border-purple-200">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-900 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full border border-purple-200">
                   {optedPlanName}
                 </span>
                 {currentUser.paymentAmount && (
-                  <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white px-2.5 py-1 rounded-full shadow-2xs">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full shadow-2xs">
                     Paid: ₹{currentUser.paymentAmount} ({currentUser.paymentStatus || 'PAID'})
                   </span>
                 )}
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-black text-zinc-950 font-heading tracking-tight">
+              <h1 className="text-xl sm:text-3xl font-black text-zinc-950 font-heading tracking-tight break-words">
                 {currentUser.fullName}
               </h1>
 
-              <div className="flex items-center gap-2.5 text-xs text-zinc-500 font-semibold flex-wrap pt-0.5">
+              <div className="flex items-center gap-2 text-xs text-zinc-500 font-semibold flex-wrap pt-0.5">
                 <span>Pass ID: <strong className="text-zinc-900 font-mono font-black">STV-2026-{currentUser.mobileNumber?.slice(-4) || '6064'}</strong></span>
                 <span>•</span>
                 <span>📞 +91 {currentUser.mobileNumber}</span>
@@ -439,12 +439,12 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
 
               {/* Delivery Address Selector if user has multiple locations */}
               {currentUser.addresses && currentUser.addresses.length > 1 ? (
-                <div className="pt-1.5 space-y-1">
+                <div className="pt-2 space-y-1.5 w-full">
                   <div className="text-[10px] font-black uppercase tracking-wider text-orange-600 flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-orange-600" />
+                    <MapPin className="w-3 h-3 text-orange-600 shrink-0" />
                     <span>Active Delivery Location:</span>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full">
                     {currentUser.addresses.map((locAddr, idx) => {
                       const isSelected = activeAddress.trim() === locAddr.trim();
                       return (
@@ -456,14 +456,14 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                             setStatusMessage(`Delivery location switched to Location ${idx + 1}`);
                             setTimeout(() => setStatusMessage(''), 3000);
                           }}
-                          className={`text-xs px-3 py-1.5 rounded-xl border font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                          className={`text-xs p-2.5 sm:px-3 sm:py-1.5 rounded-xl border font-bold transition-all cursor-pointer flex items-start sm:items-center gap-2 text-left w-full sm:w-auto ${
                             isSelected
                               ? 'bg-orange-500 text-white border-orange-500 shadow-xs'
                               : 'bg-zinc-100 text-zinc-700 border-zinc-200 hover:bg-zinc-200'
                           }`}
                         >
-                          <span className="text-[10px] font-black uppercase">Loc {idx + 1}:</span>
-                          <span className="max-w-[220px] truncate">{locAddr}</span>
+                          <span className="text-[10px] font-black uppercase shrink-0 mt-0.5 sm:mt-0">Loc {idx + 1}:</span>
+                          <span className="break-words line-clamp-2 text-xs flex-1">{locAddr}</span>
                         </button>
                       );
                     })}
@@ -472,13 +472,13 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
               ) : (
                 <p className="text-xs text-zinc-600 font-medium flex items-center gap-1.5 pt-0.5">
                   <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0" />
-                  <span className="truncate max-w-md">{activeAddress || currentUser.address}</span>
+                  <span className="break-words max-w-md">{activeAddress || currentUser.address}</span>
                 </p>
               )}
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 self-start sm:self-center shrink-0">
+          <div className="flex items-center gap-2.5 self-start sm:self-center shrink-0 w-full sm:w-auto justify-start sm:justify-end pt-1 sm:pt-0">
             <button
               onClick={onNavigateToPlans}
               className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 text-xs font-black px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-2xs"
@@ -541,7 +541,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
 
           <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[32px] p-4 sm:p-5 shadow-sm divide-y divide-zinc-100">
             
-            {/* OPTION 1: STUVVY CARDS (ATM PASS & 12 STARS MERGED ON BACK) */}
+            {/* OPTION 1: STUVVY CARDS (SUBSCRIBER PASS & 12 STARS MERGED ON BACK) */}
             <button
               type="button"
               onClick={() => setActiveScreen('stuvvy-cards')}
@@ -557,7 +557,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[9px] font-black uppercase bg-purple-100 text-purple-900 px-2 py-0.5 rounded-full border border-purple-200">
-                      ATM Pass & 12 Stars
+                      Subscriber Pass & 12 Stars
                     </span>
                     <span className="text-xs text-zinc-500 font-medium">
                       Front & Back flip card with merged loyalty stars
@@ -866,7 +866,11 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                         )}
                       </div>
 
-                      <div className="text-sm font-black text-zinc-950 font-heading">
+                      <div className={`text-sm font-black font-heading ${
+                        isDelivered
+                          ? 'line-through decoration-zinc-400 font-bold text-zinc-400'
+                          : 'text-zinc-950'
+                      }`}>
                         {item.displayDate}
                       </div>
 
@@ -1059,7 +1063,15 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
             endDate={schedule.endDateStr}
             planName={optedPlanName}
             deliveredDates={Array.from(
-              new Set(deliveryLogs.filter((l) => l.status === 'delivered').map((l) => l.date))
+              new Set([
+                ...deliveryLogs.filter((l) => l.status === 'delivered').map((l) => l.date),
+                ...(currentUser.orderStatus?.toLowerCase().includes('delivered') && currentUser.startDate
+                  ? [(() => {
+                      const d = parseDateFlexible(currentUser.startDate);
+                      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    })()]
+                  : [])
+              ])
             )}
             notDeliveredDates={Array.from(
               new Set(deliveryLogs.filter((l) => l.status === 'not_received').map((l) => l.date))

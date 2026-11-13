@@ -561,7 +561,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
       {/* 3. LOGS LIST (DESKTOP TABLE + MOBILE TOUCH CARDS)                         */}
       {/* ========================================================================= */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between px-1">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1">
           <span className="text-xs font-black uppercase tracking-wider text-zinc-500">
             Showing {filteredLogs.length} of {totalOrders} customer delivery logs
           </span>

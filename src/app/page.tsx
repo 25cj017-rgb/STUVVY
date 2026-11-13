@@ -435,10 +435,8 @@ export default function Home() {
               onClose={() => setShowLandingReviewPopup(false)}
             />
 
-            {/* Background Image Artwork Synchronized */}
-            <div className={`w-full h-full flex items-center justify-center landing-image-transition ${
-              showLoginCard ? 'sm:-translate-x-24 sm:scale-95 opacity-90' : 'translate-x-0 scale-100 opacity-100'
-            }`}>
+            {/* Steady Background Image Artwork (No jumping on login open) */}
+            <div className="w-full h-full flex items-center justify-center">
               <img
                 src="/landing_page.png"
                 alt="Stuvvy Home Food Landing Page"
@@ -446,7 +444,7 @@ export default function Home() {
               />
             </div>
 
-            {/* FLOATING HERO QUICK ACTIONS & AFFORDANCE HINT (SHOWN BEFORE LOGIN IS EXPANDED) */}
+            {/* FLOATING HERO QUICK ACTIONS (SHOWN BEFORE LOGIN IS EXPANDED) */}
             {!showLoginCard && (
               <div 
                 onClick={(e) => e.stopPropagation()}
@@ -470,14 +468,6 @@ export default function Home() {
                   >
                     <LogIn className="w-3.5 h-3.5 text-orange-400" />
                     <span>Subscriber Login</span>
-                  </button>
-
-                  <button
-                    onClick={handleOpenRegister}
-                    className="bg-orange-600 hover:bg-orange-700 text-white font-black text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md hover:scale-105"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-white" />
-                    <span>Register / Sign Up</span>
                   </button>
 
                   <button
