@@ -122,6 +122,8 @@ export default function Home() {
                   locality: matched.locality || prevUser.locality,
                   paymentStatus: matched.paymentStatus || prevUser.paymentStatus,
                   paymentAmount: matched.paymentAmount || prevUser.paymentAmount,
+                  orderStatus: matched.orderStatus || (prevUser as any).orderStatus,
+                  requestedMeals: matched.requestedMeals || (prevUser as any).requestedMeals,
                   consecutiveMonths: prevUser.consecutiveMonths || 1,
                   starsEarned: prevUser.starsEarned || 1
                 };
@@ -229,6 +231,8 @@ export default function Home() {
           locality: authResult.customer?.locality,
           paymentStatus: authResult.customer?.paymentStatus,
           paymentAmount: authResult.customer?.paymentAmount,
+          orderStatus: (authResult.customer as any)?.orderStatus,
+          requestedMeals: (authResult.customer as any)?.requestedMeals,
           consecutiveMonths: 1,
           starsEarned: 1,
           isVerified: true

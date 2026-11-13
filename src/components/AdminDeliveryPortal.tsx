@@ -26,6 +26,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
 
   // Data state
   const [logs, setLogs] = useState<DeliveryLogItem[]>([]);
+  const [customerDetailsMap, setCustomerDetailsMap] = useState<Map<string, any>>(new Map());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(() => {
@@ -97,7 +98,16 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
       }
       const combinedExisting = Array.from(mergedById.values());
 
-      let custList: Array<{ name: string; mobileNo: string; plan?: string; address?: string; locality?: string }> = [];
+      let custList: Array<{
+        name: string;
+        mobileNo: string;
+        plan?: string;
+        address?: string;
+        locality?: string;
+        paymentAmount?: string;
+        paymentStatus?: string;
+        requestedMeals?: string[];
+      }> = [];
       if (custRes && custRes.ok) {
         const custData = await custRes.json();
         if (custData?.success && Array.isArray(custData.customers)) {
@@ -105,8 +115,37 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         }
       }
 
-      // Build unified 3-meal slots (Breakfast, Lunch, Dinner) for every customer in logs or sheet
-      const customerMap = new Map<string, { name: string; mobile: string; plan: string; address: string; locality: string }>();
+      // Map customer details and their opted meals from Google Sheets
+      const customerMap = new Map<
+        string,
+        {
+          name: string;
+          mobile: string;
+          plan: string;
+          address: string;
+          locality: string;
+          paymentAmount?: string;
+          paymentStatus?: string;
+          requestedMeals?: string[];
+        }
+      >();
+
+      for (const c of custList) {
+        const mob = (c.mobileNo || '').replace(/\D/g, '').slice(-10);
+        if (mob) {
+          customerMap.set(mob, {
+            name: c.name,
+            mobile: mob,
+            plan: c.plan || 'Monthly',
+            address: c.address || '',
+            locality: c.locality || '',
+            paymentAmount: c.paymentAmount,
+            paymentStatus: c.paymentStatus,
+            requestedMeals: c.requestedMeals,
+          });
+        }
+      }
+
       for (const l of existingLogs) {
         const mob = (l.customerMobile || '').replace(/\D/g, '').slice(-10);
         if (mob && !customerMap.has(mob)) {
@@ -119,24 +158,20 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
           });
         }
       }
-      for (const c of custList) {
-        const mob = (c.mobileNo || '').replace(/\D/g, '').slice(-10);
-        if (mob && !customerMap.has(mob)) {
-          customerMap.set(mob, {
-            name: c.name,
-            mobile: mob,
-            plan: c.plan || 'Monthly',
-            address: c.address || '',
-            locality: c.locality || '',
-          });
-        }
-      }
 
-      const sessions: Array<'Breakfast' | 'Lunch' | 'Dinner'> = ['Breakfast', 'Lunch', 'Dinner'];
+      const allSessions: Array<'Breakfast' | 'Lunch' | 'Dinner'> = ['Breakfast', 'Lunch', 'Dinner'];
       const mergedLogs: DeliveryLogItem[] = [];
 
       for (const [mob, info] of customerMap.entries()) {
-        for (const session of sessions) {
+        // ONLY show the meals the customer opted for in Google Sheets (default to all if not specified)
+        const optedMeals =
+          info.requestedMeals && info.requestedMeals.length > 0
+            ? (info.requestedMeals.filter((m) =>
+                allSessions.includes(m as any)
+              ) as Array<'Breakfast' | 'Lunch' | 'Dinner'>)
+            : allSessions;
+
+        for (const session of optedMeals) {
           const found = combinedExisting.find(
             (l) =>
               (l.customerMobile || '').replace(/\D/g, '').slice(-10) === mob &&
@@ -162,6 +197,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         }
       }
 
+      setCustomerDetailsMap(new Map(customerMap));
       setLogs(mergedLogs.length > 0 ? mergedLogs : combinedExisting);
     } catch (err) {
       console.error('Failed to load logs:', err);
@@ -581,6 +617,12 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
                         <span className="text-[10px] font-black uppercase bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded-md border border-zinc-200">
                           {primary.planName} Plan
                         </span>
+                        {/* PAYMENT DISPLAY FROM GOOGLE SHEETS */}
+                        {customerDetailsMap.get((primary.customerMobile || '').replace(/\D/g, '').slice(-10))?.paymentAmount && (
+                          <span className="text-[10px] font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-md">
+                            Paid: ₹{customerDetailsMap.get((primary.customerMobile || '').replace(/\D/g, '').slice(-10))?.paymentAmount} ({customerDetailsMap.get((primary.customerMobile || '').replace(/\D/g, '').slice(-10))?.paymentStatus || 'PAID'})
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-zinc-600 font-medium flex items-start gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0 mt-0.5" />

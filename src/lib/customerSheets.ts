@@ -22,6 +22,8 @@ export interface CustomerRow {
   locality?: string;
   paymentStatus?: string;
   paymentAmount?: string;
+  orderStatus?: string;
+  requestedMeals?: string[];
   subscriberType?: string;
   review?: string;
   rating?: number;
@@ -144,11 +146,15 @@ export function parseCsvContent(fileContent: string): CustomerRow[] {
   const address2Idx = headers.findIndex((h) => h.includes('ADDRESS 2') || h.includes('LOCATION 2') || h.includes('SECONDARY'));
   const localityIdx = headers.findIndex((h) => h.includes('AREA') || h.includes('LOCALITY') || h.includes('CITY'));
   const planIdx = headers.findIndex((h) => h.includes('SUBSCRIPTION PLAN') || h.includes('NEW PLAN') || h === 'PLAN' || h.includes('PLAN'));
+  const mealsIdx = headers.findIndex((h) => h.includes('WHICH MEALS DO U NEED') || h.includes('WHICH MEALS') || h.includes('MEALS DO U NEED') || h.includes('MEALS NEEDED'));
   const startDateIdx = headers.findIndex(
     (h) => !h.includes('DOB') && !h.includes('BIRTH') && (h.includes('START') || h.includes('WHEN WOULD YOU LIKE TO START') || h.includes('BEGIN'))
   );
-  const paymentStatusIdx = headers.findIndex((h) => h.includes('PAYMNET STATUS') || h.includes('PAYMENT STATUS') || h.includes('STATUS'));
-  const paymentAmountIdx = headers.findIndex((h) => h === 'PAYMENT' || h.includes('AMOUNT'));
+  // Payment Status: matches 'PAYMNET STATUS' / 'PAYMENT STATUS' (e.g. 'PAID')
+  const paymentStatusIdx = headers.findIndex((h) => h === 'PAYMNET STATUS' || h === 'PAYMENT STATUS' || h.includes('PAYMNET STATUS') || h.includes('PAYMENT STATUS'));
+  // Payment Amount: matches 'PAYMENT' column (amount paid e.g. '2500', '149', '1669', '1500')
+  const paymentAmountIdx = headers.findIndex((h) => h === 'PAYMENT');
+  const orderStatusIdx = headers.findIndex((h) => h.includes('ORDER STATUS'));
   const sNoIdx = headers.findIndex((h) => h.includes('S.NO') || h.includes('SNO') || h === 'ID');
   const subscriberTypeIdx = headers.findIndex((h) => h.includes('EXISTING') || h.includes('SUBSCRIBER TYPE') || h.includes('UPGRADING'));
   const reviewIdx = headers.findIndex((h) => h.includes('REVIEW') || h.includes('TESTIMONIAL') || h.includes('EXPERIENCE') || h.includes('FEEDBACK'));
@@ -197,6 +203,17 @@ export function parseCsvContent(fileContent: string): CustomerRow[] {
     const purchaseDate = timestampIdx >= 0 && parts[timestampIdx] ? parts[timestampIdx].replace(/^"|"$/g, '').trim() : undefined;
     const paymentStatus = paymentStatusIdx >= 0 && parts[paymentStatusIdx] ? parts[paymentStatusIdx].replace(/^"|"$/g, '').trim() : undefined;
     const paymentAmount = paymentAmountIdx >= 0 && parts[paymentAmountIdx] ? parts[paymentAmountIdx].replace(/^"|"$/g, '').trim() : undefined;
+    const orderStatus = orderStatusIdx >= 0 && parts[orderStatusIdx] ? parts[orderStatusIdx].replace(/^"|"$/g, '').trim() : undefined;
+
+    // Parse requested meals (e.g. "BREAKFAST, LUNCH, DINNER" or "LUNCH")
+    const rawMeals = mealsIdx >= 0 && parts[mealsIdx] ? parts[mealsIdx].replace(/^"|"$/g, '').trim() : '';
+    const requestedMeals: string[] = [];
+    if (rawMeals) {
+      const upper = rawMeals.toUpperCase();
+      if (upper.includes('BREAKFAST')) requestedMeals.push('Breakfast');
+      if (upper.includes('LUNCH')) requestedMeals.push('Lunch');
+      if (upper.includes('DINNER')) requestedMeals.push('Dinner');
+    }
 
     const rawSubType = subscriberTypeIdx >= 0 && parts[subscriberTypeIdx] ? parts[subscriberTypeIdx].replace(/^"|"$/g, '').trim() : '';
     const subscriberType = rawSubType
@@ -225,6 +242,8 @@ export function parseCsvContent(fileContent: string): CustomerRow[] {
         locality: locality || undefined,
         paymentStatus: paymentStatus || undefined,
         paymentAmount: paymentAmount || undefined,
+        orderStatus: orderStatus || undefined,
+        requestedMeals: requestedMeals.length > 0 ? requestedMeals : undefined,
         subscriberType,
         review: review || undefined,
         rating,

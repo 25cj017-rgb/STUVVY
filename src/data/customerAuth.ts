@@ -12,6 +12,8 @@ export interface CustomerRecord {
   locality?: string;
   paymentStatus?: string;
   paymentAmount?: string;
+  orderStatus?: string;
+  requestedMeals?: string[];
 }
 
 // Initial demo customers fallback

@@ -65,7 +65,12 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
-  const displayName = (isGuestUser || !user?.isVerified) ? 'Guest' : (user?.fullName || 'Guest');
+  const isAdminActive = activeTab === 'admin';
+  const displayName = isAdminActive
+    ? 'Admin'
+    : (isGuestUser || !user?.isVerified)
+    ? 'Guest'
+    : (user?.fullName || 'Guest');
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-zinc-200/90 shadow-2xs">
@@ -84,44 +89,56 @@ export const Navbar: React.FC<NavbarProps> = ({
           />
         </div>
 
-        {/* Center Navigation Tabs matching menu.png */}
-        <nav className="flex items-center gap-1 sm:gap-2 text-xs font-black">
-          <button 
-            onClick={() => setActiveTab('discover')}
-            className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'discover' 
-                ? 'bg-white text-orange-600 border border-orange-500 shadow-xs' 
-                : 'text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/80'
-            }`}
-          >
-            <Utensils className="w-3.5 h-3.5" />
-            <span>Menu</span>
-          </button>
+        {/* Center Navigation Tabs (Hidden in Admin Mode to avoid confusion with Subscriptions) */}
+        {!isAdminActive && (
+          <nav className="flex items-center gap-1 sm:gap-2 text-xs font-black">
+            <button 
+              onClick={() => setActiveTab('discover')}
+              className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'discover' 
+                  ? 'bg-white text-orange-600 border border-orange-500 shadow-xs' 
+                  : 'text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/80'
+              }`}
+            >
+              <Utensils className="w-3.5 h-3.5" />
+              <span>Menu</span>
+            </button>
 
-          <button 
-            onClick={() => setActiveTab('plans')}
-            className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'plans' 
-                ? 'bg-zinc-950 text-white shadow-xs' 
-                : 'text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/80'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-orange-400" />
-            <span>Subscriptions</span>
-          </button>
+            <button 
+              onClick={() => setActiveTab('plans')}
+              className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'plans' 
+                  ? 'bg-zinc-950 text-white shadow-xs' 
+                  : 'text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/80'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-orange-400" />
+              <span>Subscriptions</span>
+            </button>
 
-          <button 
-            onClick={() => setActiveTab('dashboard')}
-            className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'dashboard' 
-                ? 'bg-zinc-950 text-white shadow-xs' 
-                : 'text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/80'
-            }`}
-          >
-            <User className="w-3.5 h-3.5" />
-            <span>My Account</span>
-          </button>
-        </nav>
+            <button 
+              onClick={() => setActiveTab('dashboard')}
+              className={`px-3.5 py-1.5 rounded-full transition-all flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'dashboard' 
+                  ? 'bg-zinc-950 text-white shadow-xs' 
+                  : 'text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100/80'
+              }`}
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>My Account</span>
+            </button>
+          </nav>
+        )}
+
+        {/* In Admin Mode: Dedicated Admin Portal Badge */}
+        {isAdminActive && (
+          <div className="flex items-center gap-2 bg-purple-50 border border-purple-200 px-3.5 py-1.5 rounded-full">
+            <ShieldCheck className="w-4 h-4 text-purple-900" />
+            <span className="text-xs font-black text-purple-950 uppercase tracking-wider">
+              Kitchen Admin Dispatch Portal
+            </span>
+          </div>
+        )}
 
         {/* Right Section: User Badge with Dropdown, Cart Drawer Trigger, Checkout Button */}
         <div className="flex items-center gap-2 sm:gap-3">
@@ -151,51 +168,83 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
 
                 <div className="p-1 space-y-0.5">
-                  {/* Option 1: My Account */}
-                  <button
-                    onClick={() => handleNavigateToSection('dashboard')}
-                    className="w-full px-3 py-2 text-left text-xs font-bold text-zinc-800 hover:bg-zinc-100 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer"
-                  >
-                    <User className="w-4 h-4 text-purple-600" />
-                    <span>My Account</span>
-                  </button>
+                  {/* In Admin Mode: Dedicated Admin Dropdown Actions */}
+                  {isAdminActive ? (
+                    <>
+                      <button
+                        onClick={() => {
+                          setIsDropdownOpen(false);
+                          setActiveTab('admin');
+                        }}
+                        className="w-full px-3 py-2 text-left text-xs font-bold text-zinc-800 hover:bg-zinc-100 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer"
+                      >
+                        <ShieldCheck className="w-4 h-4 text-purple-900" />
+                        <span>Admin Dispatch Board</span>
+                      </button>
 
-                  {/* Option 2: Stuvvy Card */}
-                  <button
-                    onClick={() => handleNavigateToSection('dashboard', 'stuvvy-card-section')}
-                    className="w-full px-3 py-2 text-left text-xs font-bold text-zinc-800 hover:bg-zinc-100 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer"
-                  >
-                    <CreditCard className="w-4 h-4 text-purple-600" />
-                    <span>Stuvvy Card</span>
-                  </button>
+                      <button
+                        onClick={() => {
+                          setIsDropdownOpen(false);
+                          if (typeof window !== 'undefined') {
+                            sessionStorage.removeItem('stuvvy_admin_auth');
+                          }
+                          setActiveTab('landing');
+                        }}
+                        className="w-full px-3 py-2 text-left text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer border-t border-zinc-100 mt-1 pt-1.5"
+                      >
+                        <LogOut className="w-4 h-4 text-red-500" />
+                        <span>Exit Admin Portal</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {/* Option 1: My Account */}
+                      <button
+                        onClick={() => handleNavigateToSection('dashboard')}
+                        className="w-full px-3 py-2 text-left text-xs font-bold text-zinc-800 hover:bg-zinc-100 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer"
+                      >
+                        <User className="w-4 h-4 text-purple-600" />
+                        <span>My Account</span>
+                      </button>
 
-                  {/* Option 3: My Delivery Logs */}
-                  <button
-                    onClick={() => {
-                      if (typeof window !== 'undefined') {
-                        window.location.hash = '#delivery-logs';
-                      }
-                      setActiveTab('dashboard');
-                      setIsDropdownOpen(false);
-                    }}
-                    className="w-full px-3 py-2 text-left text-xs font-bold text-zinc-800 hover:bg-zinc-100 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer"
-                  >
-                    <Package className="w-4 h-4 text-blue-600" />
-                    <span>My Delivery Logs</span>
-                  </button>
+                      {/* Option 2: Stuvvy Card */}
+                      <button
+                        onClick={() => handleNavigateToSection('dashboard', 'stuvvy-card-section')}
+                        className="w-full px-3 py-2 text-left text-xs font-bold text-zinc-800 hover:bg-zinc-100 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer"
+                      >
+                        <CreditCard className="w-4 h-4 text-purple-600" />
+                        <span>Stuvvy Card</span>
+                      </button>
 
-                  {/* Option 4: Logout */}
-                  {onLogout && (
-                    <button
-                      onClick={() => {
-                        setIsDropdownOpen(false);
-                        onLogout();
-                      }}
-                      className="w-full px-3 py-2 text-left text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer border-t border-zinc-100 mt-1 pt-1.5"
-                    >
-                      <LogOut className="w-4 h-4 text-red-500" />
-                      <span>Log Out</span>
-                    </button>
+                      {/* Option 3: My Delivery Logs */}
+                      <button
+                        onClick={() => {
+                          if (typeof window !== 'undefined') {
+                            window.location.hash = '#delivery-logs';
+                          }
+                          setActiveTab('dashboard');
+                          setIsDropdownOpen(false);
+                        }}
+                        className="w-full px-3 py-2 text-left text-xs font-bold text-zinc-800 hover:bg-zinc-100 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer"
+                      >
+                        <Package className="w-4 h-4 text-blue-600" />
+                        <span>My Delivery Logs</span>
+                      </button>
+
+                      {/* Option 4: Logout */}
+                      {onLogout && (
+                        <button
+                          onClick={() => {
+                            setIsDropdownOpen(false);
+                            onLogout();
+                          }}
+                          className="w-full px-3 py-2 text-left text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer border-t border-zinc-100 mt-1 pt-1.5"
+                        >
+                          <LogOut className="w-4 h-4 text-red-500" />
+                          <span>Log Out</span>
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>

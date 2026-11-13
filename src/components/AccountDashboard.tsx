@@ -413,13 +413,18 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
 
             {/* SUBSCRIBER ESSENTIAL DETAILS (STACKED HIERARCHY) */}
             <div className="space-y-1.5 text-left">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-200 shadow-2xs inline-block">
                   ✓ {schedule.status} Subscriber
                 </span>
                 <span className="text-[10px] font-black uppercase tracking-wider bg-purple-50 text-purple-900 px-2.5 py-1 rounded-full border border-purple-200">
                   {optedPlanName}
                 </span>
+                {currentUser.paymentAmount && (
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white px-2.5 py-1 rounded-full shadow-2xs">
+                    Paid: ₹{currentUser.paymentAmount} ({currentUser.paymentStatus || 'PAID'})
+                  </span>
+                )}
               </div>
 
               <h1 className="text-2xl sm:text-3xl font-black text-zinc-950 font-heading tracking-tight">
@@ -967,8 +972,11 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                   <span className="text-xs font-bold text-zinc-500">Daily Kitchen Priority</span>
                 </div>
 
-                <h2 className="text-2xl sm:text-3xl font-black font-heading text-zinc-950">
-                  {optedPlanName.toUpperCase()} (₹{optedPlanPrice.toLocaleString('en-IN')}{optedPlanPeriod})
+                <h2 className="text-2xl sm:text-3xl font-black font-heading text-zinc-950 flex items-baseline gap-2 flex-wrap">
+                  <span>{optedPlanName.toUpperCase()}</span>
+                  <span className="text-lg text-emerald-700 font-bold">
+                    (₹{currentUser.paymentAmount ? parseInt(currentUser.paymentAmount.replace(/\D/g, '')) || optedPlanPrice : optedPlanPrice} {currentUser.paymentStatus || 'PAID'})
+                  </span>
                 </h2>
 
                 <p className="text-xs text-zinc-500 font-medium mt-1">

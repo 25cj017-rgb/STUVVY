@@ -62,6 +62,8 @@ export interface UserProfile {
   starsEarned?: number;
   paymentStatus?: string;
   paymentAmount?: string;
+  orderStatus?: string;
+  requestedMeals?: string[];
 }
 
 export interface CartItem {
