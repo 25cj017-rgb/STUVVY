@@ -66,26 +66,38 @@ export function parseFeedbackCsv(fileContent: string): FeedbackEntry[] {
   const headers = parseCsvLine(lines[0]).map((h) => h.replace(/\s+/g, ' ').toUpperCase().trim());
 
   const timestampIdx = headers.findIndex((h) => h.includes('TIMESTAMP') || h.includes('DATE') || h.includes('TIME'));
-  const nameIdx = headers.findIndex((h) => h.includes('FULL NAME') || h.includes('NAME') || h.includes('CUSTOMER'));
+  const nameIdx = headers.findIndex((h) => h === 'NAME' || h.includes('FULL NAME') || h.includes('NAME') || h.includes('CUSTOMER'));
   const mobileIdx = headers.findIndex((h) => h.includes('MOBILE') || h.includes('PHONE') || h.includes('WHATSAPP'));
-  const ratingIdx = headers.findIndex((h) => h.includes('RATING') || h.includes('STAR') || h.includes('RATE') || h.includes('SCORE'));
+  const planIdx = headers.findIndex((h) => h === 'PLAN' || (h.includes('PLAN') && !h.includes('PLANNED')));
+  const ratingIdx = headers.findIndex(
+    (h) => h.includes('OVERALL FOOD QUALITY') || h.includes('FOOD TASTE') || h.includes('RATE') || h.includes('STAR') || h.includes('RATING')
+  );
   const reviewIdx = headers.findIndex(
     (h) =>
-      h.includes('REVIEW') ||
+      h.includes('VALUABLE REVIEWS') ||
+      h.includes('REVIEWS ABOUT') ||
+      (h.includes('REVIEW') && !h.includes('REVIEWING') && !h.includes('OKAY')) ||
       h.includes('FEEDBACK') ||
       h.includes('EXPERIENCE') ||
       h.includes('MESSAGE') ||
-      h.includes('COMMENT') ||
-      h.includes('TESTIMONIAL') ||
-      h.includes('WHAT DID YOU LIKE') ||
-      h.includes('YOUR THOUGHTS')
+      h.includes('TESTIMONIAL')
   );
+  const consentIdx = headers.findIndex((h) => h.includes('OKAY WITH IT') || h.includes('PLANNED TO SHARE'));
+  const favoriteDishIdx = headers.findIndex((h) => h.includes('ENJOY THE MOST'));
 
   const entries: FeedbackEntry[] = [];
 
   for (let i = 1; i < lines.length; i++) {
     const parts = parseCsvLine(lines[i]);
     if (parts.length === 0 || parts.every((p) => !p)) continue;
+
+    // Check user consent if asked in form
+    if (consentIdx >= 0 && parts[consentIdx]) {
+      const consentText = parts[consentIdx].trim().toLowerCase();
+      if (consentText.includes('no') || consentText.includes('dont') || consentText.includes("don't")) {
+        continue;
+      }
+    }
 
     const rawName = (nameIdx >= 0 ? parts[nameIdx] : parts[1] || '').replace(/^"|"$/g, '').trim().toUpperCase();
     const rawMobile = (mobileIdx >= 0 ? parts[mobileIdx] : '').replace(/\D/g, '').slice(-10);
@@ -100,7 +112,7 @@ export function parseFeedbackCsv(fileContent: string): FeedbackEntry[] {
       }
     }
 
-    // Parse review text (if no review column index found, find the longest text field)
+    // Parse review text
     let reviewText = '';
     if (reviewIdx >= 0 && parts[reviewIdx]) {
       reviewText = parts[reviewIdx].replace(/^"|"$/g, '').trim();
@@ -177,3 +189,4 @@ export async function fetchFeedbackFromSource(): Promise<{ source: string; feedb
 
   return { source: 'default-fallback', feedback: DEFAULT_FEEDBACK_ENTRIES };
 }
+
