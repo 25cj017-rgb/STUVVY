@@ -246,8 +246,19 @@ export async function POST(request: Request) {
           l.mealSession === mealSession)
     );
 
-    const nowStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    // Exact real-time in Indian Standard Time (Asia/Kolkata) as guaranteed fallback
+    const istNowStr = new Intl.DateTimeFormat('en-IN', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Kolkata',
+    }).format(new Date()).toUpperCase();
     const timestampIso = new Date().toISOString();
+
+    const resolvedDeliveredAt =
+      status === 'delivered'
+        ? (deliveredAt && String(deliveredAt).trim() ? String(deliveredAt).trim() : istNowStr)
+        : undefined;
 
     const updatedRecord: DeliveryLogItem = {
       id: existingIndex >= 0 ? logs[existingIndex].id : logId,
@@ -259,7 +270,7 @@ export async function POST(request: Request) {
       locality: locality || (existingIndex >= 0 ? logs[existingIndex].locality : ''),
       mealSession,
       status,
-      deliveredAt: status === 'delivered' ? (deliveredAt || nowStr) : undefined,
+      deliveredAt: resolvedDeliveredAt,
       recipientNote: recipientNote || (status === 'delivered' ? 'Food received in good condition' : undefined),
       issueReason: status === 'not_received' ? issueReason || 'Customer reported order not received' : undefined,
       markedBy,

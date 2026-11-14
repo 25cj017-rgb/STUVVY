@@ -233,6 +233,15 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
     issueText?: string
   ) => {
     try {
+      // Capture the exact real-time clock from admin's device right at the moment they mark it
+      const realTimeNow = new Intl.DateTimeFormat('en-IN', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }).format(new Date()).toUpperCase();
+
+      const deliveredAtTime = newStatus === 'delivered' ? (log.deliveredAt || realTimeNow) : undefined;
+
       const payload: Partial<DeliveryLogItem> = {
         id: log.id,
         date: log.date || selectedDate,
@@ -243,9 +252,19 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         locality: log.locality,
         mealSession: log.mealSession,
         status: newStatus,
+        deliveredAt: deliveredAtTime,
         issueReason: newStatus === 'not_received' ? (issueText || 'Customer reported order not received') : undefined,
         markedBy: 'admin'
       };
+
+      // Optimistic update so UI reflects real-time delivered timestamp instantly
+      const optimisticLog: DeliveryLogItem = {
+        ...log,
+        status: newStatus,
+        deliveredAt: deliveredAtTime,
+        updatedAt: new Date().toISOString(),
+      };
+      setLogs((prev) => prev.map((item) => (item.id === log.id ? optimisticLog : item)));
 
       const res = await fetch('/api/admin/delivery-logs', {
         method: 'POST',

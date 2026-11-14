@@ -925,7 +925,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                       ) : isDelivered ? (
                         <div className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow-xs">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Delivered {log?.deliveredAt ? `(${log.deliveredAt})` : '(12:30 PM)'}</span>
+                          <span>Delivered {log?.deliveredAt ? `(${log.deliveredAt})` : ''}</span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5 bg-zinc-100 text-zinc-600 border border-zinc-200 px-3 py-1.5 rounded-xl text-xs font-bold">
