@@ -21,6 +21,28 @@ export const DEFAULT_LANDING_REVIEWS: LandingReviewEntry[] = [
     reviewText:
       "Hi, The food is really good. And importantly it's exactly like home food. Especially I liked ur packing please keep doing the same. I'm really happy with ur service. I believe and wish you keep doing the same work all the time. I'm honestly happy with the taste and work….. One small request from my side is I personally don't want to include banana due to my dad's health requirements…",
   },
+  {
+    id: 'review-yamuna-1',
+    name: 'YAMUNA J N',
+    tag: 'Monthly Subscriber',
+    rating: 5,
+    reviewText:
+      "Food exceeded all my expectation.. quality wise, quantity wise, and taste wise. I can't even point out a single standout dish because I genuinely enjoyed every single one. Stuvvy is already doing great work in food delivery. Compared to other delivery services that are costlier and not up to the mark, Stuvvy's service is more than satisfying. I hope you keep up this exact same standard as you grow and gain a huge number of customers. Wishing great heights for Stuvvy!",
+  },
+  {
+    id: 'review-chandran-1',
+    name: 'Chandran',
+    tag: 'Upgraded Subscriber',
+    rating: 5,
+    reviewText: 'Good work keep doing the same',
+  },
+  {
+    id: 'review-priyanka-1',
+    name: 'PRIYANKA S',
+    tag: 'Monthly Subscriber',
+    rating: 5,
+    reviewText: 'Good start',
+  },
 ];
 
 interface LandingReviewPopupProps {
@@ -154,11 +176,11 @@ export const LandingReviewPopup: React.FC<LandingReviewPopupProps> = ({
         </div>
 
         {/* REVIEW PARAGRAPH (CLEAN & READABLE) */}
-        <div className="rounded-2xl bg-zinc-50 border border-zinc-200/80 p-3.5 sm:p-4 space-y-2">
+        <div className="rounded-2xl bg-zinc-50 border border-zinc-200/80 p-3.5 sm:p-4 space-y-2 max-h-[52vh] overflow-y-auto">
           {currentReview.rating && (
             <div className="flex items-center gap-0.5">
               {Array.from({ length: currentReview.rating }).map((_, idx) => (
-                <Star key={idx} className="w-3 h-3 fill-amber-400 text-amber-500" />
+                <Star key={idx} className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
               ))}
             </div>
           )}

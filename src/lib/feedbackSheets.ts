@@ -15,7 +15,7 @@ export const FEEDBACK_SHEET_CSV_URL =
   process.env.FEEDBACK_SHEET_CSV_URL ||
   'https://docs.google.com/spreadsheets/d/1mAmMsLeinW8FdSy8p8uQIRPDMGKls82U4n9F16lPpvk/export?format=csv';
 
-// Fallback initial reviews (including Sanjana's verified first-customer feedback)
+// Fallback initial reviews (including Sanjana's verified first-customer feedback and Yamuna J N's full feedback)
 export const DEFAULT_FEEDBACK_ENTRIES: FeedbackEntry[] = [
   {
     id: 'feedback-sanjana-1',
@@ -26,6 +26,34 @@ export const DEFAULT_FEEDBACK_ENTRIES: FeedbackEntry[] = [
     reviewText:
       "Hi, The food is really good. And importantly it's exactly like home food. Especially I liked ur packing please keep doing the same. I'm really happy with ur service. I believe and wish you keep doing the same work all the time. I'm honestly happy with the taste and work….. One small request from my side is I personally don't want to include banana due to my dad's health requirements…",
     timestamp: '11/5/2026',
+  },
+  {
+    id: 'feedback-yamuna-1',
+    name: 'YAMUNA J N',
+    mobile: '9626531680',
+    tag: 'Monthly Subscriber',
+    rating: 5,
+    reviewText:
+      "Food exceeded all my expectation.. quality wise, quantity wise, and taste wise. I can't even point out a single standout dish because I genuinely enjoyed every single one. Stuvvy is already doing great work in food delivery. Compared to other delivery services that are costlier and not up to the mark, Stuvvy's service is more than satisfying. I hope you keep up this exact same standard as you grow and gain a huge number of customers. Wishing great heights for Stuvvy!",
+    timestamp: '11/14/2026',
+  },
+  {
+    id: 'feedback-chandran-1',
+    name: 'Chandran',
+    mobile: '9444746064',
+    tag: 'Upgraded Subscriber',
+    rating: 5,
+    reviewText: 'Good work keep doing the same',
+    timestamp: '11/12/2026',
+  },
+  {
+    id: 'feedback-priyanka-1',
+    name: 'PRIYANKA S',
+    mobile: '7094704460',
+    tag: 'Monthly Subscriber',
+    rating: 5,
+    reviewText: 'Good start',
+    timestamp: '11/12/2026',
   },
 ];
 

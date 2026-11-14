@@ -17,6 +17,8 @@ export interface CustomerRecord {
   subscriberType?: string;
   previousPlan?: string;
   consecutiveMonths?: number;
+  review?: string;
+  rating?: number;
 }
 
 // Initial demo customers fallback
@@ -37,7 +39,9 @@ export const DEMO_CUSTOMERS_DATABASE: CustomerRecord[] = [
     paymentStatus: 'PAID',
     paymentAmount: '2500',
     orderStatus: 'On going',
-    requestedMeals: ['Breakfast', 'Lunch', 'Dinner']
+    requestedMeals: ['Breakfast', 'Lunch', 'Dinner'],
+    rating: 5,
+    review: "Food exceeded all my expectation.. quality wise, quantity wise, and taste wise. I can't even point out a single standout dish because I genuinely enjoyed every single one. Stuvvy is already doing great work in food delivery. Compared to other delivery services that are costlier and not up to the mark, Stuvvy's service is more than satisfying. I hope you keep up this exact same standard as you grow and gain a huge number of customers. Wishing great heights for Stuvvy!"
   },
   {
     sNo: 2,
@@ -54,7 +58,9 @@ export const DEMO_CUSTOMERS_DATABASE: CustomerRecord[] = [
     paymentStatus: 'PAID',
     paymentAmount: '149',
     orderStatus: 'Delivered',
-    requestedMeals: ['Breakfast', 'Lunch', 'Dinner']
+    requestedMeals: ['Breakfast', 'Lunch', 'Dinner'],
+    rating: 5,
+    review: "Hi, The food is really good. And importantly it's exactly like home food. Especially I liked ur packing please keep doing the same. I'm really happy with ur service. I believe and wish you keep doing the same work all the time. I'm honestly happy with the taste and work….. One small request from my side is I personally don't want to include banana due to my dad's health requirements…"
   },
   {
     sNo: 3,
@@ -73,7 +79,9 @@ export const DEMO_CUSTOMERS_DATABASE: CustomerRecord[] = [
     paymentStatus: 'PAID',
     paymentAmount: '1669',
     orderStatus: 'On going',
-    requestedMeals: ['Lunch', 'Dinner']
+    requestedMeals: ['Lunch', 'Dinner'],
+    rating: 5,
+    review: 'Good start'
   },
   {
     sNo: 4,
@@ -93,7 +101,9 @@ export const DEMO_CUSTOMERS_DATABASE: CustomerRecord[] = [
     paymentStatus: 'PAID',
     paymentAmount: '2500',
     orderStatus: 'On going',
-    requestedMeals: ['Breakfast', 'Lunch', 'Dinner']
+    requestedMeals: ['Breakfast', 'Lunch', 'Dinner'],
+    rating: 5,
+    review: 'Good work keep doing the same'
   },
   {
     sNo: 5,

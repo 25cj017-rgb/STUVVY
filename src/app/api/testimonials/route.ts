@@ -129,6 +129,11 @@ export async function GET() {
         customerReview = "Hi, The food is really good. And importantly it's exactly like home food. Especially I liked ur packing please keep doing the same. I'm really happy with ur service. I believe and wish you keep doing the same work all the time. I'm honestly happy with the taste and work….. One small request from my side is I personally don't want to include banana due to my dad's health requirements…";
       }
 
+      // Guarantee Yamuna J N's authentic feedback is anchored to Yamuna J N
+      if (normName.includes('YAMUNA') && (!customerReview || customerReview.length < 10)) {
+        customerReview = "Food exceeded all my expectation.. quality wise, quantity wise, and taste wise. I can't even point out a single standout dish because I genuinely enjoyed every single one. Stuvvy is already doing great work in food delivery. Compared to other delivery services that are costlier and not up to the mark, Stuvvy's service is more than satisfying. I hope you keep up this exact same standard as you grow and gain a huge number of customers. Wishing great heights for Stuvvy!";
+      }
+
       testimonials.push({
         id: `cust-${custKey}`,
         name: primaryRow.name || firstRow.name,
