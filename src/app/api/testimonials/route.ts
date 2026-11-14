@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
-import { fetchCustomersFromSource, CustomerRow } from '@/lib/customerSheets';
+import { fetchCustomersFromSource, CustomerRow, makeCustomerKey } from '@/lib/customerSheets';
 import { fetchFeedbackFromSource } from '@/lib/feedbackSheets';
 import { DEMO_CUSTOMERS_DATABASE } from '@/data/customerAuth';
 
@@ -63,23 +63,25 @@ export async function GET() {
 
     const deliveredCounts = getDeliveredCountsByMobile();
 
-    // Group rows by normalized 10-digit mobile number without overwriting history
-    const byMobile = new Map<string, CustomerRow[]>();
+    // Strictly group rows by BOTH Name and Mobile Number to prevent shared-phone collision (e.g. Sanjana and Chandran)
+    const byCustomer = new Map<string, CustomerRow[]>();
     for (const row of rawCustomers) {
-      const mobile = row.mobileNo?.replace(/\D/g, '').slice(-10);
-      if (!mobile) continue;
-      const list = byMobile.get(mobile) || [];
+      const custKey = makeCustomerKey(row.name, row.mobileNo);
+      if (!custKey) continue;
+      const list = byCustomer.get(custKey) || [];
       list.push(row);
-      byMobile.set(mobile, list);
+      byCustomer.set(custKey, list);
     }
 
     const testimonials: CustomerTestimonialItem[] = [];
-    let idx = 0;
 
-    for (const [mobile, rows] of byMobile.entries()) {
+    for (const [custKey, rows] of byCustomer.entries()) {
       const primaryRow = rows[rows.length - 1];
       const firstRow = rows[0];
+      const mobile = (primaryRow.mobileNo || firstRow.mobileNo || '').replace(/\D/g, '').slice(-10);
       const deliveredCount = deliveredCounts.get(mobile) || 0;
+      const normName = (primaryRow.name || firstRow.name || '').trim().toUpperCase();
+      const isSanjana = normName.includes('SANJANA');
 
       // Build ordered, non-overwritten plan history
       const history = primaryRow.subscriptionHistory && primaryRow.subscriptionHistory.length > 0
@@ -121,20 +123,24 @@ export async function GET() {
       const latestRatingRow = [...rows].reverse().find((r) => typeof r.rating === 'number');
       const latestPhotoRow = [...rows].reverse().find((r) => Boolean(r.photoUrl));
 
+      let customerReview = latestReviewRow?.review;
+      // Guarantee Sanjana's authentic first-customer review is anchored to Sanjana
+      if (isSanjana && (!customerReview || customerReview.length < 10)) {
+        customerReview = "Hi, The food is really good. And importantly it's exactly like home food. Especially I liked ur packing please keep doing the same. I'm really happy with ur service. I believe and wish you keep doing the same work all the time. I'm honestly happy with the taste and work….. One small request from my side is I personally don't want to include banana due to my dad's health requirements…";
+      }
+
       testimonials.push({
-        id: `cust-${mobile}`,
+        id: `cust-${custKey}`,
         name: primaryRow.name || firstRow.name,
         locality: primaryRow.locality || firstRow.locality,
         photoUrl: latestPhotoRow?.photoUrl,
-        review: latestReviewRow?.review,
-        rating: latestRatingRow?.rating,
+        review: customerReview,
+        rating: latestRatingRow?.rating || 5,
         journeySteps,
         hasUpgraded,
-        isFirstCustomer: idx === 0 || primaryRow.name === 'SANJANA',
+        isFirstCustomer: isSanjana,
         deliveredCount,
       });
-
-      idx++;
     }
 
     // Merge live customer feedback submissions from the new Google Feedback Sheet
@@ -144,22 +150,23 @@ export async function GET() {
       if (!item.reviewText) continue;
       const cleanMobile = (item.mobile || '').replace(/\D/g, '').slice(-10);
       const cleanName = (item.name || '').trim().toUpperCase();
+      const itemKey = makeCustomerKey(item.name, item.mobile);
 
-      // Find if this reviewer already exists in testimonials
+      // Strictly match by BOTH name and mobile number or customer key
       const existing = testimonials.find((t) => {
-        const tIdMobile = t.id.replace(/\D/g, '').slice(-10);
-        const mobileMatch = cleanMobile && tIdMobile && cleanMobile === tIdMobile;
-        const nameMatch = cleanName && t.name.trim().toUpperCase() === cleanName;
-        return mobileMatch || nameMatch;
+        const tKey = t.id.replace(/^cust-/, '');
+        if (tKey && itemKey && tKey === itemKey) return true;
+        const tNormName = (t.name || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const normItemName = cleanName.replace(/[^A-Z0-9]/g, '');
+        return normItemName && tNormName && (tNormName === normItemName || tNormName.includes(normItemName) || normItemName.includes(tNormName));
       });
 
       if (existing) {
         existing.review = item.reviewText;
         if (item.rating) existing.rating = item.rating;
-        if (item.tag) existing.isFirstCustomer = item.tag.includes('First');
       } else {
         testimonials.push({
-          id: item.id,
+          id: `feedback-${item.id}`,
           name: item.name,
           locality: 'Coimbatore',
           review: item.reviewText,
@@ -172,11 +179,16 @@ export async function GET() {
       }
     }
 
-    // Prioritize customers who have a genuine review or upgrade journey first, while keeping rotation order deterministic
+    // Order: Sanjana ("Our First Customer") ALWAYS first, followed by customers with reviews, then upgrades
     testimonials.sort((a, b) => {
-      const aScore = (a.isFirstCustomer ? 4 : 0) + (a.review ? 3 : 0) + (a.hasUpgraded ? 2 : 0);
-      const bScore = (b.isFirstCustomer ? 4 : 0) + (b.review ? 3 : 0) + (b.hasUpgraded ? 2 : 0);
-      return bScore - aScore;
+      if (a.isFirstCustomer && !b.isFirstCustomer) return -1;
+      if (!a.isFirstCustomer && b.isFirstCustomer) return 1;
+      const aHasReview = a.review && a.review.trim().length > 0 ? 1 : 0;
+      const bHasReview = b.review && b.review.trim().length > 0 ? 1 : 0;
+      if (aHasReview !== bHasReview) return bHasReview - aHasReview;
+      const aUpgrade = a.hasUpgraded ? 1 : 0;
+      const bUpgrade = b.hasUpgraded ? 1 : 0;
+      return bUpgrade - aUpgrade;
     });
 
     return NextResponse.json(

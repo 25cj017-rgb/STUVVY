@@ -51,10 +51,15 @@ export const LandingReviewPopup: React.FC<LandingReviewPopupProps> = ({
           for (const item of data.testimonials) {
             if (item.review && item.review.trim().length > 0) {
               const isSanjana = item.name.toUpperCase().includes('SANJANA') || item.isFirstCustomer;
+              const tag = isSanjana
+                ? 'Our First Customer'
+                : item.hasUpgraded
+                ? 'Upgraded Subscriber'
+                : 'Verified Subscriber';
               validReviews.push({
                 id: item.id,
                 name: item.name,
-                tag: isSanjana ? 'Our First Customer' : 'Verified Subscriber',
+                tag,
                 reviewText: item.review,
                 rating: item.rating || 5,
               });
