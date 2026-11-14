@@ -161,8 +161,21 @@ export async function GET() {
       const existing = testimonials.find((t) => {
         const tKey = t.id.replace(/^cust-/, '');
         if (tKey && itemKey && tKey === itemKey) return true;
+
+        const tDigits = (t.id.split('_')[1] || '').replace(/\D/g, '').slice(-10);
         const tNormName = (t.name || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
         const normItemName = cleanName.replace(/[^A-Z0-9]/g, '');
+
+        // Prevent Sanjana & Chandran collision
+        if (normItemName.includes('SANJANA') && !tNormName.includes('SANJANA')) return false;
+        if (!normItemName.includes('SANJANA') && tNormName.includes('SANJANA')) return false;
+
+        if (cleanMobile && tDigits && cleanMobile === tDigits) {
+          if (!normItemName || !tNormName || tNormName.includes(normItemName) || normItemName.includes(tNormName)) {
+            return true;
+          }
+        }
+
         return normItemName && tNormName && (tNormName === normItemName || tNormName.includes(normItemName) || normItemName.includes(tNormName));
       });
 

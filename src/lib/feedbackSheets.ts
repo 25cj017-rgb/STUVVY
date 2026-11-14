@@ -13,6 +13,9 @@ export interface FeedbackEntry {
 
 export const FEEDBACK_SHEET_CSV_URL =
   process.env.FEEDBACK_SHEET_CSV_URL ||
+  'https://docs.google.com/spreadsheets/d/1A5tBfZCrusMd3Kxmvu3-5wAJ7FbMl2VtNue0Rm64_Is/export?format=csv';
+
+export const FEEDBACK_SHEET_CSV_BACKUP_URL =
   'https://docs.google.com/spreadsheets/d/1mAmMsLeinW8FdSy8p8uQIRPDMGKls82U4n9F16lPpvk/export?format=csv';
 
 // Fallback initial reviews (including Sanjana's verified first-customer feedback and Yamuna J N's full feedback)
@@ -184,29 +187,55 @@ export function parseFeedbackCsv(fileContent: string): FeedbackEntry[] {
 }
 
 export async function fetchFeedbackFromSource(): Promise<{ source: string; feedback: FeedbackEntry[] }> {
+  let liveEntries: FeedbackEntry[] = [];
+  let sourceUsed = 'default-fallback';
+
+  // 1. Try Primary Google Sheet
   try {
     const res = await fetch(FEEDBACK_SHEET_CSV_URL, {
       cache: 'no-store',
-      headers: {
-        Accept: 'text/csv, text/plain, */*',
-      },
+      headers: { Accept: 'text/csv, text/plain, */*' },
     });
 
     if (res.ok) {
       const csvText = await res.text();
-      // Ensure response is actually CSV and not an HTML redirect to login
       if (!csvText.includes('<!DOCTYPE html') && !csvText.includes('<html')) {
         const parsed = parseFeedbackCsv(csvText);
         if (parsed.length > 0) {
-          return { source: 'google-sheets-feedback-live', feedback: parsed };
+          liveEntries = parsed;
+          sourceUsed = 'google-sheets-live';
         }
       }
     }
   } catch (err) {
-    console.warn('Could not fetch live Google Sheet feedback, falling back to local:', err);
+    console.warn('Could not fetch live Google Sheet feedback:', err);
   }
 
-  // Check local feedback.csv fallback
+  // 2. If primary had no entries, try backup Google Sheet
+  if (liveEntries.length === 0 && FEEDBACK_SHEET_CSV_BACKUP_URL) {
+    try {
+      const res = await fetch(FEEDBACK_SHEET_CSV_BACKUP_URL, {
+        cache: 'no-store',
+        headers: { Accept: 'text/csv, text/plain, */*' },
+      });
+
+      if (res.ok) {
+        const csvText = await res.text();
+        if (!csvText.includes('<!DOCTYPE html') && !csvText.includes('<html')) {
+          const parsed = parseFeedbackCsv(csvText);
+          if (parsed.length > 0) {
+            liveEntries = parsed;
+            sourceUsed = 'google-sheets-backup-live';
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch backup Google Sheet feedback:', err);
+    }
+  }
+
+  // 3. Fallback to local feedback.csv if no Google Sheets live entries
+  let fallbackEntries = DEFAULT_FEEDBACK_ENTRIES;
   try {
     const rootPath = path.join(process.cwd(), 'feedback.csv');
     const pubPath = path.join(process.cwd(), 'public', 'feedback.csv');
@@ -216,13 +245,30 @@ export async function fetchFeedbackFromSource(): Promise<{ source: string; feedb
       const content = fs.readFileSync(targetPath, 'utf-8');
       const parsed = parseFeedbackCsv(content);
       if (parsed.length > 0) {
-        return { source: 'local-feedback.csv', feedback: parsed };
+        fallbackEntries = parsed;
       }
     }
   } catch (err) {
     console.warn('Error reading local feedback.csv:', err);
   }
 
-  return { source: 'default-fallback', feedback: DEFAULT_FEEDBACK_ENTRIES };
+  // 4. Merge default/local entries with live sheet entries so verified customers are never lost
+  const mergedMap = new Map<string, FeedbackEntry>();
+
+  for (const item of fallbackEntries) {
+    const key = `${(item.name || '').trim().toUpperCase()}_${(item.mobile || '').replace(/\D/g, '').slice(-10)}`;
+    mergedMap.set(key, item);
+  }
+
+  for (const item of liveEntries) {
+    const key = `${(item.name || '').trim().toUpperCase()}_${(item.mobile || '').replace(/\D/g, '').slice(-10)}`;
+    mergedMap.set(key, item);
+  }
+
+  const combined = Array.from(mergedMap.values());
+  return {
+    source: liveEntries.length > 0 ? `${sourceUsed} + verified-archive` : sourceUsed,
+    feedback: combined.length > 0 ? combined : DEFAULT_FEEDBACK_ENTRIES,
+  };
 }
 
