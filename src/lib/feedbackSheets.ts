@@ -105,13 +105,17 @@ export function parseFeedbackCsv(fileContent: string): FeedbackEntry[] {
   );
   const reviewIdx = headers.findIndex(
     (h) =>
-      h.includes('VALUABLE REVIEWS') ||
-      h.includes('REVIEWS ABOUT') ||
-      (h.includes('REVIEW') && !h.includes('REVIEWING') && !h.includes('OKAY')) ||
-      h.includes('FEEDBACK') ||
-      h.includes('EXPERIENCE') ||
-      h.includes('MESSAGE') ||
-      h.includes('TESTIMONIAL')
+      !h.includes('SPILLAGE') &&
+      !h.includes('REVIEWING') &&
+      !h.includes('PLANNED') &&
+      !h.includes('OKAY') &&
+      (h.includes('VALUABLE REVIEWS') ||
+        h.includes('VALUABLE REVIEW') ||
+        h.includes('REVIEWS ABOUT') ||
+        h.includes('FEEDBACK') ||
+        h.includes('TESTIMONIAL') ||
+        (h.includes('REVIEW') && !h.includes('WHICH MEALS')) ||
+        (h.includes('EXPERIENCE') && !h.includes('SPILLAGE')))
   );
   const consentIdx = headers.findIndex((h) => h.includes('OKAY WITH IT') || h.includes('PLANNED TO SHARE'));
   const suggestionsIdx = headers.findIndex((h) => h.includes('SUGGESTION'));
@@ -150,7 +154,7 @@ export function parseFeedbackCsv(fileContent: string): FeedbackEntry[] {
 
     let reviewText = '';
     if (valReview && suggestions && valReview.toLowerCase() !== suggestions.toLowerCase()) {
-      reviewText = `${valReview}. ${suggestions}`;
+      reviewText = `${valReview} — ${suggestions}`;
     } else {
       reviewText = valReview || suggestions;
     }
