@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { fetchCustomersFromSource, CustomerRow } from '@/lib/customerSheets';
+import { fetchFeedbackFromSource } from '@/lib/feedbackSheets';
 import { DEMO_CUSTOMERS_DATABASE } from '@/data/customerAuth';
 
 export const dynamic = 'force-dynamic';
@@ -136,19 +137,55 @@ export async function GET() {
       idx++;
     }
 
+    // Merge live customer feedback submissions from the new Google Feedback Sheet
+    const { source: feedbackSource, feedback } = await fetchFeedbackFromSource();
+
+    for (const item of feedback) {
+      if (!item.reviewText) continue;
+      const cleanMobile = (item.mobile || '').replace(/\D/g, '').slice(-10);
+      const cleanName = (item.name || '').trim().toUpperCase();
+
+      // Find if this reviewer already exists in testimonials
+      const existing = testimonials.find((t) => {
+        const tIdMobile = t.id.replace(/\D/g, '').slice(-10);
+        const mobileMatch = cleanMobile && tIdMobile && cleanMobile === tIdMobile;
+        const nameMatch = cleanName && t.name.trim().toUpperCase() === cleanName;
+        return mobileMatch || nameMatch;
+      });
+
+      if (existing) {
+        existing.review = item.reviewText;
+        if (item.rating) existing.rating = item.rating;
+        if (item.tag) existing.isFirstCustomer = item.tag.includes('First');
+      } else {
+        testimonials.push({
+          id: item.id,
+          name: item.name,
+          locality: 'Coimbatore',
+          review: item.reviewText,
+          rating: item.rating || 5,
+          journeySteps: ['Verified Customer Review'],
+          hasUpgraded: false,
+          isFirstCustomer: cleanName.includes('SANJANA'),
+          deliveredCount: 1,
+        });
+      }
+    }
+
     // Prioritize customers who have a genuine review or upgrade journey first, while keeping rotation order deterministic
     testimonials.sort((a, b) => {
-      const aScore = (a.isFirstCustomer ? 4 : 0) + (a.hasUpgraded ? 2 : 0) + (a.review ? 1 : 0);
-      const bScore = (b.isFirstCustomer ? 4 : 0) + (b.hasUpgraded ? 2 : 0) + (b.review ? 1 : 0);
+      const aScore = (a.isFirstCustomer ? 4 : 0) + (a.review ? 3 : 0) + (a.hasUpgraded ? 2 : 0);
+      const bScore = (b.isFirstCustomer ? 4 : 0) + (b.review ? 3 : 0) + (b.hasUpgraded ? 2 : 0);
       return bScore - aScore;
     });
 
     return NextResponse.json(
       {
         success: true,
-        source,
+        source: `${source} + ${feedbackSource}`,
         total: testimonials.length,
         testimonials,
+        feedback,
       },
       {
         headers: {

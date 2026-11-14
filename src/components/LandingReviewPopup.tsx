@@ -1,21 +1,23 @@
 'use client';
 
-import React from 'react';
-import { X, CheckCircle2, Heart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, CheckCircle2, Heart, ChevronLeft, ChevronRight, Star } from 'lucide-react';
 
 export interface LandingReviewEntry {
   id: string;
   name: string;
   tag: string;
   reviewText: string;
+  rating?: number;
 }
 
-// Single genuine customer review for now; additional reviews can be appended here in the future
-export const LANDING_REVIEWS: LandingReviewEntry[] = [
+// Single genuine customer review for initial baseline
+export const DEFAULT_LANDING_REVIEWS: LandingReviewEntry[] = [
   {
     id: 'review-sanjana-1',
     name: 'SANJANA',
     tag: 'Our First Customer',
+    rating: 5,
     reviewText:
       "Hi, The food is really good. And importantly it's exactly like home food. Especially I liked ur packing please keep doing the same. I'm really happy with ur service. I believe and wish you keep doing the same work all the time. I'm honestly happy with the taste and work….. One small request from my side is I personally don't want to include banana due to my dad's health requirements…",
   },
@@ -24,15 +26,64 @@ export const LANDING_REVIEWS: LandingReviewEntry[] = [
 interface LandingReviewPopupProps {
   isOpen: boolean;
   onClose: () => void;
+  reviews?: LandingReviewEntry[];
 }
 
 export const LandingReviewPopup: React.FC<LandingReviewPopupProps> = ({
   isOpen,
   onClose,
+  reviews: initialReviews,
 }) => {
-  if (!isOpen || LANDING_REVIEWS.length === 0) return null;
+  const [reviews, setReviews] = useState<LandingReviewEntry[]>(
+    initialReviews && initialReviews.length > 0 ? initialReviews : DEFAULT_LANDING_REVIEWS
+  );
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  const currentReview = LANDING_REVIEWS[0];
+  // Sync with live testimonials & feedback API
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/testimonials', { cache: 'no-store' })
+      .then((res) => res.json())
+      .then((data) => {
+        if (cancelled) return;
+        if (data?.success && Array.isArray(data.testimonials)) {
+          const validReviews: LandingReviewEntry[] = [];
+          for (const item of data.testimonials) {
+            if (item.review && item.review.trim().length > 0) {
+              const isSanjana = item.name.toUpperCase().includes('SANJANA') || item.isFirstCustomer;
+              validReviews.push({
+                id: item.id,
+                name: item.name,
+                tag: isSanjana ? 'Our First Customer' : 'Verified Subscriber',
+                reviewText: item.review,
+                rating: item.rating || 5,
+              });
+            }
+          }
+          if (validReviews.length > 0) {
+            setReviews(validReviews);
+          }
+        }
+      })
+      .catch((err) => console.warn('Notice: Could not load live reviews for landing popup:', err));
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!isOpen || reviews.length === 0) return null;
+
+  const currentReview = reviews[currentIndex] || reviews[0];
+  const totalReviews = reviews.length;
+
+  const handlePrev = () => {
+    setCurrentIndex((prev) => (prev - 1 + totalReviews) % totalReviews);
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => (prev + 1) % totalReviews);
+  };
 
   return (
     <div
@@ -60,18 +111,52 @@ export const LandingReviewPopup: React.FC<LandingReviewPopupProps> = ({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close review popup"
-            className="w-7 h-7 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center justify-center transition-colors cursor-pointer shrink-0"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            {/* If there are multiple reviews, show subtle prev/next controls */}
+            {totalReviews > 1 && (
+              <div className="flex items-center gap-0.5 mr-1 bg-zinc-100 rounded-full p-0.5 border border-zinc-200">
+                <button
+                  type="button"
+                  onClick={handlePrev}
+                  aria-label="Previous review"
+                  className="w-5 h-5 rounded-full hover:bg-zinc-200 flex items-center justify-center text-zinc-600 transition-colors cursor-pointer"
+                >
+                  <ChevronLeft className="w-3 h-3" />
+                </button>
+                <span className="text-[9px] font-bold text-zinc-500 px-1">
+                  {currentIndex + 1}/{totalReviews}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  aria-label="Next review"
+                  className="w-5 h-5 rounded-full hover:bg-zinc-200 flex items-center justify-center text-zinc-600 transition-colors cursor-pointer"
+                >
+                  <ChevronRight className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close review popup"
+              className="w-7 h-7 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-700 flex items-center justify-center transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
-        {/* REVIEW PARAGRAPH (STATIC, CLEAN & READABLE) */}
-        <div className="rounded-2xl bg-zinc-50 border border-zinc-200/80 p-3.5 sm:p-4">
+        {/* REVIEW PARAGRAPH (CLEAN & READABLE) */}
+        <div className="rounded-2xl bg-zinc-50 border border-zinc-200/80 p-3.5 sm:p-4 space-y-2">
+          {currentReview.rating && (
+            <div className="flex items-center gap-0.5">
+              {Array.from({ length: currentReview.rating }).map((_, idx) => (
+                <Star key={idx} className="w-3 h-3 fill-amber-400 text-amber-500" />
+              ))}
+            </div>
+          )}
           <p className="text-xs sm:text-[13px] leading-relaxed font-medium text-zinc-800">
             &ldquo;{currentReview.reviewText}&rdquo;
           </p>
@@ -80,4 +165,3 @@ export const LandingReviewPopup: React.FC<LandingReviewPopupProps> = ({
     </div>
   );
 };
-
