@@ -34,7 +34,7 @@ export const DEFAULT_FEEDBACK_ENTRIES: FeedbackEntry[] = [
     tag: 'Monthly Subscriber',
     rating: 5,
     reviewText:
-      "Food exceeded all my expectation.. quality wise, quantity wise, and taste wise. I can't even point out a single standout dish because I genuinely enjoyed every single one. Stuvvy is already doing great work in food delivery. Compared to other delivery services that are costlier and not up to the mark, Stuvvy's service is more than satisfying. I hope you keep up this exact same standard as you grow and gain a huge number of customers. Wishing great heights for Stuvvy!",
+      "Exceeded all my expectations. Stuvvy beats other delivery services on both price and service. Food exceeded all my expectation.. quality wise, quantity wise, and taste wise. I can't even point out a single standout dish because I genuinely enjoyed every single one. Stuvvy is already doing great work in food delivery. Compared to other delivery services that are costlier and not up to the mark, Stuvvy's service is more than satisfying. I hope you keep up this exact same standard as you grow and gain a huge number of customers. Wishing great heights for Stuvvy!",
     timestamp: '11/14/2026',
   },
   {
@@ -111,6 +111,7 @@ export function parseFeedbackCsv(fileContent: string): FeedbackEntry[] {
       h.includes('TESTIMONIAL')
   );
   const consentIdx = headers.findIndex((h) => h.includes('OKAY WITH IT') || h.includes('PLANNED TO SHARE'));
+  const suggestionsIdx = headers.findIndex((h) => h.includes('SUGGESTION'));
   const favoriteDishIdx = headers.findIndex((h) => h.includes('ENJOY THE MOST'));
 
   const entries: FeedbackEntry[] = [];
@@ -140,11 +141,18 @@ export function parseFeedbackCsv(fileContent: string): FeedbackEntry[] {
       }
     }
 
-    // Parse review text
+    // Parse review text: check both "Valuable Reviews" and "Any Suggestions"
+    const valReview = reviewIdx >= 0 && parts[reviewIdx] ? parts[reviewIdx].replace(/^"|"$/g, '').trim() : '';
+    const suggestions = suggestionsIdx >= 0 && parts[suggestionsIdx] ? parts[suggestionsIdx].replace(/^"|"$/g, '').trim() : '';
+
     let reviewText = '';
-    if (reviewIdx >= 0 && parts[reviewIdx]) {
-      reviewText = parts[reviewIdx].replace(/^"|"$/g, '').trim();
+    if (valReview && suggestions && valReview.toLowerCase() !== suggestions.toLowerCase()) {
+      reviewText = `${valReview}. ${suggestions}`;
     } else {
+      reviewText = valReview || suggestions;
+    }
+
+    if (!reviewText) {
       // Fallback: pick the column with the longest string as review text
       let longest = '';
       for (const p of parts) {
