@@ -88,15 +88,23 @@ function parseSortableTime(dateStr?: string): number {
   return 0;
 }
 
+export function makeCustomerKey(name?: string, mobile?: string): string {
+  const cleanName = (name || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const cleanMobile = (mobile || '').replace(/\D/g, '').slice(-10);
+  return `${cleanName}_${cleanMobile}`;
+}
+
 /**
  * Attaches non-destructive chronological subscriptionHistory[] to each customer row
- * by grouping all rows with the same normalized 10-digit mobile number.
+ * by grouping rows with matching normalized name AND 10-digit mobile number.
+ * This guarantees customers sharing a phone number (e.g. Sanjana and Chandran)
+ * are NEVER merged or confused.
  */
 export function attachSubscriptionHistories(rows: CustomerRow[]): CustomerRow[] {
   const grouped = new Map<string, SubscriptionHistoryEntry[]>();
 
   for (const row of rows) {
-    const key = row.mobileNo?.replace(/\D/g, '').slice(-10);
+    const key = makeCustomerKey(row.name, row.mobileNo);
     if (!key || !row.plan) continue;
     const list = grouped.get(key) || [];
     list.push({
@@ -117,7 +125,7 @@ export function attachSubscriptionHistories(rows: CustomerRow[]): CustomerRow[] 
   }
 
   return rows.map((row) => {
-    const key = row.mobileNo?.replace(/\D/g, '').slice(-10);
+    const key = makeCustomerKey(row.name, row.mobileNo);
     const history = key ? grouped.get(key) : undefined;
     return history && history.length > 0
       ? { ...row, subscriptionHistory: history }

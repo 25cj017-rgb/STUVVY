@@ -102,9 +102,13 @@ export default function Home() {
           setUser(prevUser => {
             if (prevUser?.isVerified && prevUser?.mobileNumber) {
               const userDigits = prevUser.mobileNumber.replace(/\D/g, '').slice(-10);
-              const matched = data.customers.find((c: any) =>
-                c.mobileNo?.replace(/\D/g, '').slice(-10) === userDigits
-              );
+              const userNormName = (prevUser.fullName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+              const matched = data.customers.find((c: any) => {
+                const cDigits = (c.mobileNo || '').replace(/\D/g, '').slice(-10);
+                const cNormName = (c.name || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+                const nameMatches = !userNormName || cNormName === userNormName || cNormName.includes(userNormName) || userNormName.includes(cNormName);
+                return cDigits === userDigits && nameMatches;
+              });
               if (matched) {
                 const addrs = matched.addresses && matched.addresses.length > 0
                   ? matched.addresses
@@ -249,7 +253,10 @@ export default function Home() {
           if (matchedPlan) {
             setSelectedPlan(matchedPlan);
             setSelectedDays(matchedPlan.defaultDays);
-            setCalculatedPrice(matchedPlan.price);
+            const actualPaid = authResult.customer?.paymentAmount
+              ? parseInt(authResult.customer.paymentAmount.replace(/\D/g, ''), 10) || matchedPlan.price
+              : matchedPlan.price;
+            setCalculatedPrice(actualPaid);
           }
         }
 

@@ -59,13 +59,16 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
   });
 
   // Fetch real delivery records for this subscriber + sync with local Admin updates
+  // Strictly checks BOTH customer name and mobile number to prevent data collision between shared phone numbers
   useEffect(() => {
     if (!user?.mobileNumber) return;
     const cleanMobile = user.mobileNumber.replace(/\D/g, '').slice(-10);
+    const cleanName = encodeURIComponent(user.fullName || '');
+    const userNormName = (user.fullName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
     const loadAndMergeLogs = () => {
       setLoadingLogs(true);
-      fetch(`/api/admin/delivery-logs?mobile=${cleanMobile}`, { cache: 'no-store' })
+      fetch(`/api/admin/delivery-logs?mobile=${cleanMobile}&name=${cleanName}`, { cache: 'no-store' })
         .then(res => res.json())
         .then(data => {
           const serverLogs: DeliveryLogItem[] = data.success && Array.isArray(data.logs) ? data.logs : [];
@@ -76,7 +79,9 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
               const parsed = JSON.parse(rawLocal) as DeliveryLogItem[];
               if (Array.isArray(parsed)) {
                 localLogs = parsed.filter(
-                  (l) => (l.customerMobile || '').replace(/\D/g, '').slice(-10) === cleanMobile
+                  (l) =>
+                    (l.customerMobile || '').replace(/\D/g, '').slice(-10) === cleanMobile &&
+                    (!userNormName || (l.customerName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '') === userNormName)
                 );
               }
             }
@@ -103,7 +108,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
       window.removeEventListener('stuvvy-logs-updated', loadAndMergeLogs);
       window.removeEventListener('storage', loadAndMergeLogs);
     };
-  }, [user?.mobileNumber]);
+  }, [user?.mobileNumber, user?.fullName]);
 
   // Hash change detection (e.g. from navbar "Stuvvy Card" button)
   useEffect(() => {

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { fetchCustomersFromSource } from '@/lib/customerSheets';
+import { DEMO_CUSTOMERS_DATABASE } from '@/data/customerAuth';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -29,26 +30,14 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       source: 'demo-fallback',
-      customers: [
-        {
-          sNo: 1,
-          name: 'SRI RAM V K',
-          mobileNo: '9344795832',
-          dob: '26-10-2007',
-          address: 'No. 14, 2nd Cross, Anna Nagar West, Chennai - 600040',
-          addresses: ['No. 14, 2nd Cross, Anna Nagar West, Chennai - 600040'],
-          plan: 'Weekly',
-          startDate: '03-11-2026',
-          purchaseDate: '28-10-2026',
-        },
-      ],
+      customers: DEMO_CUSTOMERS_DATABASE,
     });
   } catch (error: any) {
     console.error('Error loading customers:', error);
     return NextResponse.json({
       success: false,
       error: error.message,
-      customers: [],
+      customers: DEMO_CUSTOMERS_DATABASE,
     });
   }
 }

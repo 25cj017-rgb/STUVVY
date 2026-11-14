@@ -30,7 +30,11 @@ export const DEMO_CUSTOMERS_DATABASE: CustomerRecord[] = [
     ],
     plan: 'Monthly',
     startDate: '11/12/2026',
-    purchaseDate: '10/29/2026 22:03:21'
+    purchaseDate: '10/29/2026 22:03:21',
+    paymentStatus: 'PAID',
+    paymentAmount: '2500',
+    orderStatus: 'On going',
+    requestedMeals: ['Breakfast', 'Lunch', 'Dinner']
   },
   {
     sNo: 2,
@@ -43,7 +47,62 @@ export const DEMO_CUSTOMERS_DATABASE: CustomerRecord[] = [
     ],
     plan: 'Daily',
     startDate: '11/6/2026',
-    purchaseDate: '11/5/2026 13:27:58'
+    purchaseDate: '11/5/2026 13:27:58',
+    paymentStatus: 'PAID',
+    paymentAmount: '149',
+    orderStatus: 'Delivered',
+    requestedMeals: ['Breakfast', 'Lunch', 'Dinner']
+  },
+  {
+    sNo: 3,
+    name: 'PRIYANKA S',
+    mobileNo: '7094704460',
+    dob: '3/7/2002',
+    address: 'No-49 Marutham nagar, saravanampatti 641035',
+    addresses: [
+      'No-49 Marutham nagar, saravanampatti 641035'
+    ],
+    plan: 'Monthly',
+    startDate: '11/13/2026',
+    purchaseDate: '11/12/2026 10:43:31',
+    paymentStatus: 'PAID',
+    paymentAmount: '1669',
+    orderStatus: 'On going',
+    requestedMeals: ['Lunch', 'Dinner']
+  },
+  {
+    sNo: 4,
+    name: 'Chandran',
+    mobileNo: '9444746064',
+    dob: '4/23/1996',
+    address: '2/716, teachers colony, Thudilure, Coimbatore',
+    addresses: [
+      '2/716, teachers colony, Thudilure, Coimbatore'
+    ],
+    plan: 'Monthly',
+    startDate: '11/13/2026',
+    purchaseDate: '11/12/2026 11:33:58',
+    paymentStatus: 'PAID',
+    paymentAmount: '2500',
+    orderStatus: 'On going',
+    requestedMeals: ['Breakfast', 'Lunch', 'Dinner']
+  },
+  {
+    sNo: 5,
+    name: 'Shalini',
+    mobileNo: '7548888549',
+    dob: '7/12/1996',
+    address: 'PSG COLLEGE OF ARTS AND SCIENCE ,Civil aero drome post',
+    addresses: [
+      'PSG COLLEGE OF ARTS AND SCIENCE ,Civil aero drome post'
+    ],
+    plan: 'Monthly',
+    startDate: '11/13/2026',
+    purchaseDate: '11/12/2026 11:37:34',
+    paymentStatus: 'PAID',
+    paymentAmount: '1500',
+    orderStatus: 'On going',
+    requestedMeals: ['Lunch']
   }
 ];
 
@@ -59,9 +118,27 @@ export const getCustomersDatabase = (): CustomerRecord[] => {
   return dynamicCustomers;
 };
 
+/**
+ * Looks up customer checking BOTH name and mobile number.
+ * Ensures customers sharing the same mobile (e.g. Sanjana and Chandran)
+ * are NEVER confused or merged.
+ */
+export const lookupCustomerByNameAndMobile = (name: string, mobile: string): CustomerRecord | undefined => {
+  const normName = name.trim().toUpperCase();
+  const normMobile = normalizeMobile(mobile);
+  const activeDb = dynamicCustomers.length > 0 ? dynamicCustomers : DEMO_CUSTOMERS_DATABASE;
+  return activeDb.find(c => {
+    const cName = c.name.trim().toUpperCase();
+    const cMobile = normalizeMobile(c.mobileNo);
+    const nameMatch = cName === normName || cName.includes(normName) || normName.includes(cName);
+    return nameMatch && cMobile === normMobile;
+  });
+};
+
 export const lookupCustomerByMobile = (mobile: string): CustomerRecord | undefined => {
   const normMobile = normalizeMobile(mobile);
-  return dynamicCustomers.find(c => normalizeMobile(c.mobileNo) === normMobile);
+  const activeDb = dynamicCustomers.length > 0 ? dynamicCustomers : DEMO_CUSTOMERS_DATABASE;
+  return activeDb.find(c => normalizeMobile(c.mobileNo) === normMobile);
 };
 
 /**

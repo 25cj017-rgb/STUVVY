@@ -115,6 +115,14 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         }
       }
 
+      // Helper to generate unique key combining customer name and 10-digit mobile number
+      // This strictly prevents customers with the same mobile (e.g. Sanjana and Chandran) from merging
+      const makeCustKey = (name?: string, mobile?: string) => {
+        const n = (name || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const m = (mobile || '').replace(/\D/g, '').slice(-10);
+        return `${n}_${m}`;
+      };
+
       // Map customer details and their opted meals from Google Sheets
       const customerMap = new Map<
         string,
@@ -132,8 +140,9 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
 
       for (const c of custList) {
         const mob = (c.mobileNo || '').replace(/\D/g, '').slice(-10);
-        if (mob) {
-          customerMap.set(mob, {
+        const custKey = makeCustKey(c.name, mob);
+        if (mob && custKey) {
+          customerMap.set(custKey, {
             name: c.name,
             mobile: mob,
             plan: c.plan || 'Monthly',
@@ -148,8 +157,9 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
 
       for (const l of existingLogs) {
         const mob = (l.customerMobile || '').replace(/\D/g, '').slice(-10);
-        if (mob && !customerMap.has(mob)) {
-          customerMap.set(mob, {
+        const custKey = makeCustKey(l.customerName, mob);
+        if (mob && custKey && !customerMap.has(custKey)) {
+          customerMap.set(custKey, {
             name: l.customerName,
             mobile: mob,
             plan: l.planName,
@@ -162,7 +172,9 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
       const allSessions: Array<'Breakfast' | 'Lunch' | 'Dinner'> = ['Breakfast', 'Lunch', 'Dinner'];
       const mergedLogs: DeliveryLogItem[] = [];
 
-      for (const [mob, info] of customerMap.entries()) {
+      for (const [custKey, info] of customerMap.entries()) {
+        const cleanNameSlug = (info.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+
         // ONLY show the meals the customer opted for in Google Sheets (default to all if not specified)
         const optedMeals =
           info.requestedMeals && info.requestedMeals.length > 0
@@ -174,17 +186,18 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         for (const session of optedMeals) {
           const found = combinedExisting.find(
             (l) =>
-              (l.customerMobile || '').replace(/\D/g, '').slice(-10) === mob &&
+              (l.customerMobile || '').replace(/\D/g, '').slice(-10) === info.mobile &&
+              makeCustKey(l.customerName, l.customerMobile) === custKey &&
               l.mealSession === session
           );
           if (found) {
             mergedLogs.push(found);
           } else {
             mergedLogs.push({
-              id: `LOG-${selectedDate}-${mob}-${session.toLowerCase()}`,
+              id: `LOG-${selectedDate}-${cleanNameSlug}-${info.mobile}-${session.toLowerCase()}`,
               date: selectedDate,
               customerName: info.name,
-              customerMobile: mob,
+              customerMobile: info.mobile,
               planName: info.plan,
               deliveryAddress: info.address,
               locality: info.locality,
@@ -589,7 +602,9 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
           <div className="space-y-4">
             {Array.from(
               filteredLogs.reduce((acc, log) => {
-                const key = log.customerMobile || log.customerName;
+                const cleanName = (log.customerName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+                const cleanMob = (log.customerMobile || '').replace(/\D/g, '').slice(-10);
+                const key = `${cleanName}_${cleanMob}`;
                 const list = acc.get(key) || [];
                 list.push(log);
                 acc.set(key, list);
@@ -601,6 +616,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
               const sortedMeals = [...custLogs].sort(
                 (a, b) => (mealOrder[a.mealSession] ?? 9) - (mealOrder[b.mealSession] ?? 9)
               );
+              const custDetails = customerDetailsMap.get(custKey);
 
               return (
                 <div
@@ -618,9 +634,9 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
                           {primary.planName} Plan
                         </span>
                         {/* PAYMENT DISPLAY FROM GOOGLE SHEETS */}
-                        {customerDetailsMap.get((primary.customerMobile || '').replace(/\D/g, '').slice(-10))?.paymentAmount && (
+                        {custDetails?.paymentAmount && (
                           <span className="text-[10px] font-black uppercase bg-emerald-50 text-emerald-800 border border-emerald-200 px-2.5 py-0.5 rounded-md">
-                            Paid: ₹{customerDetailsMap.get((primary.customerMobile || '').replace(/\D/g, '').slice(-10))?.paymentAmount} ({customerDetailsMap.get((primary.customerMobile || '').replace(/\D/g, '').slice(-10))?.paymentStatus || 'PAID'})
+                            Paid: ₹{custDetails.paymentAmount} ({custDetails.paymentStatus || 'PAID'})
                           </span>
                         )}
                       </div>

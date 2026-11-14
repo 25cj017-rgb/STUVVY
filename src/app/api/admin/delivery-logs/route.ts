@@ -170,11 +170,12 @@ function generateSeedLogs(): DeliveryLogItem[] {
   ];
 }
 
-// GET: Fetch logs, optional ?date=YYYY-MM-DD filter
+// GET: Fetch logs, optional ?date=YYYY-MM-DD, ?mobile=..., ?name=... filter
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const filterDate = searchParams.get('date');
   const filterMobile = searchParams.get('mobile');
+  const filterName = searchParams.get('name');
 
   let logs = getSavedLogs();
 
@@ -184,6 +185,13 @@ export async function GET(request: Request) {
   if (filterMobile) {
     const cleanFilter = filterMobile.replace(/\D/g, '').slice(-10);
     logs = logs.filter(l => (l.customerMobile || '').replace(/\D/g, '').slice(-10) === cleanFilter);
+  }
+  if (filterName) {
+    const cleanName = filterName.trim().toUpperCase();
+    logs = logs.filter(l => {
+      const lName = (l.customerName || '').trim().toUpperCase();
+      return lName === cleanName || lName.includes(cleanName) || cleanName.includes(lName);
+    });
   }
 
   // Sort by updatedAt descending
@@ -225,13 +233,17 @@ export async function POST(request: Request) {
 
     const logDate = date || new Date().toISOString().split('T')[0];
     const normMobile = customerMobile.replace(/\D/g, '').slice(-10);
-    const logId = id || `LOG-${logDate}-${normMobile}-${String(mealSession).toLowerCase()}`;
+    const cleanNameSlug = (customerName || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    const logId = id || `LOG-${logDate}-${cleanNameSlug}-${normMobile}-${String(mealSession).toLowerCase()}`;
 
     const logs = getSavedLogs();
     const existingIndex = logs.findIndex(
       (l) =>
         l.id === logId ||
-        (l.date === logDate && l.customerMobile === normMobile && l.mealSession === mealSession)
+        (l.date === logDate &&
+          (l.customerMobile || '').replace(/\D/g, '').slice(-10) === normMobile &&
+          (!customerName || (l.customerName || '').trim().toUpperCase() === (customerName || '').trim().toUpperCase()) &&
+          l.mealSession === mealSession)
     );
 
     const nowStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
