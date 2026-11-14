@@ -14,6 +14,9 @@ export interface CustomerRecord {
   paymentAmount?: string;
   orderStatus?: string;
   requestedMeals?: string[];
+  subscriberType?: string;
+  previousPlan?: string;
+  consecutiveMonths?: number;
 }
 
 // Initial demo customers fallback
@@ -63,6 +66,8 @@ export const DEMO_CUSTOMERS_DATABASE: CustomerRecord[] = [
       'No-49 Marutham nagar, saravanampatti 641035'
     ],
     plan: 'Monthly',
+    subscriberType: 'New',
+    consecutiveMonths: 1,
     startDate: '11/13/2026',
     purchaseDate: '11/12/2026 10:43:31',
     paymentStatus: 'PAID',
@@ -80,6 +85,9 @@ export const DEMO_CUSTOMERS_DATABASE: CustomerRecord[] = [
       '2/716, teachers colony, Thudilure, Coimbatore'
     ],
     plan: 'Monthly',
+    previousPlan: 'Daily Plan',
+    subscriberType: 'Upgrade',
+    consecutiveMonths: 2,
     startDate: '11/13/2026',
     purchaseDate: '11/12/2026 11:33:58',
     paymentStatus: 'PAID',
@@ -97,6 +105,8 @@ export const DEMO_CUSTOMERS_DATABASE: CustomerRecord[] = [
       'PSG COLLEGE OF ARTS AND SCIENCE ,Civil aero drome post'
     ],
     plan: 'Monthly',
+    subscriberType: 'New',
+    consecutiveMonths: 1,
     startDate: '11/13/2026',
     purchaseDate: '11/12/2026 11:37:34',
     paymentStatus: 'PAID',

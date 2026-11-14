@@ -128,7 +128,9 @@ export default function Home() {
                   paymentAmount: matched.paymentAmount || prevUser.paymentAmount,
                   orderStatus: matched.orderStatus || (prevUser as any).orderStatus,
                   requestedMeals: matched.requestedMeals || (prevUser as any).requestedMeals,
-                  consecutiveMonths: prevUser.consecutiveMonths || 1,
+                  subscriberType: matched.subscriberType || (prevUser as any).subscriberType,
+                  previousPlan: matched.previousPlan || (prevUser as any).previousPlan,
+                  consecutiveMonths: (matched as any).consecutiveMonths || prevUser.consecutiveMonths || 1,
                   starsEarned: prevUser.starsEarned || 1
                 };
               }
@@ -237,7 +239,9 @@ export default function Home() {
           paymentAmount: authResult.customer?.paymentAmount,
           orderStatus: (authResult.customer as any)?.orderStatus,
           requestedMeals: (authResult.customer as any)?.requestedMeals,
-          consecutiveMonths: 1,
+          subscriberType: (authResult.customer as any)?.subscriberType,
+          previousPlan: (authResult.customer as any)?.previousPlan,
+          consecutiveMonths: (authResult.customer as any)?.consecutiveMonths || ((authResult.customer as any)?.previousPlan || (authResult.customer as any)?.subscriberType === 'Upgrade' ? 2 : 1),
           starsEarned: 1,
           isVerified: true
         };

@@ -430,6 +430,11 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                     Paid: ₹{currentUser.paymentAmount} ({currentUser.paymentStatus || 'PAID'})
                   </span>
                 )}
+                {(currentUser.previousPlan || currentUser.subscriberType === 'Upgrade') && (
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-900 border border-amber-200 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full shadow-2xs">
+                    Upgraded from {currentUser.previousPlan || 'Previous Plan'}
+                  </span>
+                )}
               </div>
 
               <h1 className="text-xl sm:text-3xl font-black text-zinc-950 font-heading tracking-tight break-words">
@@ -755,7 +760,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
               startDateStr={schedule.startDateStr}
               endDateStr={schedule.endDateStr}
               status={schedule.status}
-              consecutiveMonths={currentUser.consecutiveMonths || 1}
+              consecutiveMonths={currentUser.consecutiveMonths || (currentUser.previousPlan || currentUser.subscriberType === 'Upgrade' ? 2 : 1)}
               avatarUrl="/user-avatar.jpg"
             />
 

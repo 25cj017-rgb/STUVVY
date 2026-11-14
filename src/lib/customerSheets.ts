@@ -25,6 +25,8 @@ export interface CustomerRow {
   orderStatus?: string;
   requestedMeals?: string[];
   subscriberType?: string;
+  previousPlan?: string;
+  consecutiveMonths?: number;
   review?: string;
   rating?: number;
   photoUrl?: string;
@@ -101,36 +103,103 @@ export function makeCustomerKey(name?: string, mobile?: string): string {
  * are NEVER merged or confused.
  */
 export function attachSubscriptionHistories(rows: CustomerRow[]): CustomerRow[] {
-  const grouped = new Map<string, SubscriptionHistoryEntry[]>();
+  const grouped = new Map<string, CustomerRow[]>();
 
   for (const row of rows) {
     const key = makeCustomerKey(row.name, row.mobileNo);
-    if (!key || !row.plan) continue;
+    if (!key) continue;
     const list = grouped.get(key) || [];
-    list.push({
-      plan: normalizePlanLabel(row.plan),
-      startDate: row.startDate,
-      purchaseDate: row.purchaseDate,
-      subscriberType: row.subscriberType,
-    });
+    list.push(row);
     grouped.set(key, list);
   }
 
-  for (const [, list] of grouped) {
-    list.sort((a, b) => {
+  const consolidated: CustomerRow[] = [];
+
+  for (const [, submissions] of grouped) {
+    if (submissions.length === 1) {
+      const single = submissions[0];
+      const history: SubscriptionHistoryEntry[] = [];
+      if (single.previousPlan) {
+        history.push({
+          plan: normalizePlanLabel(single.previousPlan),
+          subscriberType: 'Previously Registered Plan',
+        });
+      }
+      if (single.plan) {
+        history.push({
+          plan: normalizePlanLabel(single.plan),
+          startDate: single.startDate,
+          purchaseDate: single.purchaseDate,
+          subscriberType: single.subscriberType || 'Active',
+        });
+      }
+      const consecutiveMonths = single.previousPlan || single.subscriberType === 'Upgrade' ? 2 : 1;
+      consolidated.push({
+        ...single,
+        subscriptionHistory: history.length > 0 ? history : undefined,
+        consecutiveMonths,
+      });
+      continue;
+    }
+
+    // Sort submissions chronologically ascending (oldest first, latest upgraded last)
+    submissions.sort((a, b) => {
       const ta = parseSortableTime(a.purchaseDate || a.startDate);
       const tb = parseSortableTime(b.purchaseDate || b.startDate);
       return ta - tb;
     });
+
+    // The last submission is the latest active upgraded subscription
+    const latest = submissions[submissions.length - 1];
+
+    // Collect all historical subscription entries in chronological order
+    const history: SubscriptionHistoryEntry[] = [];
+    if (submissions[0].previousPlan) {
+      history.push({
+        plan: normalizePlanLabel(submissions[0].previousPlan),
+        subscriberType: 'Initial Plan',
+      });
+    }
+
+    for (let i = 0; i < submissions.length; i++) {
+      const sub = submissions[i];
+      if (!sub.plan) continue;
+      const isLatest = i === submissions.length - 1;
+      history.push({
+        plan: normalizePlanLabel(sub.plan),
+        startDate: sub.startDate,
+        purchaseDate: sub.purchaseDate,
+        subscriberType: isLatest ? (sub.subscriberType || 'Upgraded Active') : 'Previous Plan',
+      });
+    }
+
+    // Merge addresses without duplicates
+    const allAddresses: string[] = [];
+    for (const sub of submissions) {
+      if (sub.addresses && sub.addresses.length > 0) {
+        for (const addr of sub.addresses) {
+          if (addr && !allAddresses.includes(addr)) allAddresses.push(addr);
+        }
+      } else if (sub.address && !allAddresses.includes(sub.address)) {
+        allAddresses.push(sub.address);
+      }
+    }
+
+    const previousPlan = latest.previousPlan || submissions[submissions.length - 2]?.plan;
+    const consecutiveMonths = Math.max(submissions.length, previousPlan ? submissions.length + 1 : 1);
+
+    consolidated.push({
+      ...latest,
+      address: allAddresses[0] || latest.address,
+      addresses: allAddresses.length > 0 ? allAddresses : (latest.addresses || []),
+      previousPlan: previousPlan ? normalizePlanLabel(previousPlan) : undefined,
+      subscriberType: latest.subscriberType || 'Upgrade',
+      consecutiveMonths,
+      subscriptionHistory: history.length > 0 ? history : undefined,
+    });
   }
 
-  return rows.map((row) => {
-    const key = makeCustomerKey(row.name, row.mobileNo);
-    const history = key ? grouped.get(key) : undefined;
-    return history && history.length > 0
-      ? { ...row, subscriptionHistory: history }
-      : row;
-  });
+  return consolidated;
 }
 
 export function parseCsvContent(fileContent: string): CustomerRow[] {
@@ -164,7 +233,12 @@ export function parseCsvContent(fileContent: string): CustomerRow[] {
   const paymentAmountIdx = headers.findIndex((h) => h === 'PAYMENT');
   const orderStatusIdx = headers.findIndex((h) => h.includes('ORDER STATUS'));
   const sNoIdx = headers.findIndex((h) => h.includes('S.NO') || h.includes('SNO') || h === 'ID');
-  const subscriberTypeIdx = headers.findIndex((h) => h.includes('EXISTING') || h.includes('SUBSCRIBER TYPE') || h.includes('UPGRADING'));
+  const subscriberTypeIdx = headers.findIndex(
+    (h) => h.includes('NEW SUBSCRIBER OR UPGRADING') || h.includes('SUBSCRIBER TYPE') || h.includes('EXISTING')
+  );
+  const previousPlanIdx = headers.findIndex(
+    (h) => h.includes('PREVIOUSLY REGISTERED') || h.includes('PREVIOUS PLAN')
+  );
   const reviewIdx = headers.findIndex((h) => h.includes('REVIEW') || h.includes('TESTIMONIAL') || h.includes('EXPERIENCE') || h.includes('FEEDBACK'));
   const ratingIdx = headers.findIndex((h) => h.includes('RATING') || h.includes('STAR'));
   const photoUrlIdx = headers.findIndex((h) => h.includes('PHOTO') || h.includes('AVATAR') || h.includes('PROFILE PIC') || h.includes('IMAGE'));
@@ -224,10 +298,17 @@ export function parseCsvContent(fileContent: string): CustomerRow[] {
     }
 
     const rawSubType = subscriberTypeIdx >= 0 && parts[subscriberTypeIdx] ? parts[subscriberTypeIdx].replace(/^"|"$/g, '').trim() : '';
+    const rawPrevPlan = previousPlanIdx >= 0 && parts[previousPlanIdx] ? parts[previousPlanIdx].replace(/^"|"$/g, '').trim() : '';
+    const previousPlan = rawPrevPlan ? normalizePlanLabel(rawPrevPlan) : undefined;
+
     const subscriberType = rawSubType
-      ? rawSubType.toLowerCase().includes('yes') || rawSubType.toLowerCase().includes('upgrade')
+      ? rawSubType.toLowerCase().includes('upgrade')
         ? 'Upgrade'
-        : 'New'
+        : rawSubType.toLowerCase().includes('new')
+        ? 'New'
+        : rawSubType
+      : previousPlan
+      ? 'Upgrade'
       : undefined;
 
     const review = reviewIdx >= 0 && parts[reviewIdx] ? parts[reviewIdx].replace(/^"|"$/g, '').trim() : undefined;
@@ -253,6 +334,7 @@ export function parseCsvContent(fileContent: string): CustomerRow[] {
         orderStatus: orderStatus || undefined,
         requestedMeals: requestedMeals.length > 0 ? requestedMeals : undefined,
         subscriberType,
+        previousPlan,
         review: review || undefined,
         rating,
         photoUrl: photoUrl || undefined,

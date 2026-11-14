@@ -64,6 +64,8 @@ export interface UserProfile {
   paymentAmount?: string;
   orderStatus?: string;
   requestedMeals?: string[];
+  subscriberType?: string;
+  previousPlan?: string;
 }
 
 export interface CartItem {
