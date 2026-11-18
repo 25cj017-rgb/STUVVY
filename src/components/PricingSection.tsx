@@ -74,6 +74,7 @@ export const SUBSCRIPTION_PLANS: PlanOption[] = [
       'Full access to all 3 cuisine categories',
       'Temporal Day Selector (Mon-Sun planning)',
       'Free priority morning/evening delivery',
+      'Optional insulated lunch box delivery (₹699 refundable deposit)',
       'Subsidized meal fund contribution included'
     ]
   },
@@ -91,6 +92,7 @@ export const SUBSCRIPTION_PLANS: PlanOption[] = [
       '30 Fresh Chef Meals per month',
       'Priority delivery slot lock',
       'Free dietary customization (Keto / Low-GI)',
+      'Optional insulated lunch box delivery (₹699 refundable deposit)',
       'Dedicated care support manager',
       'Full flexibility to pause during vacations'
     ]

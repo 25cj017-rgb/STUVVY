@@ -449,6 +449,12 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                     Upgraded from {currentUser.previousPlan || 'Previous Plan'}
                   </span>
                 )}
+                {currentUser.hasInsulatedLunchBox && (
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-orange-50 text-orange-950 border border-orange-200 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full shadow-2xs flex items-center gap-1">
+                    <Package className="w-3 h-3 text-orange-600" />
+                    <span>Insulated Lunch Box (₹699 Deposit Paid)</span>
+                  </span>
+                )}
               </div>
 
               <h1 className="text-xl sm:text-3xl font-black text-zinc-950 font-heading tracking-tight break-words">

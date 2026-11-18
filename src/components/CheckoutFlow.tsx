@@ -8,8 +8,10 @@ import { STUVVY_3_PLUS_1_CONFIG, calculate3Plus1Pricing } from '../config/subscr
 import { 
   ArrowLeft, CheckCircle2, ShieldCheck, Lock, Phone, MessageSquare, 
   Check, Plus, Minus, Lightbulb, Sparkles, ArrowRight, Calendar as CalendarIcon, 
-  ShoppingBag, Clock, X, AlertCircle, MapPin 
+  ShoppingBag, Clock, X, AlertCircle, MapPin, Package
 } from 'lucide-react';
+
+export const INSULATED_LUNCH_BOX_DEPOSIT = 699;
 
 interface CheckoutFlowProps {
   plan: PlanOption;
@@ -19,7 +21,10 @@ interface CheckoutFlowProps {
   cart?: CartItem[];
   checkoutMode?: 'subscription' | 'cart';
   onBack: () => void;
-  onCompleteCheckout: (savedCalendar?: CalendarDay[]) => void;
+  onCompleteCheckout: (
+    savedCalendar?: CalendarDay[],
+    orderMeta?: { insulatedLunchBox?: boolean; depositAmount?: number; totalPaid?: number }
+  ) => void;
   onSwitchPlan?: (plan: PlanOption, days: number, price: number) => void;
 }
 
@@ -98,6 +103,23 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
 
   const finalAmount = currentMode === 'cart' ? cartSubtotal : subscriptionPrice;
 
+  // Optional Insulated Lunch Box Deposit (₹699) - Applicable to Weekly & Monthly Plans
+  const isEligibleForDeposit =
+    currentMode === 'subscription' &&
+    ((currentPlan.id || '').toLowerCase().includes('month') ||
+      (currentPlan.id || '').toLowerCase().includes('week') ||
+      (currentPlan.id || '').toLowerCase().includes('3plus1') ||
+      (currentPlan.name || '').toLowerCase().includes('monthly') ||
+      (currentPlan.name || '').toLowerCase().includes('weekly') ||
+      (currentPlan.name || '').toLowerCase().includes('meal pass'));
+
+  const [includeLunchBoxDeposit, setIncludeLunchBoxDeposit] = useState<boolean>(false);
+  const [showSkipDepositModal, setShowSkipDepositModal] = useState<boolean>(false);
+  const [hasConfirmedSkipDeposit, setHasConfirmedSkipDeposit] = useState<boolean>(false);
+
+  const depositAmount = (isEligibleForDeposit && includeLunchBoxDeposit) ? INSULATED_LUNCH_BOX_DEPOSIT : 0;
+  const finalPayableTotal = finalAmount + depositAmount;
+
   const handleIncrementDays = () => {
     const newCount = totalRangeDays + 1;
     setTotalRangeDays(newCount);
@@ -133,6 +155,11 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
 
   const handleSubmitPayment = (e: React.FormEvent) => {
     e.preventDefault();
+    // Intercept: If customer is opting for Weekly/Monthly plan without selecting the deposit, show confirmation popup
+    if (isEligibleForDeposit && !includeLunchBoxDeposit && !hasConfirmedSkipDeposit) {
+      setShowSkipDepositModal(true);
+      return;
+    }
     setShowAdminPaymentNotify(true);
   };
 
@@ -143,7 +170,14 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
       setIsSuccess(true);
       setShowAdminPaymentNotify(false);
       setTimeout(() => {
-        onCompleteCheckout(currentMode === 'subscription' ? calendarDays : undefined);
+        onCompleteCheckout(
+          currentMode === 'subscription' ? calendarDays : undefined,
+          {
+            insulatedLunchBox: isEligibleForDeposit && includeLunchBoxDeposit,
+            depositAmount: depositAmount,
+            totalPaid: finalPayableTotal,
+          }
+        );
       }, 1000);
     }, 700);
   };
@@ -303,6 +337,64 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
                 startDate={user?.startDate}
                 onDaysChange={handleCalendarDaysChange}
               />
+            </div>
+          )}
+
+          {/* OPTIONAL INSULATED LUNCH BOX DEPOSIT SECTION (WEEKLY & MONTHLY PLANS) */}
+          {isEligibleForDeposit && (
+            <div 
+              id="lunchbox-deposit-section"
+              className={`bg-white/95 backdrop-blur-xl border rounded-[32px] p-5 sm:p-7 shadow-md transition-all space-y-3.5 ${
+                includeLunchBoxDeposit 
+                  ? 'border-orange-500 ring-4 ring-orange-500/10 bg-orange-50/10' 
+                  : 'border-zinc-200/90'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2 flex-wrap pb-2.5 border-b border-zinc-100">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
+                    <Package className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs sm:text-sm font-black font-heading text-zinc-950 uppercase tracking-wide">
+                      Insulated Lunch Box Option
+                    </h3>
+                    <p className="text-[10px] text-zinc-400 font-medium">Keep your food steaming hot & fresh</p>
+                  </div>
+                </div>
+                <span className={`text-[10px] font-mono font-black uppercase px-2.5 py-1 rounded-full border ${
+                  includeLunchBoxDeposit 
+                    ? 'bg-orange-500 text-white border-orange-500 shadow-2xs' 
+                    : 'bg-zinc-100 text-zinc-600 border-zinc-200'
+                }`}>
+                  {includeLunchBoxDeposit ? '+₹699 Deposit Selected' : 'Optional Choice'}
+                </span>
+              </div>
+
+              {/* Exact user-specified checkbox and wording */}
+              <label 
+                htmlFor="lunchbox-deposit-checkbox" 
+                className="flex items-start gap-3.5 cursor-pointer select-none group pt-1"
+              >
+                <input
+                  type="checkbox"
+                  id="lunchbox-deposit-checkbox"
+                  checked={includeLunchBoxDeposit}
+                  onChange={(e) => {
+                    setIncludeLunchBoxDeposit(e.target.checked);
+                    if (e.target.checked) setHasConfirmedSkipDeposit(false);
+                  }}
+                  className="w-5 h-5 mt-0.5 rounded-md border-zinc-300 text-orange-600 focus:ring-orange-500 cursor-pointer accent-orange-600 shrink-0"
+                />
+                <div className="space-y-1.5 flex-1">
+                  <div className="text-xs sm:text-sm font-black text-zinc-950 leading-snug group-hover:text-orange-600 transition-colors">
+                    I want my lunch delivered in an insulated lunch box – ₹699 refundable deposit.
+                  </div>
+                  <p className="text-[11px] sm:text-xs text-zinc-600 font-medium leading-relaxed bg-zinc-50/80 p-2.5 rounded-xl border border-zinc-100">
+                    “The ₹699 deposit is applicable only for customers who prefer to receive their lunch in an insulated lunch box. This deposit is collected separately and is refundable subject to the return of the lunch box in acceptable condition.”
+                  </p>
+                </div>
+              </label>
             </div>
           )}
 
@@ -561,6 +653,17 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
                 </>
               )}
 
+              {/* INSULATED LUNCH BOX LINE ITEM */}
+              {isEligibleForDeposit && includeLunchBoxDeposit && (
+                <div className="flex justify-between text-zinc-300 pt-1 border-t border-zinc-800/80">
+                  <span className="flex items-center gap-1.5 text-orange-300 font-bold">
+                    <Package className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+                    <span>Insulated Lunch Box Deposit (Refundable)</span>
+                  </span>
+                  <span className="font-mono font-black text-orange-400">+₹{INSULATED_LUNCH_BOX_DEPOSIT}</span>
+                </div>
+              )}
+
               <div className="pt-3 border-t border-zinc-800 flex justify-between items-baseline">
                 <div>
                   <div className="text-sm font-black text-white">
@@ -569,7 +672,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
                   <div className="text-[10px] text-zinc-400 font-medium">All taxes & fees included</div>
                 </div>
                 <div className="text-2xl font-black text-orange-400 font-heading">
-                  ₹{finalAmount.toLocaleString('en-IN')}
+                  ₹{finalPayableTotal.toLocaleString('en-IN')}
                 </div>
               </div>
             </div>
@@ -585,11 +688,11 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
                 <button
                   id="checkout-pay-btn"
                   onClick={handleSubmitPayment}
-                  disabled={isProcessing || finalAmount === 0}
+                  disabled={isProcessing || finalPayableTotal === 0}
                   className="w-full bg-orange-500 hover:bg-orange-600 disabled:bg-zinc-800 text-white font-black py-4 rounded-2xl text-xs shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-95"
                 >
                   <Phone className="w-4 h-4" />
-                  <span>{isProcessing ? 'Processing Order...' : `Pay ₹${finalAmount} (Notify Administrator)`}</span>
+                  <span>{isProcessing ? 'Processing Order...' : `Pay ₹${finalPayableTotal} (Notify Administrator)`}</span>
                 </button>
               )}
             </div>
@@ -627,7 +730,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
                 Contact Administrator for Payment
               </h2>
               <p className="text-xs text-zinc-500 font-medium leading-relaxed">
-                To activate your daily meals and lock in kitchen preparation, please contact our Administrator to complete the settlement of <strong>₹{finalAmount}</strong>.
+                To activate your daily meals and lock in kitchen preparation, please contact our Administrator to complete the settlement of <strong>₹{finalPayableTotal}</strong>.
               </p>
             </div>
 
@@ -651,9 +754,23 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
                 <span>Subscriber:</span>
                 <span className="font-black text-zinc-950">{fullName} ({mobileNumber})</span>
               </div>
+              {isEligibleForDeposit && (
+                <div className="flex justify-between items-center text-zinc-600">
+                  <span>Packaging Option:</span>
+                  <span className="font-black text-zinc-950">
+                    {includeLunchBoxDeposit ? 'Insulated Lunch Box' : 'Regular Packaging'}
+                  </span>
+                </div>
+              )}
+              {isEligibleForDeposit && includeLunchBoxDeposit && (
+                <div className="flex justify-between items-center text-orange-700 font-bold">
+                  <span>Refundable Lunch Box Deposit:</span>
+                  <span className="font-mono font-black">+₹{INSULATED_LUNCH_BOX_DEPOSIT}</span>
+                </div>
+              )}
               <div className="pt-2 border-t border-zinc-200 flex justify-between items-center">
                 <span className="font-bold text-zinc-800">Total Payable Amount:</span>
-                <span className="text-xl font-black text-orange-600 font-heading">₹{finalAmount}</span>
+                <span className="text-xl font-black text-orange-600 font-heading">₹{finalPayableTotal}</span>
               </div>
             </div>
 
@@ -662,7 +779,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
               <a
                 id="modal-whatsapp-admin-btn"
                 href={`https://wa.me/919344795832?text=${encodeURIComponent(
-                  `Hi Stuvvy Administrator, I would like to pay ₹${finalAmount} for my ${currentMode === 'cart' ? 'Meal Order' : currentPlan.name} (Ref: ${orderId}). Subscriber: ${fullName}, Phone: ${mobileNumber}. Please confirm payment instructions.`
+                  `Hi Stuvvy Administrator, I would like to pay ₹${finalPayableTotal} for my ${currentMode === 'cart' ? 'Meal Order' : currentPlan.name}${isEligibleForDeposit && includeLunchBoxDeposit ? ' (including ₹699 Insulated Lunch Box Refundable Deposit)' : ''} (Ref: ${orderId}). Subscriber: ${fullName}, Phone: ${mobileNumber}. Packaging Preference: ${isEligibleForDeposit && includeLunchBoxDeposit ? 'Insulated Lunch Box' : 'Regular Food Packaging'}. Please confirm payment instructions.`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -702,6 +819,74 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* CONFIRMATION POPUP – IF CUSTOMER SKIPS THE DEPOSIT */}
+      {showSkipDepositModal && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200 select-none"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="bg-white border border-zinc-200 rounded-[32px] w-full max-w-md p-6 sm:p-7 shadow-2xl relative space-y-5 animate-in zoom-in-95 duration-150">
+            <button
+              onClick={() => setShowSkipDepositModal(false)}
+              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600 flex items-center justify-center transition-colors cursor-pointer"
+              aria-label="Close modal"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-600 border border-orange-200 flex items-center justify-center">
+              <Package className="w-6 h-6" />
+            </div>
+
+            <div className="space-y-2.5">
+              <h3 className="text-xl sm:text-2xl font-black font-heading text-zinc-950 tracking-tight">
+                Are You Sure?
+              </h3>
+              <div className="text-xs text-zinc-600 font-medium leading-relaxed space-y-2">
+                <p>
+                  You have chosen to proceed without the insulated lunch box deposit.
+                </p>
+                <p>
+                  Your lunch will be delivered in regular food packaging instead of an insulated lunch box.
+                </p>
+                <p className="font-bold text-zinc-900 pt-1">
+                  Are you sure you want to continue without the insulated lunch box?
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSkipDepositModal(false);
+                  const el = document.getElementById('lunchbox-deposit-section');
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }}
+                className="flex-1 bg-zinc-950 hover:bg-zinc-800 text-white font-black text-xs py-3.5 px-4 rounded-2xl shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer hover:scale-[1.01] active:scale-95"
+              >
+                <span>Go Back & Select Deposit</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSkipDepositModal(false);
+                  setHasConfirmedSkipDeposit(true);
+                  setShowAdminPaymentNotify(true);
+                }}
+                className="flex-1 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold text-xs py-3.5 px-4 rounded-2xl transition-all cursor-pointer text-center"
+              >
+                <span>Continue Without Deposit</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

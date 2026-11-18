@@ -67,11 +67,11 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
 
   return (
     <div id="stuvvy-card-section" className="w-full flex flex-col items-center justify-center py-2 select-none">
-      
+
       {/* ========================================================================= */}
       {/* 3D PERSPECTIVE WRAPPER (ATM PROPORTIONS 1.586 : 1)                        */}
       {/* ========================================================================= */}
-      <div 
+      <div
         className="w-full max-w-[340px] sm:max-w-[360px] aspect-[1.586/1] relative cursor-pointer group"
         style={{ perspective: '1200px' }}
         onClick={handleCardClick}
@@ -99,8 +99,8 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
             }}
           >
             {/* Subtle pearl shimmer */}
-            <div 
-              className="absolute -top-12 -right-12 w-40 h-40 rounded-full pointer-events-none opacity-40 blur-xl" 
+            <div
+              className="absolute -top-12 -right-12 w-40 h-40 rounded-full pointer-events-none opacity-40 blur-xl"
               style={{ background: 'radial-gradient(circle, #DDD6FE 0%, transparent 70%)' }}
             />
 
@@ -227,24 +227,10 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
                   STV-{last4}
                 </span>
               </div>
-              {is3Plus1 ? (
-                <div className="text-[7.5px] font-black font-mono tracking-wider text-emerald-950 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
-                  4TH MO FREE: UPCOMING
-                </div>
-              ) : (
-                <div className="text-[7.5px] font-black font-ostrich tracking-wider text-purple-900 bg-purple-100/90 px-1.5 py-0.5 rounded border border-purple-200">
-                  KITCHEN PASS
-                </div>
-              )}
-            </div>
-
-            {/* 3+1 MEAL PASS ENTITLEMENT BADGE (PRESERVES 12 STARS BELOW) */}
-            {is3Plus1 && (
-              <div className="bg-zinc-950 text-white rounded-md px-2 py-0.5 flex items-center justify-between text-[7px] font-mono font-bold shadow-2xs">
-                <span className="tracking-wide">STUVVY 3+1 MEAL PASS</span>
-                <span className="text-emerald-400 uppercase">3 MO PAID • 4TH MO FREE</span>
+              <div className="text-[7.5px] font-black font-ostrich tracking-wider text-purple-900 bg-purple-100/90 px-1.5 py-0.5 rounded border border-purple-200">
+                KITCHEN PASS
               </div>
-            )}
+            </div>
 
             {/* 3. MERGED 12-STAR LOYALTY TRACKER (STARS ONLY - NO EXPLANATIONS) */}
             <div className="space-y-1 py-0.5">
@@ -267,22 +253,20 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
                   return (
                     <div
                       key={starNum}
-                      className={`flex flex-col items-center justify-center p-0.5 rounded-lg border transition-all ${
-                        isFilled
-                          ? 'bg-amber-400/20 border-amber-400 shadow-2xs text-amber-950'
-                          : isMilestone
+                      className={`flex flex-col items-center justify-center p-0.5 rounded-lg border transition-all ${isFilled
+                        ? 'bg-amber-400/20 border-amber-400 shadow-2xs text-amber-950'
+                        : isMilestone
                           ? 'bg-white/90 border-purple-300 border-dashed text-purple-900'
                           : 'bg-white/50 border-purple-100 text-zinc-400'
-                      }`}
+                        }`}
                     >
                       <Star
-                        className={`w-3.5 h-3.5 ${
-                          isFilled
-                            ? 'fill-amber-500 text-amber-600'
-                            : isMilestone
+                        className={`w-3.5 h-3.5 ${isFilled
+                          ? 'fill-amber-500 text-amber-600'
+                          : isMilestone
                             ? 'text-purple-600 stroke-[1.8]'
                             : 'text-zinc-300 stroke-[1.5]'
-                        }`}
+                          }`}
                       />
                       <span className="text-[7px] font-black leading-tight mt-0.2 font-mono">
                         {isMilestone ? `${starNum} FREE` : `#${starNum}`}

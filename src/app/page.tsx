@@ -872,27 +872,28 @@ export default function Home() {
                 cart={cart}
                 checkoutMode={checkoutMode}
                 onBack={() => setActiveTab(checkoutMode === 'cart' ? 'discover' : 'plans')}
-                onCompleteCheckout={(calendar) => {
+                onCompleteCheckout={(calendar, orderMeta) => {
                   if (calendar) {
                     setSavedCalendar(calendar);
                   }
-                  if (selectedPlan.id === '3plus1') {
-                    setUser((prev) => {
-                      const updated: UserProfile = {
-                        ...prev,
-                        currentPlan: 'Stuvvy 3+1 Meal Pass',
-                        plan: 'Stuvvy 3+1 Meal Pass',
-                        consecutiveMonths: Math.max(4, prev.consecutiveMonths || 4),
-                        planDurationDays: 120,
-                        paymentAmount: calculatedPrice ? String(calculatedPrice) : '4900',
-                        paymentStatus: 'PAID',
-                      };
-                      try {
-                        localStorage.setItem('stuvvy_user', JSON.stringify(updated));
-                      } catch {}
-                      return updated;
-                    });
-                  }
+                  setUser((prev) => {
+                    const is3Plus1 = selectedPlan.id === '3plus1';
+                    const updated: UserProfile = {
+                      ...prev,
+                      currentPlan: is3Plus1 ? 'Stuvvy 3+1 Meal Pass' : selectedPlan.name,
+                      plan: is3Plus1 ? 'Stuvvy 3+1 Meal Pass' : selectedPlan.name,
+                      consecutiveMonths: is3Plus1 ? Math.max(4, prev.consecutiveMonths || 4) : prev.consecutiveMonths,
+                      planDurationDays: is3Plus1 ? 120 : (selectedPlan.defaultDays || 7),
+                      hasInsulatedLunchBox: orderMeta?.insulatedLunchBox ?? prev.hasInsulatedLunchBox,
+                      lunchBoxDeposit: orderMeta?.depositAmount ?? prev.lunchBoxDeposit,
+                      paymentAmount: orderMeta?.totalPaid ? String(orderMeta.totalPaid) : (calculatedPrice ? String(calculatedPrice) : prev.paymentAmount),
+                      paymentStatus: 'PAID',
+                    };
+                    try {
+                      localStorage.setItem('stuvvy_user', JSON.stringify(updated));
+                    } catch {}
+                    return updated;
+                  });
                   setActiveTab('dashboard');
                 }}
                 onSwitchPlan={(newPlan, newDays, newPrice) => {

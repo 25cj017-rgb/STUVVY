@@ -68,6 +68,8 @@ export interface UserProfile {
   requestedMeals?: string[];
   subscriberType?: string;
   previousPlan?: string;
+  hasInsulatedLunchBox?: boolean;
+  lunchBoxDeposit?: number;
 }
 
 export interface CartItem {
