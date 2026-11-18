@@ -113,6 +113,21 @@ export default function Home() {
                 const addrs = matched.addresses && matched.addresses.length > 0
                   ? matched.addresses
                   : (matched.address ? [matched.address] : []);
+
+                const matchedPaid = matched.paymentAmount
+                  ? parseInt(matched.paymentAmount.replace(/\D/g, ''), 10) || undefined
+                  : undefined;
+
+                if (matched.plan) {
+                  const normPlan = matched.plan.toLowerCase().trim();
+                  const p = SUBSCRIPTION_PLANS.find(sp => sp.id === normPlan || normPlan.includes(sp.id) || sp.name.toLowerCase().includes(normPlan));
+                  if (p) {
+                    setSelectedPlan(matchedPaid ? { ...p, price: matchedPaid } : p);
+                    setSelectedDays(p.defaultDays);
+                    setCalculatedPrice(matchedPaid || p.price);
+                  }
+                }
+
                 return {
                   ...prevUser,
                   fullName: matched.name || prevUser.fullName,
@@ -255,11 +270,11 @@ export default function Home() {
             p.id === normPlan || normPlan.includes(p.id) || p.name.toLowerCase().includes(normPlan)
           );
           if (matchedPlan) {
-            setSelectedPlan(matchedPlan);
-            setSelectedDays(matchedPlan.defaultDays);
             const actualPaid = authResult.customer?.paymentAmount
               ? parseInt(authResult.customer.paymentAmount.replace(/\D/g, ''), 10) || matchedPlan.price
               : matchedPlan.price;
+            setSelectedPlan({ ...matchedPlan, price: actualPaid });
+            setSelectedDays(matchedPlan.defaultDays);
             setCalculatedPrice(actualPaid);
           }
         }

@@ -77,7 +77,7 @@ export const DEMO_CUSTOMERS_DATABASE: CustomerRecord[] = [
     startDate: '11/13/2026',
     purchaseDate: '11/12/2026 10:43:31',
     paymentStatus: 'PAID',
-    paymentAmount: '1669',
+    paymentAmount: '1699',
     orderStatus: 'On going',
     requestedMeals: ['Lunch', 'Dinner'],
     rating: 5,

@@ -99,6 +99,10 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
   // If user has an assigned plan in CSV, show ONLY that plan! Otherwise show all plans.
   const plansToDisplay = assignedPlan ? [assignedPlan] : SUBSCRIPTION_PLANS;
 
+  const userPaidAmount = user?.paymentAmount
+    ? parseInt(user.paymentAmount.replace(/\D/g, ''), 10) || undefined
+    : undefined;
+
   // State for days selector per plan
   const [daysState, setDaysState] = useState<Record<string, number>>({
     daily: 1,
@@ -199,7 +203,8 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
         {plansToDisplay.map((plan) => {
           const isSelected = selectedPlan?.id === plan.id;
           const currentDays = daysState[plan.id] || plan.defaultDays;
-          const calculatedPrice = getCalculatedPrice(plan);
+          const isAssigned = assignedPlan?.id === plan.id;
+          const calculatedPrice = isAssigned && userPaidAmount ? userPaidAmount : getCalculatedPrice(plan);
 
           return (
             <div
@@ -211,10 +216,10 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
               }`}
             >
               {/* Savings / Popular / Assigned Badge */}
-              {assignedPlan?.id === plan.id ? (
+              {isAssigned ? (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1 rounded-full shadow-md whitespace-nowrap border border-emerald-500 flex items-center gap-1.5">
                   <Sparkles className="w-3 h-3 text-emerald-200" />
-                  <span>Your Assigned Plan</span>
+                  <span>Your Active Plan • Paid ₹{userPaidAmount || calculatedPrice}</span>
                 </div>
               ) : plan.savingsBadge ? (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-zinc-950 text-white text-[10px] font-black uppercase tracking-widest px-3.5 py-1 rounded-full shadow-md whitespace-nowrap border border-zinc-800">
@@ -280,16 +285,23 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                       ₹{calculatedPrice.toLocaleString('en-IN')}
                     </span>
                     <span className="text-xs font-bold text-zinc-500">
-                      for {currentDays} {currentDays === 1 ? 'day' : 'days'}
+                      {isAssigned && userPaidAmount ? 'Paid in full' : `for ${currentDays} ${currentDays === 1 ? 'day' : 'days'}`}
                     </span>
                   </div>
                   <p className="text-[11px] text-zinc-400 font-medium mt-1">
-                    {plan.billingText}
+                    {isAssigned && userPaidAmount ? `Registered & Paid for ${plan.name}` : plan.billingText}
                   </p>
                 </div>
 
-                {/* WEEKLY SUGGESTION CALLOUT FOR INDIVIDUAL CARDS */}
-                {plan.id !== 'weekly' ? (
+                {/* WEEKLY SUGGESTION CALLOUT FOR INDIVIDUAL CARDS (Hidden if user already has an active paid plan) */}
+                {isAssigned && userPaidAmount ? (
+                  <div className="mb-5 p-2.5 bg-emerald-50 border border-emerald-200/80 rounded-xl text-[11px] text-emerald-900 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+                    <span className="font-bold text-[10px]">
+                      Your subscription is active and verified by kitchen dispatch.
+                    </span>
+                  </div>
+                ) : plan.id !== 'weekly' ? (
                   <div className="mb-5 p-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-[11px] text-zinc-700 flex items-center justify-between gap-2">
                     <span className="font-medium text-[10px]">
                       💡 Tip: Weekly plan (7 days) saves 34%!
@@ -345,7 +357,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                       : 'bg-zinc-900 hover:bg-zinc-800 text-white'
                   }`}
                 >
-                  <span>Select {plan.name} (₹{calculatedPrice})</span>
+                  <span>{isAssigned && userPaidAmount ? `Active Plan (₹${userPaidAmount})` : `Select ${plan.name} (₹${calculatedPrice})`}</span>
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </div>

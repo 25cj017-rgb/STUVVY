@@ -229,8 +229,16 @@ export function parseCsvContent(fileContent: string): CustomerRow[] {
   );
   // Payment Status: matches 'PAYMNET STATUS' / 'PAYMENT STATUS' (e.g. 'PAID')
   const paymentStatusIdx = headers.findIndex((h) => h === 'PAYMNET STATUS' || h === 'PAYMENT STATUS' || h.includes('PAYMNET STATUS') || h.includes('PAYMENT STATUS'));
-  // Payment Amount: matches 'PAYMENT' column (amount paid e.g. '2500', '149', '1669', '1500')
-  const paymentAmountIdx = headers.findIndex((h) => h === 'PAYMENT');
+  // Payment Amount: matches 'PAYMENT' column (amount paid e.g. '2500', '149', '1699', '1500')
+  const paymentAmountIdx = headers.findIndex(
+    (h) =>
+      h === 'PAYMENT' ||
+      h === 'AMOUNT' ||
+      h === 'PAID' ||
+      h.includes('AMOUNT PAID') ||
+      h.includes('PAYMENT AMOUNT') ||
+      (h.includes('PAYMENT') && !h.includes('STATUS') && !h.includes('METHOD'))
+  );
   const orderStatusIdx = headers.findIndex((h) => h.includes('ORDER STATUS'));
   const sNoIdx = headers.findIndex((h) => h.includes('S.NO') || h.includes('SNO') || h === 'ID');
   const subscriberTypeIdx = headers.findIndex(

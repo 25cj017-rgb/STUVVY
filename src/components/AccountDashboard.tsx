@@ -253,30 +253,38 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
 
   // Strictly resolve the exact subscription plan the user opted for from Google Sheets
   const rawPlan = (currentUser.plan || '').trim().toLowerCase();
-  
+
+  // Extract user's actual paid amount if available (takes total priority over any default plan price)
+  const userPaidAmountNumber = currentUser.paymentAmount
+    ? parseInt(currentUser.paymentAmount.replace(/\D/g, ''), 10) || undefined
+    : undefined;
+  const userPaidAmountStr = userPaidAmountNumber
+    ? String(userPaidAmountNumber)
+    : currentUser.paymentAmount || '';
+
   let optedPlanName = 'Monthly Plan';
-  let optedPlanPrice = 2500;
+  let optedPlanPrice = userPaidAmountNumber || 2500;
   let optedPlanPeriod = '/ month';
   let optedPlanDefaultDays = 30;
 
   if (rawPlan.includes('day') || rawPlan.includes('daily')) {
     optedPlanName = 'Daily Plan';
-    optedPlanPrice = currentUser.paymentAmount ? parseInt(currentUser.paymentAmount.replace(/\D/g, '')) || 99 : 99;
+    optedPlanPrice = userPaidAmountNumber || 99;
     optedPlanPeriod = '/ day';
     optedPlanDefaultDays = 1;
   } else if (rawPlan.includes('week')) {
     optedPlanName = 'Weekly Plan';
-    optedPlanPrice = currentUser.paymentAmount ? parseInt(currentUser.paymentAmount.replace(/\D/g, '')) || 689 : 689;
+    optedPlanPrice = userPaidAmountNumber || 689;
     optedPlanPeriod = '/ week';
     optedPlanDefaultDays = 7;
   } else if (rawPlan.includes('month')) {
     optedPlanName = 'Monthly Plan';
-    optedPlanPrice = currentUser.paymentAmount ? parseInt(currentUser.paymentAmount.replace(/\D/g, '')) || 2500 : 2500;
+    optedPlanPrice = userPaidAmountNumber || 2500;
     optedPlanPeriod = '/ month';
     optedPlanDefaultDays = 30;
   } else if (activePlan) {
     optedPlanName = activePlan.name;
-    optedPlanPrice = activePlan.price;
+    optedPlanPrice = userPaidAmountNumber || activePlan.price;
     optedPlanPeriod = activePlan.period;
     optedPlanDefaultDays = activePlan.defaultDays;
   }
@@ -989,7 +997,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                 <h2 className="text-2xl sm:text-3xl font-black font-heading text-zinc-950 flex items-baseline gap-2 flex-wrap">
                   <span>{optedPlanName.toUpperCase()}</span>
                   <span className="text-lg text-emerald-700 font-bold">
-                    (₹{currentUser.paymentAmount ? parseInt(currentUser.paymentAmount.replace(/\D/g, '')) || optedPlanPrice : optedPlanPrice} {currentUser.paymentStatus || 'PAID'})
+                    (₹{userPaidAmountNumber || optedPlanPrice} {currentUser.paymentStatus || 'PAID'})
                   </span>
                 </h2>
 
