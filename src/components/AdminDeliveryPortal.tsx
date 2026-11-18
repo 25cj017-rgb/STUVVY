@@ -8,6 +8,7 @@ import {
   FileText, Sparkles, X, Check, FileSpreadsheet, Ban, RotateCcw
 } from 'lucide-react';
 import { DeliveryLogItem } from '../app/api/admin/delivery-logs/route';
+import { parseDateFlexible, getPlanDurationDays } from '../utils/subscriptionUtils';
 
 interface AdminDeliveryPortalProps {
   onBackToApp?: () => void;
@@ -111,6 +112,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         startDate?: string;
         purchaseDate?: string;
         subscriberType?: string;
+        previousPlan?: string;
         requestedMeals?: string[];
       }> = [];
       if (custRes && custRes.ok) {
@@ -142,6 +144,10 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
           orderStatus?: string;
           startDate?: string;
           isClosed?: boolean;
+          closeReason?: string;
+          closeReasonTag?: string;
+          isUpcoming?: boolean;
+          upcomingReason?: string;
           requestedMeals?: string[];
         }
       >();
@@ -158,8 +164,45 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
             rawOrderStatus === 'inactive' ||
             rawOrderStatus === 'expired';
 
-          const isDailyPlan = (c.plan || '').toUpperCase().includes('DAILY');
-          const isClosed = isExplicitlyClosed || (isDailyPlan && rawOrderStatus === 'delivered');
+          // Automatic Plan Date Check:
+          // Daily = 1 day, Weekly = 7 days, Monthly = 30 days
+          const duration = getPlanDurationDays(c.plan);
+          const startDateObj = parseDateFlexible(c.startDate);
+          startDateObj.setHours(0, 0, 0, 0);
+
+          // The last active day of the customer's subscription
+          const lastActiveDate = new Date(
+            startDateObj.getFullYear(),
+            startDateObj.getMonth(),
+            startDateObj.getDate() + duration - 1
+          );
+          lastActiveDate.setHours(23, 59, 59, 999);
+
+          const selDateObj = parseDateFlexible(selectedDate);
+          selDateObj.setHours(0, 0, 0, 0);
+
+          // If the selected dispatch date is strictly after the plan's end date, the plan has ended!
+          const isDateExpired = selDateObj.getTime() > lastActiveDate.getTime();
+          const isUpcoming = selDateObj.getTime() < startDateObj.getTime();
+          const isClosed = isExplicitlyClosed || isDateExpired;
+
+          let closeReason = 'This plan is closed & fully delivered. No kitchen dispatch required.';
+          let closeReasonTag = 'Completed';
+
+          if (isExplicitlyClosed && (c.subscriberType?.toLowerCase().includes('upgrad') || c.previousPlan)) {
+            closeReason = 'This plan was upgraded to Monthly Plan. No dispatch required for this old plan.';
+            closeReasonTag = 'Completed / Upgraded';
+          } else if (duration === 1) {
+            closeReason = `This 1-day Daily Plan ended on ${lastActiveDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}. No active dispatch required today.`;
+            closeReasonTag = '1-Day Plan Completed';
+          } else if (isDateExpired) {
+            closeReason = `This ${duration}-day ${c.plan || ''} Plan ended on ${lastActiveDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}. Plan duration completed.`;
+            closeReasonTag = 'Plan Duration Ended';
+          }
+
+          const upcomingReason = isUpcoming
+            ? `Plan begins on ${c.startDate || 'scheduled date'}. No delivery required for ${selectedDate}.`
+            : undefined;
 
           customerMap.set(custKey, {
             name: c.name,
@@ -172,6 +215,10 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
             orderStatus: c.orderStatus,
             startDate: c.startDate,
             isClosed,
+            closeReason,
+            closeReasonTag,
+            isUpcoming,
+            upcomingReason,
             requestedMeals: c.requestedMeals,
           });
         }
@@ -737,10 +784,15 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
                             Paid: ₹{custDetails.paymentAmount} ({custDetails.paymentStatus || 'PAID'})
                           </span>
                         )}
-                        {/* CLOSED PLAN BADGE */}
+                        {/* CLOSED OR UPCOMING PLAN BADGE */}
                         {custDetails?.isClosed && (
                           <span className="text-[10px] font-black uppercase bg-zinc-200 text-zinc-700 border border-zinc-300 px-2.5 py-0.5 rounded-md">
-                            ✓ Plan Closed (Completed / Upgraded)
+                            ✓ Plan Closed ({custDetails.closeReasonTag || 'Completed'})
+                          </span>
+                        )}
+                        {custDetails?.isUpcoming && (
+                          <span className="text-[10px] font-black uppercase bg-blue-100 text-blue-800 border border-blue-200 px-2.5 py-0.5 rounded-md">
+                            ⏱ Starts {custDetails.startDate}
                           </span>
                         )}
                       </div>
@@ -780,10 +832,20 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
                       <div className="bg-zinc-100/90 border border-zinc-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-zinc-600 font-bold">
                         <div className="flex items-center gap-2">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span>This plan is closed & fully delivered (customer upgraded to Monthly). No kitchen dispatch required.</span>
+                          <span>{custDetails?.closeReason || 'This plan is closed & fully delivered. No kitchen dispatch required.'}</span>
                         </div>
                         <span className="text-[10px] uppercase font-mono px-2.5 py-0.5 rounded-full bg-zinc-200 text-zinc-700 shrink-0 self-start sm:self-center font-black">
-                          Closed Plan
+                          {custDetails?.closeReasonTag || 'Plan Closed'}
+                        </span>
+                      </div>
+                    ) : custDetails?.isUpcoming ? (
+                      <div className="bg-blue-50/90 border border-blue-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-blue-900 font-bold">
+                        <div className="flex items-center gap-2">
+                          <Clock className="w-4 h-4 text-blue-600 shrink-0" />
+                          <span>{custDetails?.upcomingReason || `Plan scheduled to start on ${custDetails?.startDate}. No delivery required for ${selectedDate}.`}</span>
+                        </div>
+                        <span className="text-[10px] uppercase font-mono px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 shrink-0 self-start sm:self-center font-black">
+                          Upcoming Plan
                         </span>
                       </div>
                     ) : (

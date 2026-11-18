@@ -957,28 +957,26 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                               {session}
                             </span>
 
-                            <div className="flex items-center gap-1 font-mono">
+                            <div className="flex items-center gap-1">
                               {isDelivered && (
-                                <span className="inline-flex items-center gap-0.5 text-emerald-700 font-black text-[11px]" title={`Delivered ${sessionTime}`}>
-                                  <Check className="w-3.5 h-3.5 stroke-[3] text-emerald-600" />
-                                  <span>✓</span>
+                                <span className="inline-flex items-center text-emerald-600 font-black" title={sessionTime ? `Delivered at ${sessionTime}` : 'Delivered'}>
+                                  <Check className="w-4 h-4 stroke-[3]" />
                                 </span>
                               )}
                               {isCanceled && (
-                                <span className="inline-flex items-center gap-0.5 text-red-600 font-black text-[11px]" title="Canceled / Paused">
-                                  <X className="w-3.5 h-3.5 stroke-[3] text-red-600" />
-                                  <span>✕</span>
+                                <span className="inline-flex items-center text-red-600 font-black" title="Canceled / Paused">
+                                  <X className="w-4 h-4 stroke-[3]" />
                                 </span>
                               )}
                               {isOut && (
                                 <span className="inline-flex items-center gap-0.5 text-purple-700 font-black text-[10px]" title="Out for Delivery">
-                                  <Truck className="w-3 h-3 text-purple-700" />
+                                  <Truck className="w-3.5 h-3.5" />
                                   <span>Out</span>
                                 </span>
                               )}
                               {!isDelivered && !isCanceled && !isOut && (
-                                <span className="inline-flex items-center gap-0.5 text-zinc-400 font-medium text-[10px]" title="Scheduled">
-                                  <Clock className="w-3 h-3 text-zinc-400" />
+                                <span className="inline-flex items-center text-zinc-400 font-medium text-[10px]" title="Scheduled">
+                                  <Clock className="w-3.5 h-3.5 text-zinc-400" />
                                 </span>
                               )}
                             </div>
