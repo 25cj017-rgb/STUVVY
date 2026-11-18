@@ -193,71 +193,73 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* OBJECTIVE 2: STUVVY 3+1 MEAL PASS - CENTER TOP HORIZONTAL CARD (BLACK & WHITE) */}
+      {/* OBJECTIVE 2: STUVVY 3+1 MEAL PASS - CENTER TOP HORIZONTAL CARD (WHITE BG & BLACK LETTERS) */}
       {/* ========================================================================= */}
       <div className="w-full mb-10 text-left">
-        <div className="bg-black text-white rounded-[28px] sm:rounded-[36px] border border-zinc-800 p-5 sm:p-7 md:p-8 lg:p-9 shadow-2xl relative overflow-hidden transition-all">
-          {/* Subtle monochrome ambient light */}
-          <div className="absolute -top-32 -right-32 w-80 h-80 bg-zinc-800/30 rounded-full blur-3xl pointer-events-none" />
-
+        <div className="bg-white text-zinc-950 rounded-[28px] sm:rounded-[36px] border border-zinc-200/90 p-5 sm:p-7 md:p-8 lg:p-9 shadow-xl relative overflow-hidden transition-all">
           <div className="relative z-10 flex flex-col lg:flex-row items-stretch justify-between gap-6 lg:gap-8">
             
             {/* LEFT / CONTENT COLUMN */}
             <div className="space-y-4 flex-1 min-w-0">
-              {/* TOP MONOCHROME BADGES */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] sm:text-xs font-mono font-black uppercase tracking-widest bg-white text-black px-3 py-1 rounded-full shadow-xs">
+              {/* TOP BRAND LOGO & BADGES */}
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <img
+                  src="/stuvvy-logo-horizontal.png"
+                  alt="Stuvvy"
+                  className="h-8 sm:h-9 w-auto object-contain"
+                />
+                <span className="text-[10px] sm:text-xs font-mono font-black uppercase tracking-widest bg-zinc-950 text-white px-3 py-1 rounded-full shadow-xs">
                   ★ NEW LAUNCH
                 </span>
-                <span className="text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider bg-zinc-900 text-zinc-300 px-3 py-1 rounded-full border border-zinc-800">
+                <span className="text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider bg-zinc-100 text-zinc-700 px-3 py-1 rounded-full border border-zinc-200">
                   SUBSCRIBE 3 MONTHS • GET 4TH MONTH FREE
                 </span>
                 {pricing3Plus1.isEligibleUpgrade && (
-                  <span className="text-[10px] sm:text-xs font-mono font-black uppercase tracking-wider bg-zinc-800 text-white px-3 py-1 rounded-full border border-zinc-700">
+                  <span className="text-[10px] sm:text-xs font-mono font-black uppercase tracking-wider bg-emerald-50 text-emerald-800 px-3 py-1 rounded-full border border-emerald-200">
                     SPECIAL MONTHLY SUBSCRIBER BENEFIT
                   </span>
                 )}
               </div>
 
-              {/* HEADLINE & PROMOTIONAL COPY */}
+              {/* HEADLINE & PROMOTIONAL COPY (STUVVY OSTRICH & HEADING FONT HIERARCHY) */}
               <div className="space-y-1.5">
-                <div className="text-[11px] font-mono font-bold text-zinc-400 uppercase tracking-widest">
+                <div className="text-[11px] font-mono font-bold text-zinc-500 uppercase tracking-widest">
                   {STUVVY_3_PLUS_1_CONFIG.headline}
                 </div>
-                <h3 className="text-2xl sm:text-3xl md:text-4xl font-black font-heading tracking-tight text-white uppercase leading-tight">
+                <h3 className="font-ostrich text-3xl sm:text-4xl md:text-5xl font-black tracking-wider text-zinc-950 uppercase leading-none">
                   {STUVVY_3_PLUS_1_CONFIG.name}
                 </h3>
-                <p className="text-sm sm:text-base font-extrabold text-zinc-200 leading-snug">
+                <p className="font-heading text-sm sm:text-base font-extrabold text-zinc-800 leading-snug">
                   {STUVVY_3_PLUS_1_CONFIG.tagline}
                 </p>
-                <p className="text-xs text-zinc-400 font-medium leading-relaxed max-w-xl">
+                <p className="text-xs text-zinc-600 font-medium leading-relaxed max-w-xl">
                   {STUVVY_3_PLUS_1_CONFIG.subheadline} Total 120 days of authentic stone-ground homely meals with zero hassle.
                 </p>
               </div>
 
-              {/* MONOCHROME BULLET HIGHLIGHTS */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 text-xs text-zinc-300">
+              {/* BULLET HIGHLIGHTS (BLACK LETTERS WITH CRISP CHECK ICONS) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 text-xs font-bold text-zinc-800">
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center shrink-0">
-                    <Check className="w-2.5 h-2.5 stroke-[3] text-white" />
+                  <div className="w-4 h-4 rounded-full bg-zinc-100 border border-zinc-300 flex items-center justify-center shrink-0">
+                    <Check className="w-2.5 h-2.5 stroke-[3] text-zinc-950" />
                   </div>
                   <span>90 Days Paid + 30 Days Free (120 Days)</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center shrink-0">
-                    <Check className="w-2.5 h-2.5 stroke-[3] text-white" />
+                  <div className="w-4 h-4 rounded-full bg-zinc-100 border border-zinc-300 flex items-center justify-center shrink-0">
+                    <Check className="w-2.5 h-2.5 stroke-[3] text-zinc-950" />
                   </div>
                   <span>Full Access (South, North, Healthy)</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center shrink-0">
-                    <Check className="w-2.5 h-2.5 stroke-[3] text-white" />
+                  <div className="w-4 h-4 rounded-full bg-zinc-100 border border-zinc-300 flex items-center justify-center shrink-0">
+                    <Check className="w-2.5 h-2.5 stroke-[3] text-zinc-950" />
                   </div>
                   <span>Priority Delivery Slot Lock</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center shrink-0">
-                    <Check className="w-2.5 h-2.5 stroke-[3] text-white" />
+                  <div className="w-4 h-4 rounded-full bg-zinc-100 border border-zinc-300 flex items-center justify-center shrink-0">
+                    <Check className="w-2.5 h-2.5 stroke-[3] text-zinc-950" />
                   </div>
                   <span>Pause & Shift Dates Anytime</span>
                 </div>
@@ -265,79 +267,79 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
             </div>
 
             {/* RIGHT / PRICING BREAKDOWN & CTA COLUMN */}
-            <div className="lg:w-[380px] shrink-0 bg-zinc-950 border border-zinc-800 rounded-2xl p-4 sm:p-6 flex flex-col justify-between space-y-4">
+            <div className="lg:w-[380px] shrink-0 bg-zinc-50 border border-zinc-200 rounded-2xl p-4 sm:p-6 flex flex-col justify-between space-y-4">
               
               {pricing3Plus1.isEligibleUpgrade ? (
                 /* UPGRADE BREAKDOWN FOR ELIGIBLE MONTHLY SUBSCRIBER */
                 <div className="space-y-2 text-left">
-                  <div className="flex items-center justify-between text-xs text-zinc-400">
+                  <div className="flex items-center justify-between text-xs text-zinc-600 font-semibold">
                     <span>Three-Month Package Price</span>
-                    <span className="font-mono text-zinc-300">₹{pricing3Plus1.packagePrice.toLocaleString('en-IN')}</span>
+                    <span className="font-mono text-zinc-950 font-bold">₹{pricing3Plus1.packagePrice.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-zinc-300">
+                  <div className="flex items-center justify-between text-xs text-zinc-700">
                     <span>Already Paid – Monthly Subscription</span>
-                    <span className="font-mono text-white font-bold">-₹{pricing3Plus1.monthlyCredit.toLocaleString('en-IN')}</span>
+                    <span className="font-mono text-emerald-700 font-bold">-₹{pricing3Plus1.monthlyCredit.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-zinc-300">
+                  <div className="flex items-center justify-between text-xs text-zinc-700">
                     <span>Special Upgrade Offer</span>
-                    <span className="font-mono text-white font-bold">-₹{pricing3Plus1.upgradeDiscount.toLocaleString('en-IN')}</span>
+                    <span className="font-mono text-emerald-700 font-bold">-₹{pricing3Plus1.upgradeDiscount.toLocaleString('en-IN')}</span>
                   </div>
 
-                  <div className="pt-2 border-t border-zinc-800 flex items-baseline justify-between">
+                  <div className="pt-2 border-t border-zinc-200 flex items-baseline justify-between">
                     <div>
-                      <span className="text-[10px] font-mono uppercase text-zinc-400 font-bold block">
+                      <span className="text-[10px] font-mono uppercase text-zinc-500 font-bold block">
                         Remaining Amount to Pay
                       </span>
-                      <span className="text-3xl sm:text-4xl font-black font-heading text-white tracking-tight">
+                      <span className="font-ostrich text-3xl sm:text-4xl font-black text-zinc-950 tracking-tight leading-none">
                         ₹{pricing3Plus1.finalPayable.toLocaleString('en-IN')}
                       </span>
                     </div>
-                    <span className="text-[10px] font-mono font-bold uppercase bg-white text-black px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-mono font-bold uppercase bg-zinc-950 text-white px-2 py-0.5 rounded shadow-2xs">
                       4TH MO FREE
                     </span>
                   </div>
 
-                  <p className="text-[11px] text-zinc-400 font-medium leading-tight pt-1">
+                  <p className="text-[11px] text-zinc-600 font-medium leading-tight pt-1">
                     Your previous monthly subscription payment will be adjusted! Enjoy an additional ₹100 upgrade discount.
                   </p>
                 </div>
               ) : (
                 /* NEW CUSTOMER PRICING */
                 <div className="space-y-2 text-left">
-                  <div className="flex items-center justify-between text-xs text-zinc-400">
+                  <div className="flex items-center justify-between text-xs text-zinc-600 font-semibold">
                     <span>Three-Month Package (90 Days)</span>
-                    <span className="font-mono text-zinc-300">₹{pricing3Plus1.packagePrice.toLocaleString('en-IN')}</span>
+                    <span className="font-mono text-zinc-950 font-bold">₹{pricing3Plus1.packagePrice.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-zinc-300">
+                  <div className="flex items-center justify-between text-xs text-zinc-700">
                     <span>Fourth Month (30 Days)</span>
-                    <span className="font-mono text-white font-bold uppercase">100% FREE (₹0)</span>
+                    <span className="font-mono text-emerald-700 font-bold uppercase">100% FREE (₹0)</span>
                   </div>
 
-                  <div className="pt-2 border-t border-zinc-800 flex items-baseline justify-between">
+                  <div className="pt-2 border-t border-zinc-200 flex items-baseline justify-between">
                     <div>
-                      <span className="text-[10px] font-mono uppercase text-zinc-400 font-bold block">
+                      <span className="text-[10px] font-mono uppercase text-zinc-500 font-bold block">
                         Final Amount Payable
                       </span>
-                      <span className="text-3xl sm:text-4xl font-black font-heading text-white tracking-tight">
+                      <span className="font-ostrich text-3xl sm:text-4xl font-black text-zinc-950 tracking-tight leading-none">
                         ₹{pricing3Plus1.finalPayable.toLocaleString('en-IN')}
                       </span>
                     </div>
-                    <span className="text-[10px] font-mono font-bold uppercase bg-white text-black px-2 py-0.5 rounded">
+                    <span className="text-[10px] font-mono font-bold uppercase bg-zinc-950 text-white px-2 py-0.5 rounded shadow-2xs">
                       4 MONTHS TOTAL
                     </span>
                   </div>
 
-                  <p className="text-[11px] text-zinc-400 font-medium leading-tight pt-1 font-mono">
+                  <p className="text-[11px] text-zinc-600 font-medium leading-tight pt-1 font-mono">
                     Effective rate: ₹62.50 / day for 120 days of fresh homely meals.
                   </p>
                 </div>
               )}
 
-              {/* CTA BUTTON (PURE HIGH-CONTRAST BLACK & WHITE) */}
+              {/* CTA BUTTON (HIGH-CONTRAST BLACK BUTTON WITH WHITE LETTERS) */}
               <button
                 type="button"
                 onClick={() => onSelectPlan(PLAN_3_PLUS_1, 120, pricing3Plus1.finalPayable)}
-                className="w-full py-4 px-5 rounded-2xl bg-white hover:bg-zinc-200 text-black font-black text-xs sm:text-sm tracking-wider uppercase transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                className="w-full py-4 px-5 rounded-2xl bg-zinc-950 hover:bg-black text-white font-black text-xs sm:text-sm tracking-wider uppercase transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] hover:scale-[1.01]"
               >
                 <span>{STUVVY_3_PLUS_1_CONFIG.ctaText}</span>
                 <ArrowRight className="w-4 h-4 stroke-[3]" />
