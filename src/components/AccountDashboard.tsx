@@ -13,7 +13,7 @@ import {
   RefreshCw, ShieldCheck, CheckCircle2, Clock, ChevronRight, AlertCircle, 
   ArrowLeft, Lock, Phone, Utensils, Sparkles, LogOut, Check, MessageSquare,
   Award, Gift, Star, CalendarRange, Timer, UserCheck, LogIn, Eye, ChevronLeft,
-  Mail, ShieldAlert, Package, Truck, AlertTriangle, RotateCcw
+  Mail, ShieldAlert, Package, Truck, AlertTriangle, RotateCcw, X
 } from 'lucide-react';
 
 interface AccountDashboardProps {
@@ -914,33 +914,77 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                       )}
                     </div>
 
-                    {/* RIGHT: LIVE DELIVERY STATUS PILL */}
-                    <div className="shrink-0 self-start sm:self-center">
-                      {isNotDelivered ? (
-                        <div className="flex items-center gap-1.5 bg-red-600 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow-xs">
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          <span>Not Delivered</span>
-                        </div>
-                      ) : isOutForDelivery ? (
-                        <div className="flex items-center gap-1.5 bg-purple-900 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow-xs">
-                          <Truck className="w-3.5 h-3.5" />
-                          <span>Out for Delivery</span>
-                        </div>
-                      ) : isPausedLog ? (
-                        <div className="flex items-center gap-1.5 bg-zinc-200 text-zinc-800 px-3 py-1.5 rounded-xl text-xs font-black">
-                          <span>⛔ Paused / Canceled</span>
-                        </div>
-                      ) : isDelivered ? (
-                        <div className="flex items-center gap-1.5 bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-black shadow-xs">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Delivered {log?.deliveredAt ? `(${log.deliveredAt})` : ''}</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1.5 bg-zinc-100 text-zinc-600 border border-zinc-200 px-3 py-1.5 rounded-xl text-xs font-bold">
-                          <Clock className="w-3.5 h-3.5 text-zinc-400" />
-                          <span>Scheduled Delivery</span>
-                        </div>
-                      )}
+                    {/* RIGHT: 3-MEAL STATUS LADDER (BREAKFAST, LUNCH, DINNER) */}
+                    <div className="flex flex-col gap-1.5 shrink-0 min-w-[130px] sm:min-w-[155px] self-start sm:self-center">
+                      {(['Breakfast', 'Lunch', 'Dinner'] as const).map((session) => {
+                        const sLog = deliveryLogs.find(
+                          (l) => l.date === item.dateStr && (l.mealSession || '').toLowerCase() === session.toLowerCase()
+                        );
+                        let isDelivered = false;
+                        let isCanceled = false;
+                        let isOut = false;
+                        let sessionTime = '';
+
+                        if (sLog) {
+                          if (sLog.status === 'delivered') {
+                            isDelivered = true;
+                            sessionTime = sLog.deliveredAt || '';
+                          } else if (sLog.status === 'paused' || sLog.status === 'not_received') {
+                            isCanceled = true;
+                          } else if (sLog.status === 'out_for_delivery') {
+                            isOut = true;
+                          } else {
+                            isDelivered = item.isPast;
+                          }
+                        } else {
+                          isDelivered = item.isPast;
+                        }
+
+                        return (
+                          <div
+                            key={session}
+                            className={`flex items-center justify-between gap-2 px-2.5 py-1 rounded-lg text-xs border transition-all ${
+                              isDelivered
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-950 font-bold'
+                                : isCanceled
+                                ? 'bg-red-50 border-red-200 text-red-950 font-bold'
+                                : isOut
+                                ? 'bg-purple-50 border-purple-200 text-purple-950 font-bold'
+                                : 'bg-zinc-50 border-zinc-200 text-zinc-500 font-medium'
+                            }`}
+                          >
+                            <span className="text-[11px] font-extrabold uppercase tracking-wide">
+                              {session}
+                            </span>
+
+                            <div className="flex items-center gap-1 font-mono">
+                              {isDelivered && (
+                                <span className="inline-flex items-center gap-0.5 text-emerald-700 font-black text-[11px]" title={`Delivered ${sessionTime}`}>
+                                  <Check className="w-3.5 h-3.5 stroke-[3] text-emerald-600" />
+                                  <span>✓</span>
+                                </span>
+                              )}
+                              {isCanceled && (
+                                <span className="inline-flex items-center gap-0.5 text-red-600 font-black text-[11px]" title="Canceled / Paused">
+                                  <X className="w-3.5 h-3.5 stroke-[3] text-red-600" />
+                                  <span>✕</span>
+                                </span>
+                              )}
+                              {isOut && (
+                                <span className="inline-flex items-center gap-0.5 text-purple-700 font-black text-[10px]" title="Out for Delivery">
+                                  <Truck className="w-3 h-3 text-purple-700" />
+                                  <span>Out</span>
+                                </span>
+                              )}
+                              {!isDelivered && !isCanceled && !isOut && (
+                                <span className="inline-flex items-center gap-0.5 text-zinc-400 font-medium text-[10px]" title="Scheduled">
+                                  <Clock className="w-3 h-3 text-zinc-400" />
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
 
                   </div>

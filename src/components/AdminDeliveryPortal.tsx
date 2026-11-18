@@ -5,7 +5,7 @@ import {
   ShieldCheck, CheckCircle2, AlertTriangle, Clock, Truck, 
   Search, Calendar, Filter, Phone, MessageSquare, RefreshCw, 
   MapPin, User, ChevronRight, Lock, Key, ArrowLeft, Plus,
-  FileText, Sparkles, X, Check, FileSpreadsheet, Ban
+  FileText, Sparkles, X, Check, FileSpreadsheet, Ban, RotateCcw
 } from 'lucide-react';
 import { DeliveryLogItem } from '../app/api/admin/delivery-logs/route';
 
@@ -36,6 +36,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
   const [selectedMealSession, setSelectedMealSession] = useState<'All' | 'Breakfast' | 'Lunch' | 'Dinner'>('All');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<'All' | 'delivered' | 'out_for_delivery' | 'pending' | 'not_received' | 'paused'>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showClosedPlans, setShowClosedPlans] = useState<boolean>(false);
 
   // Issue modal state
   const [activeIssueLog, setActiveIssueLog] = useState<DeliveryLogItem | null>(null);
@@ -106,6 +107,10 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         locality?: string;
         paymentAmount?: string;
         paymentStatus?: string;
+        orderStatus?: string;
+        startDate?: string;
+        purchaseDate?: string;
+        subscriberType?: string;
         requestedMeals?: string[];
       }> = [];
       if (custRes && custRes.ok) {
@@ -134,6 +139,9 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
           locality: string;
           paymentAmount?: string;
           paymentStatus?: string;
+          orderStatus?: string;
+          startDate?: string;
+          isClosed?: boolean;
           requestedMeals?: string[];
         }
       >();
@@ -142,6 +150,17 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         const mob = (c.mobileNo || '').replace(/\D/g, '').slice(-10);
         const custKey = makeCustKey(c.name, mob);
         if (mob && custKey) {
+          const rawOrderStatus = (c.orderStatus || '').trim().toLowerCase();
+          const isExplicitlyClosed =
+            rawOrderStatus === 'delivered' ||
+            rawOrderStatus === 'closed' ||
+            rawOrderStatus === 'completed' ||
+            rawOrderStatus === 'inactive' ||
+            rawOrderStatus === 'expired';
+
+          const isDailyPlan = (c.plan || '').toUpperCase().includes('DAILY');
+          const isClosed = isExplicitlyClosed || (isDailyPlan && rawOrderStatus === 'delivered');
+
           customerMap.set(custKey, {
             name: c.name,
             mobile: mob,
@@ -150,6 +169,9 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
             locality: c.locality || '',
             paymentAmount: c.paymentAmount,
             paymentStatus: c.paymentStatus,
+            orderStatus: c.orderStatus,
+            startDate: c.startDate,
+            isClosed,
             requestedMeals: c.requestedMeals,
           });
         }
@@ -165,6 +187,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
             plan: l.planName,
             address: l.deliveryAddress,
             locality: l.locality || '',
+            isClosed: false,
           });
         }
       }
@@ -226,13 +249,17 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
     }
   }, [isAuthenticated, selectedDate]);
 
-  // Update order delivery status
+  // Update order delivery status - completely changeable and reversible
   const handleUpdateStatus = async (
     log: DeliveryLogItem, 
     newStatus: 'delivered' | 'out_for_delivery' | 'pending' | 'not_received' | 'paused',
     issueText?: string
   ) => {
     try {
+      // Reversible toggle: if operator clicks the status that is already active, toggle back to 'pending'!
+      const targetStatus: 'delivered' | 'out_for_delivery' | 'pending' | 'not_received' | 'paused' =
+        log.status === newStatus ? 'pending' : newStatus;
+
       // Capture the exact real-time clock from admin's device right at the moment they mark it
       const realTimeNow = new Intl.DateTimeFormat('en-IN', {
         hour: 'numeric',
@@ -240,7 +267,8 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         hour12: true,
       }).format(new Date()).toUpperCase();
 
-      const deliveredAtTime = newStatus === 'delivered' ? (log.deliveredAt || realTimeNow) : undefined;
+      const deliveredAtTime = targetStatus === 'delivered' ? (log.deliveredAt || realTimeNow) : undefined;
+      const issueReasonText = targetStatus === 'not_received' ? (issueText || 'Customer reported order not received') : undefined;
 
       const payload: Partial<DeliveryLogItem> = {
         id: log.id,
@@ -251,17 +279,18 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         deliveryAddress: log.deliveryAddress,
         locality: log.locality,
         mealSession: log.mealSession,
-        status: newStatus,
+        status: targetStatus,
         deliveredAt: deliveredAtTime,
-        issueReason: newStatus === 'not_received' ? (issueText || 'Customer reported order not received') : undefined,
+        issueReason: issueReasonText,
         markedBy: 'admin'
       };
 
-      // Optimistic update so UI reflects real-time delivered timestamp instantly
+      // Optimistic update so UI reflects real-time delivered timestamp or reversal instantly
       const optimisticLog: DeliveryLogItem = {
         ...log,
-        status: newStatus,
+        status: targetStatus,
         deliveredAt: deliveredAtTime,
+        issueReason: issueReasonText,
         updatedAt: new Date().toISOString(),
       };
       setLogs((prev) => prev.map((item) => (item.id === log.id ? optimisticLog : item)));
@@ -287,7 +316,12 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
           localStorage.setItem('stuvvy_delivery_logs', JSON.stringify(parsedLocal));
           window.dispatchEvent(new Event('stuvvy-logs-updated'));
         } catch {}
-        showToast(`Auto-saved "${newStatus.replace(/_/g, ' ').toUpperCase()}" to Excel for ${log.customerName}`);
+
+        if (targetStatus === 'pending') {
+          showToast(`Reverted ${log.customerName} (${log.mealSession}) back to PENDING`);
+        } else {
+          showToast(`Saved "${targetStatus.replace(/_/g, ' ').toUpperCase()}" for ${log.customerName}`);
+        }
       }
     } catch (err) {
       console.error('Error updating status:', err);
@@ -298,6 +332,14 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
   // Filtered logs calculation
   const filteredLogs = useMemo(() => {
     return logs.filter(log => {
+      // Exclude closed/upgraded plans unless showClosedPlans is enabled OR specifically searched
+      const cleanName = (log.customerName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const cleanMob = (log.customerMobile || '').replace(/\D/g, '').slice(-10);
+      const custDetails = customerDetailsMap.get(`${cleanName}_${cleanMob}`);
+      if (!showClosedPlans && custDetails?.isClosed && !searchQuery.trim()) {
+        return false;
+      }
+
       // Meal session filter
       if (selectedMealSession !== 'All' && log.mealSession !== selectedMealSession) {
         return false;
@@ -319,10 +361,19 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
       }
       return true;
     });
-  }, [logs, selectedMealSession, selectedStatusFilter, searchQuery]);
+  }, [logs, selectedMealSession, selectedStatusFilter, searchQuery, showClosedPlans, customerDetailsMap]);
 
   // Aggregate statistics
   const totalOrders = logs.length;
+  const closedLogsCount = useMemo(() => {
+    return logs.filter((l) => {
+      const cleanName = (l.customerName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const cleanMob = (l.customerMobile || '').replace(/\D/g, '').slice(-10);
+      return customerDetailsMap.get(`${cleanName}_${cleanMob}`)?.isClosed;
+    }).length;
+  }, [logs, customerDetailsMap]);
+
+  const activeOrdersCount = totalOrders - closedLogsCount;
   const deliveredCount = logs.filter(l => l.status === 'delivered').length;
   const outForDeliveryCount = logs.filter(l => l.status === 'out_for_delivery').length;
   const pendingCount = logs.filter(l => l.status === 'pending').length;
@@ -561,31 +612,59 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
           </div>
         </div>
 
-        {/* STATUS FILTER PILLS */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 border-t border-zinc-100 text-xs">
-          <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 shrink-0">
-            Filter Status:
-          </span>
+        {/* STATUS FILTER PILLS & ACTIVE/CLOSED TOGGLE */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-zinc-100 text-xs">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1">
+            <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 shrink-0">
+              Filter Status:
+            </span>
 
-          {[
-            { id: 'All', label: `All Orders (${logs.length})` },
-            { id: 'delivered', label: `✓ Delivered (${deliveredCount})` },
-            { id: 'out_for_delivery', label: `🚚 Out for Delivery (${outForDeliveryCount})` },
-            { id: 'pending', label: `⏳ Pending (${pendingCount})` },
-            { id: 'not_received', label: `⚠️ Not Received (${notReceivedCount})` },
-          ].map((pill) => (
+            {[
+              { id: 'All', label: `All Orders (${filteredLogs.length})` },
+              { id: 'delivered', label: `✓ Delivered (${deliveredCount})` },
+              { id: 'out_for_delivery', label: `🚚 Out for Delivery (${outForDeliveryCount})` },
+              { id: 'pending', label: `⏳ Pending (${pendingCount})` },
+              { id: 'not_received', label: `⚠️ Not Received (${notReceivedCount})` },
+            ].map((pill) => (
+              <button
+                key={pill.id}
+                onClick={() => setSelectedStatusFilter(pill.id as any)}
+                className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 transition-all cursor-pointer ${
+                  selectedStatusFilter === pill.id
+                    ? 'bg-zinc-950 text-white shadow-xs'
+                    : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                }`}
+              >
+                {pill.label}
+              </button>
+            ))}
+          </div>
+
+          {/* ACTIVE DISPATCHES VS CLOSED PLANS TOGGLE */}
+          <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-center">
             <button
-              key={pill.id}
-              onClick={() => setSelectedStatusFilter(pill.id as any)}
-              className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 transition-all cursor-pointer ${
-                selectedStatusFilter === pill.id
-                  ? 'bg-zinc-950 text-white shadow-xs'
+              type="button"
+              onClick={() => setShowClosedPlans(false)}
+              className={`px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer ${
+                !showClosedPlans
+                  ? 'bg-purple-900 text-white shadow-xs'
                   : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
               }`}
             >
-              {pill.label}
+              Active Queue ({activeOrdersCount})
             </button>
-          ))}
+            <button
+              type="button"
+              onClick={() => setShowClosedPlans(true)}
+              className={`px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer ${
+                showClosedPlans
+                  ? 'bg-zinc-800 text-white shadow-xs'
+                  : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+              }`}
+            >
+              Closed Plans ({closedLogsCount})
+            </button>
+          </div>
         </div>
       </div>
 
@@ -658,6 +737,12 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
                             Paid: ₹{custDetails.paymentAmount} ({custDetails.paymentStatus || 'PAID'})
                           </span>
                         )}
+                        {/* CLOSED PLAN BADGE */}
+                        {custDetails?.isClosed && (
+                          <span className="text-[10px] font-black uppercase bg-zinc-200 text-zinc-700 border border-zinc-300 px-2.5 py-0.5 rounded-md">
+                            ✓ Plan Closed (Completed / Upgraded)
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-zinc-600 font-medium flex items-start gap-1.5">
                         <MapPin className="w-3.5 h-3.5 text-orange-500 shrink-0 mt-0.5" />
@@ -691,128 +776,157 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
 
                   {/* SEPARATE 3-MEAL STATUS ROWS (BREAKFAST, LUNCH, DINNER) */}
                   <div className="space-y-2.5">
-                    {sortedMeals.map((log) => {
-                      const isDelivered = log.status === 'delivered';
-                      const isOutForDelivery = log.status === 'out_for_delivery';
-                      const isPending = log.status === 'pending';
-                      const isNotReceived = log.status === 'not_received';
+                    {custDetails?.isClosed ? (
+                      <div className="bg-zinc-100/90 border border-zinc-200 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-zinc-600 font-bold">
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>This plan is closed & fully delivered (customer upgraded to Monthly). No kitchen dispatch required.</span>
+                        </div>
+                        <span className="text-[10px] uppercase font-mono px-2.5 py-0.5 rounded-full bg-zinc-200 text-zinc-700 shrink-0 self-start sm:self-center font-black">
+                          Closed Plan
+                        </span>
+                      </div>
+                    ) : (
+                      sortedMeals.map((log) => {
+                        const isDelivered = log.status === 'delivered';
+                        const isOutForDelivery = log.status === 'out_for_delivery';
+                        const isPending = log.status === 'pending';
+                        const isNotReceived = log.status === 'not_received';
 
-                      return (
-                        <div
-                          key={log.id}
-                          className={`rounded-2xl border p-3 sm:px-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 transition-all ${
-                            isNotReceived
-                              ? 'bg-red-50 border-red-200 text-red-950'
-                              : isDelivered
-                              ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
-                              : 'bg-zinc-50/70 border-zinc-200/80'
-                          }`}
-                        >
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-xs font-black uppercase tracking-wider text-zinc-900 min-w-[76px]">
-                                {log.mealSession}
-                              </span>
+                        return (
+                          <div
+                            key={log.id}
+                            className={`rounded-2xl border p-3 sm:px-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3 transition-all ${
+                              isNotReceived
+                                ? 'bg-red-50 border-red-200 text-red-950'
+                                : isDelivered
+                                ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                                : 'bg-zinc-50/70 border-zinc-200/80'
+                            }`}
+                          >
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-xs font-black uppercase tracking-wider text-zinc-900 min-w-[76px]">
+                                  {log.mealSession}
+                                </span>
 
-                              {isDelivered && (
-                                <span className="text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
-                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                  <span>Delivered ({log.deliveredAt || 'Confirmed'})</span>
-                                </span>
-                              )}
-                              {isOutForDelivery && (
-                                <span className="text-[10px] font-black uppercase bg-purple-100 text-purple-900 px-2.5 py-0.5 rounded-full border border-purple-300 flex items-center gap-1">
-                                  <Truck className="w-3 h-3 text-purple-700" />
-                                  <span>Out for Delivery</span>
-                                </span>
-                              )}
-                              {isPending && (
-                                <span className="text-[10px] font-bold bg-white text-zinc-600 px-2.5 py-0.5 rounded-full border border-zinc-200 flex items-center gap-1">
-                                  <Clock className="w-3 h-3 text-zinc-500" />
-                                  <span>Pending</span>
-                                </span>
-                              )}
-                              {isNotReceived && (
-                                <span className="text-[10px] font-black uppercase bg-red-100 text-red-800 px-2.5 py-0.5 rounded-full border border-red-300 flex items-center gap-1">
-                                  <AlertTriangle className="w-3 h-3 text-red-600" />
-                                  <span>Not Delivered</span>
-                                </span>
-                              )}
-                              {log.status === 'paused' && (
-                                <span className="text-[10px] font-black uppercase bg-zinc-200 text-zinc-800 px-2.5 py-0.5 rounded-full border border-zinc-300 flex items-center gap-1">
-                                  <Ban className="w-3 h-3 text-zinc-600" />
-                                  <span>Canceled</span>
-                                </span>
+                                {isDelivered && (
+                                  <span className="text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full border border-emerald-300 flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                    <span>Delivered ({log.deliveredAt || 'Confirmed'})</span>
+                                  </span>
+                                )}
+                                {isOutForDelivery && (
+                                  <span className="text-[10px] font-black uppercase bg-purple-100 text-purple-900 px-2.5 py-0.5 rounded-full border border-purple-300 flex items-center gap-1">
+                                    <Truck className="w-3 h-3 text-purple-700" />
+                                    <span>Out for Delivery</span>
+                                  </span>
+                                )}
+                                {isPending && (
+                                  <span className="text-[10px] font-bold bg-white text-zinc-600 px-2.5 py-0.5 rounded-full border border-zinc-200 flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-zinc-500" />
+                                    <span>Pending</span>
+                                  </span>
+                                )}
+                                {isNotReceived && (
+                                  <span className="text-[10px] font-black uppercase bg-red-100 text-red-800 px-2.5 py-0.5 rounded-full border border-red-300 flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3 text-red-600" />
+                                    <span>Not Delivered</span>
+                                  </span>
+                                )}
+                                {log.status === 'paused' && (
+                                  <span className="text-[10px] font-black uppercase bg-zinc-200 text-zinc-800 px-2.5 py-0.5 rounded-full border border-zinc-300 flex items-center gap-1">
+                                    <Ban className="w-3 h-3 text-zinc-600" />
+                                    <span>Canceled</span>
+                                  </span>
+                                )}
+                              </div>
+
+                              {log.issueReason && isNotReceived && (
+                                <div className="text-[11px] text-red-700 font-semibold">
+                                  Reason: {log.issueReason}
+                                </div>
                               )}
                             </div>
 
-                            {log.issueReason && isNotReceived && (
-                              <div className="text-[11px] text-red-700 font-semibold">
-                                Reason: {log.issueReason}
-                              </div>
-                            )}
+                            {/* PER-MEAL STATUS BUTTONS (CHANGEABLE & REVERSIBLE) */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateStatus(log, 'delivered')}
+                                title={isDelivered ? "Active (Click again to revert back to Pending)" : "Mark as Delivered"}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                                  isDelivered
+                                    ? 'bg-emerald-600 text-white ring-2 ring-emerald-300'
+                                    : 'bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                }`}
+                              >
+                                <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                <span>Delivered</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateStatus(log, 'out_for_delivery')}
+                                title={isOutForDelivery ? "Active (Click again to revert back to Pending)" : "Mark as Out for Delivery"}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                                  isOutForDelivery
+                                    ? 'bg-purple-900 text-white ring-2 ring-purple-300'
+                                    : 'bg-white hover:bg-purple-100 text-purple-900 border border-purple-200'
+                                }`}
+                              >
+                                <Truck className="w-3.5 h-3.5" />
+                                <span>Out</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveIssueLog(log);
+                                  setIssueReasonInput(log.issueReason || '');
+                                }}
+                                title="Report Delivery Issue"
+                                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                                  isNotReceived
+                                    ? 'bg-red-600 text-white'
+                                    : 'bg-white hover:bg-red-100 text-red-800 border border-red-200'
+                                }`}
+                              >
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                                <span>Not Delivered</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateStatus(log, 'paused', 'Order paused or canceled by customer/admin')}
+                                title={log.status === 'paused' ? "Active (Click again to revert back to Pending)" : "Mark as Canceled"}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
+                                  log.status === 'paused'
+                                    ? 'bg-zinc-800 text-white'
+                                    : 'bg-white hover:bg-zinc-200 text-zinc-700 border border-zinc-200'
+                                }`}
+                              >
+                                <Ban className="w-3.5 h-3.5" />
+                                <span>Canceled</span>
+                              </button>
+
+                              {/* ONE-CLICK REVERT / RESET BUTTON (IF MISTAKENLY CLICKED) */}
+                              {log.status !== 'pending' && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateStatus(log, 'pending')}
+                                  title="Mistakenly clicked? Click to reset back to Pending"
+                                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer bg-zinc-100 hover:bg-zinc-200 text-zinc-700 border border-zinc-200 shadow-2xs"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5 text-zinc-500" />
+                                  <span className="hidden sm:inline">Reset</span>
+                                </button>
+                              )}
+                            </div>
                           </div>
-
-                          {/* PER-MEAL STATUS BUTTONS */}
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateStatus(log, 'delivered')}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
-                                isDelivered
-                                  ? 'bg-emerald-600 text-white'
-                                  : 'bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-200'
-                              }`}
-                            >
-                              <Check className="w-3.5 h-3.5 stroke-[3]" />
-                              <span>Delivered</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateStatus(log, 'out_for_delivery')}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
-                                isOutForDelivery
-                                  ? 'bg-purple-900 text-white'
-                                  : 'bg-white hover:bg-purple-100 text-purple-900 border border-purple-200'
-                              }`}
-                            >
-                              <Truck className="w-3.5 h-3.5" />
-                              <span>Out</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setActiveIssueLog(log);
-                                setIssueReasonInput(log.issueReason || '');
-                              }}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
-                                isNotReceived
-                                  ? 'bg-red-600 text-white'
-                                  : 'bg-white hover:bg-red-100 text-red-800 border border-red-200'
-                              }`}
-                            >
-                              <AlertTriangle className="w-3.5 h-3.5" />
-                              <span>Not Delivered</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleUpdateStatus(log, 'paused', 'Order paused or canceled by customer/admin')}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs ${
-                                log.status === 'paused'
-                                  ? 'bg-zinc-800 text-white'
-                                  : 'bg-white hover:bg-zinc-200 text-zinc-700 border border-zinc-200'
-                              }`}
-                            >
-                              <Ban className="w-3.5 h-3.5" />
-                              <span>Canceled</span>
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               );
