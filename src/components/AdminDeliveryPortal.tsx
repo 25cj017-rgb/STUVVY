@@ -245,13 +245,19 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
       for (const [custKey, info] of customerMap.entries()) {
         const cleanNameSlug = (info.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 
-        // ONLY show the meals the customer opted for in Google Sheets (default to all if not specified)
-        const optedMeals =
+        // ONLY show the meals the customer opted for in Google Sheets
+        const isDailyPlan = (info.plan || '').toLowerCase().includes('daily') || (info.plan || '').toLowerCase().includes('day');
+        let optedMeals =
           info.requestedMeals && info.requestedMeals.length > 0
             ? (info.requestedMeals.filter((m) =>
                 allSessions.includes(m as any)
               ) as Array<'Breakfast' | 'Lunch' | 'Dinner'>)
             : allSessions;
+
+        // Daily Plan (₹149) covers a single feast meal (Lunch)
+        if (isDailyPlan && (optedMeals.length > 1 || !info.requestedMeals || info.requestedMeals.length === 0)) {
+          optedMeals = ['Lunch'];
+        }
 
         for (const session of optedMeals) {
           const found = combinedExisting.find(

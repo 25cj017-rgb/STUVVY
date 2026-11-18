@@ -8,6 +8,7 @@ import type { DeliveryLogItem } from '../app/api/admin/delivery-logs/route';
 import { StuvvyCard } from './StuvvyCard';
 import { StuvvyStarRewards } from './StuvvyStarRewards';
 import { calculateSubscriptionSchedule, parseDateFlexible } from '../utils/subscriptionUtils';
+import { getFreeMonthStatus } from '../config/subscriptionConfig';
 import { 
   User, Calendar, CreditCard, MapPin, PauseCircle, PlayCircle, 
   RefreshCw, ShieldCheck, CheckCircle2, Clock, ChevronRight, AlertCircle, 
@@ -267,7 +268,12 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
   let optedPlanPeriod = '/ month';
   let optedPlanDefaultDays = 30;
 
-  if (rawPlan.includes('day') || rawPlan.includes('daily')) {
+  if (rawPlan.includes('3+1') || rawPlan.includes('3plus1') || (rawPlan.includes('meal pass') && !rawPlan.includes('week'))) {
+    optedPlanName = 'Stuvvy 3+1 Meal Pass';
+    optedPlanPrice = userPaidAmountNumber || 4900;
+    optedPlanPeriod = '/ 4 months';
+    optedPlanDefaultDays = 120;
+  } else if (rawPlan.includes('day') || rawPlan.includes('daily')) {
     optedPlanName = 'Daily Plan';
     optedPlanPrice = userPaidAmountNumber || 99;
     optedPlanPeriod = '/ day';
@@ -454,6 +460,50 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                 <span>•</span>
                 <span>📞 +91 {currentUser.mobileNumber}</span>
               </div>
+
+              {/* STUVVY 3+1 MEAL PASS EXCLUSIVE STATUS BANNER */}
+              {(optedPlanName.toLowerCase().includes('3+1') || optedPlanName.toLowerCase().includes('3plus1') || optedPlanName.toLowerCase().includes('meal pass')) && (() => {
+                const freeMonthInfo = getFreeMonthStatus(currentUser.startDate);
+                return (
+                  <div className="mt-3 p-3.5 bg-zinc-950 text-white rounded-2xl border border-zinc-800 space-y-2 select-none shadow-md">
+                    <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-zinc-800">
+                      <span className="font-mono text-[11px] font-black tracking-widest text-white uppercase">
+                        STUVVY 3+1 MEAL PASS
+                      </span>
+                      <span className="text-[9px] font-mono font-bold bg-white text-black px-2 py-0.5 rounded uppercase">
+                        4 Months Total Benefit
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                      <div className="p-2 bg-zinc-900 rounded-xl border border-zinc-800">
+                        <span className="text-[9px] font-mono uppercase text-zinc-400 block font-bold">Paid Months</span>
+                        <span className="font-black text-white text-xs sm:text-sm">3 MONTHS – PAID</span>
+                      </div>
+
+                      <div className="p-2 bg-zinc-900 rounded-xl border border-zinc-800">
+                        <span className="text-[9px] font-mono uppercase text-zinc-400 block font-bold">Reward Month</span>
+                        <span className="font-black text-emerald-400 text-xs sm:text-sm">4TH MONTH – FREE</span>
+                      </div>
+
+                      <div className="p-2 bg-zinc-900 rounded-xl border border-zinc-800 col-span-2 sm:col-span-1">
+                        <span className="text-[9px] font-mono uppercase text-zinc-400 block font-bold">Free Meal Pass Status</span>
+                        <span className="font-black text-white text-xs sm:text-sm flex items-center gap-1 font-mono">
+                          <span className={`w-2 h-2 rounded-full ${freeMonthInfo.status === 'ACTIVE' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
+                          <span>{freeMonthInfo.status}</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="text-[10px] text-zinc-400 font-mono flex items-center justify-between pt-1">
+                      <span>{freeMonthInfo.label}</span>
+                      {freeMonthInfo.status === 'UPCOMING' && (
+                        <span className="text-zinc-300 font-bold">{freeMonthInfo.daysUntilFree} days until 4th month unlocks</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Delivery Address Selector if user has multiple locations */}
               {currentUser.addresses && currentUser.addresses.length > 1 ? (

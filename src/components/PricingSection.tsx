@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, Sparkles, Plus, Minus, Lightbulb, Zap, ArrowRight, ShieldCheck, Eye } from 'lucide-react';
+import { Check, Sparkles, Plus, Minus, Lightbulb, Zap, ArrowRight, ShieldCheck, Eye, Star } from 'lucide-react';
 
 import { UserProfile } from '../types';
+import { STUVVY_3_PLUS_1_CONFIG, calculate3Plus1Pricing } from '../config/subscriptionConfig';
 
 export interface PlanOption {
   id: string;
@@ -18,6 +19,27 @@ export interface PlanOption {
   defaultDays: number;
   ratePerDay: number;
 }
+
+export const PLAN_3_PLUS_1: PlanOption = {
+  id: '3plus1',
+  name: 'Stuvvy 3+1 Meal Pass',
+  price: 7500,
+  period: '/ 4 months',
+  billingText: '3 Months Paid (₹7,500) • 4th Month FREE',
+  savingsBadge: 'EXCLUSIVE LAUNCH • 4TH MONTH FREE',
+  isPopular: true,
+  description: 'Your Meals. Your Routine. Your Reward. Pay for 3 Months and Enjoy Your 4th Month FREE!',
+  defaultDays: 120,
+  ratePerDay: 62.5,
+  features: [
+    '3 Months Paid + 1 Full Month 100% FREE',
+    'Total 120 Days of Homely Chef Meals',
+    'Priority Morning & Evening Delivery Slot Lock',
+    'Free Dietary Customization (Mild Spice, Low-GI)',
+    'Full Flexibility to Pause & Resume Days Anytime',
+    'VIP Central Kitchen Priority Care'
+  ]
+};
 
 export const SUBSCRIPTION_PLANS: PlanOption[] = [
   {
@@ -72,7 +94,8 @@ export const SUBSCRIPTION_PLANS: PlanOption[] = [
       'Dedicated care support manager',
       'Full flexibility to pause during vacations'
     ]
-  }
+  },
+  PLAN_3_PLUS_1
 ];
 
 interface PricingSectionProps {
@@ -96,8 +119,12 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
     ? (SUBSCRIPTION_PLANS.find(p => p.id === userPlanNormalized || userPlanNormalized.includes(p.id) || p.name.toLowerCase().includes(userPlanNormalized)) || null)
     : null;
 
-  // If user has an assigned plan in CSV, show ONLY that plan! Otherwise show all plans.
-  const plansToDisplay = assignedPlan ? [assignedPlan] : SUBSCRIPTION_PLANS;
+  // Pricing calculation for Stuvvy 3+1 Meal Pass (Checks if user qualifies for the ₹4,900 upgrade)
+  const pricing3Plus1 = calculate3Plus1Pricing(user);
+
+  // The 3 standard plans for the bottom grid
+  const standardPlans = SUBSCRIPTION_PLANS.filter(p => p.id !== '3plus1');
+  const plansToDisplay = assignedPlan && assignedPlan.id !== '3plus1' ? [assignedPlan] : standardPlans;
 
   const userPaidAmount = user?.paymentAmount
     ? parseInt(user.paymentAmount.replace(/\D/g, ''), 10) || undefined
@@ -162,6 +189,162 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
           </p>
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* OBJECTIVE 2: STUVVY 3+1 MEAL PASS - CENTER TOP HORIZONTAL CARD (BLACK & WHITE) */}
+      {/* ========================================================================= */}
+      <div className="w-full mb-10 text-left">
+        <div className="bg-black text-white rounded-[28px] sm:rounded-[36px] border border-zinc-800 p-5 sm:p-7 md:p-8 lg:p-9 shadow-2xl relative overflow-hidden transition-all">
+          {/* Subtle monochrome ambient light */}
+          <div className="absolute -top-32 -right-32 w-80 h-80 bg-zinc-800/30 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row items-stretch justify-between gap-6 lg:gap-8">
+            
+            {/* LEFT / CONTENT COLUMN */}
+            <div className="space-y-4 flex-1 min-w-0">
+              {/* TOP MONOCHROME BADGES */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] sm:text-xs font-mono font-black uppercase tracking-widest bg-white text-black px-3 py-1 rounded-full shadow-xs">
+                  ★ NEW LAUNCH
+                </span>
+                <span className="text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider bg-zinc-900 text-zinc-300 px-3 py-1 rounded-full border border-zinc-800">
+                  SUBSCRIBE 3 MONTHS • GET 4TH MONTH FREE
+                </span>
+                {pricing3Plus1.isEligibleUpgrade && (
+                  <span className="text-[10px] sm:text-xs font-mono font-black uppercase tracking-wider bg-zinc-800 text-white px-3 py-1 rounded-full border border-zinc-700">
+                    SPECIAL MONTHLY SUBSCRIBER BENEFIT
+                  </span>
+                )}
+              </div>
+
+              {/* HEADLINE & PROMOTIONAL COPY */}
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-mono font-bold text-zinc-400 uppercase tracking-widest">
+                  {STUVVY_3_PLUS_1_CONFIG.headline}
+                </div>
+                <h3 className="text-2xl sm:text-3xl md:text-4xl font-black font-heading tracking-tight text-white uppercase leading-tight">
+                  {STUVVY_3_PLUS_1_CONFIG.name}
+                </h3>
+                <p className="text-sm sm:text-base font-extrabold text-zinc-200 leading-snug">
+                  {STUVVY_3_PLUS_1_CONFIG.tagline}
+                </p>
+                <p className="text-xs text-zinc-400 font-medium leading-relaxed max-w-xl">
+                  {STUVVY_3_PLUS_1_CONFIG.subheadline} Total 120 days of authentic stone-ground homely meals with zero hassle.
+                </p>
+              </div>
+
+              {/* MONOCHROME BULLET HIGHLIGHTS */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 text-xs text-zinc-300">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center shrink-0">
+                    <Check className="w-2.5 h-2.5 stroke-[3] text-white" />
+                  </div>
+                  <span>90 Days Paid + 30 Days Free (120 Days)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center shrink-0">
+                    <Check className="w-2.5 h-2.5 stroke-[3] text-white" />
+                  </div>
+                  <span>Full Access (South, North, Healthy)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center shrink-0">
+                    <Check className="w-2.5 h-2.5 stroke-[3] text-white" />
+                  </div>
+                  <span>Priority Delivery Slot Lock</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-zinc-900 border border-zinc-700 flex items-center justify-center shrink-0">
+                    <Check className="w-2.5 h-2.5 stroke-[3] text-white" />
+                  </div>
+                  <span>Pause & Shift Dates Anytime</span>
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT / PRICING BREAKDOWN & CTA COLUMN */}
+            <div className="lg:w-[380px] shrink-0 bg-zinc-950 border border-zinc-800 rounded-2xl p-4 sm:p-6 flex flex-col justify-between space-y-4">
+              
+              {pricing3Plus1.isEligibleUpgrade ? (
+                /* UPGRADE BREAKDOWN FOR ELIGIBLE MONTHLY SUBSCRIBER */
+                <div className="space-y-2 text-left">
+                  <div className="flex items-center justify-between text-xs text-zinc-400">
+                    <span>Three-Month Package Price</span>
+                    <span className="font-mono text-zinc-300">₹{pricing3Plus1.packagePrice.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-zinc-300">
+                    <span>Already Paid – Monthly Subscription</span>
+                    <span className="font-mono text-white font-bold">-₹{pricing3Plus1.monthlyCredit.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-zinc-300">
+                    <span>Special Upgrade Offer</span>
+                    <span className="font-mono text-white font-bold">-₹{pricing3Plus1.upgradeDiscount.toLocaleString('en-IN')}</span>
+                  </div>
+
+                  <div className="pt-2 border-t border-zinc-800 flex items-baseline justify-between">
+                    <div>
+                      <span className="text-[10px] font-mono uppercase text-zinc-400 font-bold block">
+                        Remaining Amount to Pay
+                      </span>
+                      <span className="text-3xl sm:text-4xl font-black font-heading text-white tracking-tight">
+                        ₹{pricing3Plus1.finalPayable.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold uppercase bg-white text-black px-2 py-0.5 rounded">
+                      4TH MO FREE
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-zinc-400 font-medium leading-tight pt-1">
+                    Your previous monthly subscription payment will be adjusted! Enjoy an additional ₹100 upgrade discount.
+                  </p>
+                </div>
+              ) : (
+                /* NEW CUSTOMER PRICING */
+                <div className="space-y-2 text-left">
+                  <div className="flex items-center justify-between text-xs text-zinc-400">
+                    <span>Three-Month Package (90 Days)</span>
+                    <span className="font-mono text-zinc-300">₹{pricing3Plus1.packagePrice.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-zinc-300">
+                    <span>Fourth Month (30 Days)</span>
+                    <span className="font-mono text-white font-bold uppercase">100% FREE (₹0)</span>
+                  </div>
+
+                  <div className="pt-2 border-t border-zinc-800 flex items-baseline justify-between">
+                    <div>
+                      <span className="text-[10px] font-mono uppercase text-zinc-400 font-bold block">
+                        Final Amount Payable
+                      </span>
+                      <span className="text-3xl sm:text-4xl font-black font-heading text-white tracking-tight">
+                        ₹{pricing3Plus1.finalPayable.toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold uppercase bg-white text-black px-2 py-0.5 rounded">
+                      4 MONTHS TOTAL
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-zinc-400 font-medium leading-tight pt-1 font-mono">
+                    Effective rate: ₹62.50 / day for 120 days of fresh homely meals.
+                  </p>
+                </div>
+              )}
+
+              {/* CTA BUTTON (PURE HIGH-CONTRAST BLACK & WHITE) */}
+              <button
+                type="button"
+                onClick={() => onSelectPlan(PLAN_3_PLUS_1, 120, pricing3Plus1.finalPayable)}
+                className="w-full py-4 px-5 rounded-2xl bg-white hover:bg-zinc-200 text-black font-black text-xs sm:text-sm tracking-wider uppercase transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+              >
+                <span>{STUVVY_3_PLUS_1_CONFIG.ctaText}</span>
+                <ArrowRight className="w-4 h-4 stroke-[3]" />
+              </button>
+            </div>
+
+          </div>
+        </div>
+      </div>
 
       {/* WEEKLY SUBSCRIPTION POPUP / SUGGESTION BANNER (Only shown when not restricted to single assigned plan) */}
       {!assignedPlan && showWeeklySuggestion && (

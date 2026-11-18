@@ -52,6 +52,8 @@ export interface UserProfile {
   addresses?: string[];
   selectedAddress?: string;
   plan?: string;
+  currentPlan?: string;
+  planDurationDays?: number;
   startDate?: string;
   purchaseDate?: string;
   endDate?: string;

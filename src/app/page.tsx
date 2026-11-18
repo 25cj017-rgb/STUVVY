@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Navbar } from '../components/Navbar';
-import { PricingSection, SUBSCRIPTION_PLANS, PlanOption } from '../components/PricingSection';
+import { PricingSection, SUBSCRIPTION_PLANS, PLAN_3_PLUS_1, PlanOption } from '../components/PricingSection';
 import { CheckoutFlow } from '../components/CheckoutFlow';
 import { AccountDashboard } from '../components/AccountDashboard';
 import { CenteredFrameMenu } from '../components/CenteredFrameMenu';
@@ -10,6 +10,7 @@ import { PlanMenuModal } from '../components/PlanMenuModal';
 import { AdminContactModal } from '../components/AdminContactModal';
 import { CustomerTestimonialPopup } from '../components/CustomerTestimonialPopup';
 import { LandingReviewPopup } from '../components/LandingReviewPopup';
+import { Stuvvy3Plus1Popup } from '../components/Stuvvy3Plus1Popup';
 import { CartDrawer } from '../components/CartDrawer';
 import { AdminDeliveryPortal } from '../components/AdminDeliveryPortal';
 import { MobileBottomNav } from '../components/MobileBottomNav';
@@ -19,6 +20,7 @@ import { CheckCircle2, X, Eye, Phone, Lock, Sparkles, Utensils, LogIn, ChevronRi
 
 import { validateCustomerLogin, setDynamicCustomers } from '../data/customerAuth';
 import { CalendarDay } from '../components/SubscriptionCalendar';
+import { STUVVY_3_PLUS_1_CONFIG, calculate3Plus1Pricing } from '../config/subscriptionConfig';
 
 export default function Home() {
   const [activeTab, _setActiveTab] = useState<'landing' | 'discover' | 'plans' | 'checkout' | 'dashboard' | 'admin'>('landing');
@@ -38,6 +40,8 @@ export default function Home() {
   const [isAdminContactOpen, setIsAdminContactOpen] = useState(false);
   const [isTestimonialPopupOpen, setIsTestimonialPopupOpen] = useState(false);
   const [showLandingReviewPopup, setShowLandingReviewPopup] = useState(true);
+  const [show3Plus1Popup, setShow3Plus1Popup] = useState(false);
+  const [claim3Plus1Pending, setClaim3Plus1Pending] = useState(false);
   const [loginMode, setLoginMode] = useState<'subscriber' | 'admin'>('subscriber');
   const [adminCodeInput, setAdminCodeInput] = useState('');
   const [adminCodeError, setAdminCodeError] = useState('');
@@ -90,6 +94,17 @@ export default function Home() {
       const savedUser = localStorage.getItem('stuvvy_user');
       if (savedUser) {
         setUser(JSON.parse(savedUser));
+      }
+    } catch {}
+
+    // Check promotional popup session dismissal
+    try {
+      const dismissed = sessionStorage.getItem(STUVVY_3_PLUS_1_CONFIG.popupDismissKey);
+      if (!dismissed && initialTab !== 'admin') {
+        const timer = setTimeout(() => {
+          setShow3Plus1Popup(true);
+        }, 1200);
+        // Note: timer runs once on load
       }
     } catch {}
 
@@ -283,10 +298,42 @@ export default function Home() {
           localStorage.setItem('stuvvy_user', JSON.stringify(updatedUser));
         } catch {}
 
-        setActiveTab('discover');
+        if (claim3Plus1Pending) {
+          setClaim3Plus1Pending(false);
+          const pricing = calculate3Plus1Pricing(updatedUser);
+          setSelectedPlan(PLAN_3_PLUS_1);
+          setSelectedDays(120);
+          setCalculatedPrice(pricing.finalPayable);
+          setCheckoutMode('subscription');
+          setActiveTab('checkout');
+        } else {
+          setActiveTab('discover');
+        }
         setIsSuccess(false);
       }, 500);
     }, 800);
+  };
+
+  const handleClaim3Plus1 = () => {
+    try {
+      sessionStorage.setItem(STUVVY_3_PLUS_1_CONFIG.popupDismissKey, 'true');
+    } catch {}
+    setShow3Plus1Popup(false);
+
+    // If guest or not verified, guide through login/registration first
+    if (!user.isVerified) {
+      setClaim3Plus1Pending(true);
+      setShowLoginCard(true);
+      setActiveTab('landing');
+    } else {
+      // Verified user: direct to 3+1 checkout with authoritative calculation
+      const pricing = calculate3Plus1Pricing(user);
+      setSelectedPlan(PLAN_3_PLUS_1);
+      setSelectedDays(120);
+      setCalculatedPrice(pricing.finalPayable);
+      setCheckoutMode('subscription');
+      setActiveTab('checkout');
+    }
   };
 
   const handleContinueAsGuest = () => {
@@ -829,6 +876,23 @@ export default function Home() {
                   if (calendar) {
                     setSavedCalendar(calendar);
                   }
+                  if (selectedPlan.id === '3plus1') {
+                    setUser((prev) => {
+                      const updated: UserProfile = {
+                        ...prev,
+                        currentPlan: 'Stuvvy 3+1 Meal Pass',
+                        plan: 'Stuvvy 3+1 Meal Pass',
+                        consecutiveMonths: Math.max(4, prev.consecutiveMonths || 4),
+                        planDurationDays: 120,
+                        paymentAmount: calculatedPrice ? String(calculatedPrice) : '4900',
+                        paymentStatus: 'PAID',
+                      };
+                      try {
+                        localStorage.setItem('stuvvy_user', JSON.stringify(updated));
+                      } catch {}
+                      return updated;
+                    });
+                  }
                   setActiveTab('dashboard');
                 }}
                 onSwitchPlan={(newPlan, newDays, newPrice) => {
@@ -946,6 +1010,20 @@ export default function Home() {
           </div>
         </footer>
       )}
+
+      {/* STUVVY 3+1 MEAL PASS PROMOTIONAL POPUP (PURE BLACK & WHITE LAUNCH MODAL) */}
+      <Stuvvy3Plus1Popup
+        isOpen={show3Plus1Popup}
+        onClose={() => {
+          try {
+            sessionStorage.setItem(STUVVY_3_PLUS_1_CONFIG.popupDismissKey, 'true');
+          } catch {}
+          setShow3Plus1Popup(false);
+        }}
+        onClaimPass={handleClaim3Plus1}
+        user={user}
+        isGuestUser={isGuestUser || !user.isVerified}
+      />
 
       {/* CUSTOMER TESTIMONIAL & UPGRADE JOURNEY POPUP */}
       <CustomerTestimonialPopup

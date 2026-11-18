@@ -63,6 +63,7 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
   // 12 Stars definitions
   const totalStars = 12;
   const earnedStars = Math.max(1, consecutiveMonths);
+  const is3Plus1 = (planName || '').toLowerCase().includes('3+1') || (planName || '').toLowerCase().includes('3plus1') || (planName || '').toLowerCase().includes('meal pass');
 
   return (
     <div id="stuvvy-card-section" className="w-full flex flex-col items-center justify-center py-2 select-none">
@@ -142,6 +143,11 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
               <div className="text-right">
                 <div className="font-ostrich text-[9px] font-bold tracking-wider text-zinc-400">PLAN OPTED</div>
                 <div className="text-xs font-black text-purple-950 leading-tight">{planName}</div>
+                {is3Plus1 && (
+                  <div className="text-[7.5px] font-mono font-black text-zinc-900 bg-white px-1.5 py-0.5 rounded border border-purple-200 mt-0.5 inline-block uppercase">
+                    3 MO PAID • 4TH MO FREE
+                  </div>
+                )}
               </div>
             </div>
 
@@ -221,10 +227,24 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
                   STV-{last4}
                 </span>
               </div>
-              <div className="text-[7.5px] font-black font-ostrich tracking-wider text-purple-900 bg-purple-100/90 px-1.5 py-0.5 rounded border border-purple-200">
-                KITCHEN PASS
-              </div>
+              {is3Plus1 ? (
+                <div className="text-[7.5px] font-black font-mono tracking-wider text-emerald-950 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-300">
+                  4TH MO FREE: UPCOMING
+                </div>
+              ) : (
+                <div className="text-[7.5px] font-black font-ostrich tracking-wider text-purple-900 bg-purple-100/90 px-1.5 py-0.5 rounded border border-purple-200">
+                  KITCHEN PASS
+                </div>
+              )}
             </div>
+
+            {/* 3+1 MEAL PASS ENTITLEMENT BADGE (PRESERVES 12 STARS BELOW) */}
+            {is3Plus1 && (
+              <div className="bg-zinc-950 text-white rounded-md px-2 py-0.5 flex items-center justify-between text-[7px] font-mono font-bold shadow-2xs">
+                <span className="tracking-wide">STUVVY 3+1 MEAL PASS</span>
+                <span className="text-emerald-400 uppercase">3 MO PAID • 4TH MO FREE</span>
+              </div>
+            )}
 
             {/* 3. MERGED 12-STAR LOYALTY TRACKER (STARS ONLY - NO EXPLANATIONS) */}
             <div className="space-y-1 py-0.5">

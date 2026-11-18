@@ -80,6 +80,7 @@ export function formatDisplayDate(date: Date): string {
 
 /**
  * Calculates plan duration in days:
+ * - 3+1 Meal Pass: 120 days (3 months paid + 1 month free)
  * - Monthly: 30 days
  * - Weekly: 7 days
  * - Daily: 1 day
@@ -87,6 +88,9 @@ export function formatDisplayDate(date: Date): string {
 export function getPlanDurationDays(planName?: string): number {
   if (!planName) return 7; // Default to 7 days
   const norm = planName.toLowerCase().trim();
+  if (norm.includes('3+1') || norm.includes('3plus1') || norm.includes('3 plus 1') || norm.includes('three') || (norm.includes('meal pass') && !norm.includes('week') && !norm.includes('daily'))) {
+    return 120;
+  }
   if (norm.includes('month')) return 30;
   if (norm.includes('week')) return 7;
   if (norm.includes('day') || norm.includes('daily')) return 1;

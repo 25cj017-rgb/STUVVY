@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { PlanOption, SUBSCRIPTION_PLANS } from './PricingSection';
 import { SubscriptionCalendar, CalendarDay, generateUpcomingDays } from './SubscriptionCalendar';
 import { UserProfile, CartItem } from '../types';
+import { STUVVY_3_PLUS_1_CONFIG, calculate3Plus1Pricing } from '../config/subscriptionConfig';
 import { 
   ArrowLeft, CheckCircle2, ShieldCheck, Lock, Phone, MessageSquare, 
   Check, Plus, Minus, Lightbulb, Sparkles, ArrowRight, Calendar as CalendarIcon, 
@@ -82,9 +83,18 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
     return acc + price * item.quantity;
   }, 0);
 
+  // 3+1 Meal Pass pricing & eligibility
+  const is3Plus1 = currentPlan.id === '3plus1';
+  const pricing3Plus1 = calculate3Plus1Pricing(user);
+
   // Subscription calculation
-  const ratePerDay = currentPlan.ratePerDay || (currentPlan.price / (currentPlan.defaultDays || 1));
-  const subscriptionPrice = Math.round(activeFoodDays * ratePerDay);
+  const ratePerDay = is3Plus1 
+    ? STUVVY_3_PLUS_1_CONFIG.effectiveRatePerDay 
+    : (currentPlan.ratePerDay || (currentPlan.price / (currentPlan.defaultDays || 1)));
+
+  const subscriptionPrice = is3Plus1
+    ? (initialPrice || pricing3Plus1.finalPayable)
+    : Math.round(activeFoodDays * ratePerDay);
 
   const finalAmount = currentMode === 'cart' ? cartSubtotal : subscriptionPrice;
 
@@ -496,28 +506,70 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
 
             {/* Calculations Breakdown */}
             <div className="space-y-3 text-xs">
-              <div className="flex justify-between text-zinc-300">
-                <span>{currentMode === 'cart' ? 'Food Items Subtotal' : `Active Meal Days (${activeFoodDays} days)`}</span>
-                <span className="font-black text-white">₹{finalAmount}</span>
-              </div>
+              {is3Plus1 ? (
+                <>
+                  <div className="flex justify-between text-zinc-300">
+                    <span>Three-Month Package (90 Days)</span>
+                    <span className="font-mono font-bold text-white">₹{pricing3Plus1.packagePrice.toLocaleString('en-IN')}</span>
+                  </div>
 
-              <div className="flex justify-between text-zinc-300">
-                <span>Delivery & Logistics</span>
-                <span className="text-emerald-400 font-black">FREE (₹0)</span>
-              </div>
+                  {pricing3Plus1.isEligibleUpgrade && (
+                    <>
+                      <div className="flex justify-between text-zinc-300">
+                        <span>Already Paid – Monthly Subscription</span>
+                        <span className="font-mono font-bold text-emerald-400">-₹{pricing3Plus1.monthlyCredit.toLocaleString('en-IN')}</span>
+                      </div>
+                      <div className="flex justify-between text-zinc-300">
+                        <span>Special Upgrade Offer</span>
+                        <span className="font-mono font-bold text-emerald-400">-₹{pricing3Plus1.upgradeDiscount.toLocaleString('en-IN')}</span>
+                      </div>
+                    </>
+                  )}
 
-              <div className="flex justify-between text-zinc-300">
-                <span>Subsidized Meal Fund Contribution</span>
-                <span className="text-emerald-400 font-black">Included (₹0)</span>
-              </div>
+                  <div className="flex justify-between text-zinc-300">
+                    <span>Fourth Month Benefit (30 Days)</span>
+                    <span className="text-emerald-400 font-black uppercase">100% FREE (₹0)</span>
+                  </div>
+
+                  <div className="flex justify-between text-zinc-300">
+                    <span>Total Service Coverage</span>
+                    <span className="text-white font-mono font-bold">120 Days (4 Months)</span>
+                  </div>
+
+                  {pricing3Plus1.isEligibleUpgrade && (
+                    <div className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-[11px] text-zinc-300 leading-snug">
+                      {pricing3Plus1.message}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div className="flex justify-between text-zinc-300">
+                    <span>{currentMode === 'cart' ? 'Food Items Subtotal' : `Active Meal Days (${activeFoodDays} days)`}</span>
+                    <span className="font-black text-white">₹{finalAmount}</span>
+                  </div>
+
+                  <div className="flex justify-between text-zinc-300">
+                    <span>Delivery & Logistics</span>
+                    <span className="text-emerald-400 font-black">FREE (₹0)</span>
+                  </div>
+
+                  <div className="flex justify-between text-zinc-300">
+                    <span>Subsidized Meal Fund Contribution</span>
+                    <span className="text-emerald-400 font-black">Included (₹0)</span>
+                  </div>
+                </>
+              )}
 
               <div className="pt-3 border-t border-zinc-800 flex justify-between items-baseline">
                 <div>
-                  <div className="text-sm font-black text-white">Total Amount Payable</div>
+                  <div className="text-sm font-black text-white">
+                    {is3Plus1 && pricing3Plus1.isEligibleUpgrade ? 'Remaining Amount to Pay' : 'Total Amount Payable'}
+                  </div>
                   <div className="text-[10px] text-zinc-400 font-medium">All taxes & fees included</div>
                 </div>
                 <div className="text-2xl font-black text-orange-400 font-heading">
-                  ₹{finalAmount}
+                  ₹{finalAmount.toLocaleString('en-IN')}
                 </div>
               </div>
             </div>
