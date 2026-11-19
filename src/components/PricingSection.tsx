@@ -23,14 +23,14 @@ export interface PlanOption {
 export const PLAN_3_PLUS_1: PlanOption = {
   id: '3plus1',
   name: 'Stuvvy 3+1 Meal Pass',
-  price: 7500,
+  price: 7999,
   period: '/ 4 months',
-  billingText: '3 Months Paid (₹7,500) • 4th Month FREE',
+  billingText: '3 Months Paid (₹7,999) • 4th Month FREE',
   savingsBadge: 'EXCLUSIVE LAUNCH • 4TH MONTH FREE',
   isPopular: true,
   description: 'Your Meals. Your Routine. Your Reward. Pay for 3 Months and Enjoy Your 4th Month FREE!',
   defaultDays: 120,
-  ratePerDay: 62.5,
+  ratePerDay: 66.65,
   features: [
     '3 Months Paid + 1 Full Month 100% FREE',
     'Total 120 Days of Homely Chef Meals',
@@ -121,7 +121,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
     ? (SUBSCRIPTION_PLANS.find(p => p.id === userPlanNormalized || userPlanNormalized.includes(p.id) || p.name.toLowerCase().includes(userPlanNormalized)) || null)
     : null;
 
-  // Pricing calculation for Stuvvy 3+1 Meal Pass (Checks if user qualifies for the ₹4,900 upgrade)
+  // Pricing calculation for Stuvvy 3+1 Meal Pass (Unified: Pay ₹7,999 for 3 months, get 4th month FREE)
   const pricing3Plus1 = calculate3Plus1Pricing(user);
 
   // The 3 standard plans for the bottom grid
@@ -214,11 +214,6 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                 <span className="text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider bg-zinc-100 text-zinc-700 px-3 py-1 rounded-full border border-zinc-200">
                   SUBSCRIBE 3 MONTHS • GET 4TH MONTH FREE
                 </span>
-                {pricing3Plus1.isEligibleUpgrade && (
-                  <span className="text-[10px] sm:text-xs font-mono font-black uppercase tracking-wider bg-emerald-50 text-emerald-800 px-3 py-1 rounded-full border border-emerald-200">
-                    SPECIAL MONTHLY SUBSCRIBER BENEFIT
-                  </span>
-                )}
               </div>
 
               {/* HEADLINE & PROMOTIONAL COPY (STUVVY OSTRICH & HEADING FONT HIERARCHY) */}
@@ -269,71 +264,34 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
             {/* RIGHT / PRICING BREAKDOWN & CTA COLUMN */}
             <div className="lg:w-[380px] shrink-0 bg-zinc-50 border border-zinc-200 rounded-2xl p-4 sm:p-6 flex flex-col justify-between space-y-4">
               
-              {pricing3Plus1.isEligibleUpgrade ? (
-                /* UPGRADE BREAKDOWN FOR ELIGIBLE MONTHLY SUBSCRIBER */
-                <div className="space-y-2 text-left">
-                  <div className="flex items-center justify-between text-xs text-zinc-600 font-semibold">
-                    <span>Three-Month Package Price</span>
-                    <span className="font-mono text-zinc-950 font-bold">₹{pricing3Plus1.packagePrice.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-zinc-700">
-                    <span>Already Paid – Monthly Subscription</span>
-                    <span className="font-mono text-emerald-700 font-bold">-₹{pricing3Plus1.monthlyCredit.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-zinc-700">
-                    <span>Special Upgrade Offer</span>
-                    <span className="font-mono text-emerald-700 font-bold">-₹{pricing3Plus1.upgradeDiscount.toLocaleString('en-IN')}</span>
-                  </div>
+              <div className="space-y-2 text-left">
+                <div className="flex items-center justify-between text-xs text-zinc-600 font-semibold">
+                  <span>Three-Month Package (90 Days)</span>
+                  <span className="font-mono text-zinc-950 font-bold">₹{pricing3Plus1.packagePrice.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs text-zinc-700">
+                  <span>Fourth Month (30 Days)</span>
+                  <span className="font-mono text-emerald-700 font-bold uppercase">100% FREE (₹0)</span>
+                </div>
 
-                  <div className="pt-2 border-t border-zinc-200 flex items-baseline justify-between">
-                    <div>
-                      <span className="text-[10px] font-mono uppercase text-zinc-500 font-bold block">
-                        Remaining Amount to Pay
-                      </span>
-                      <span className="font-ostrich text-3xl sm:text-4xl font-black text-zinc-950 tracking-tight leading-none">
-                        ₹{pricing3Plus1.finalPayable.toLocaleString('en-IN')}
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-mono font-bold uppercase bg-zinc-950 text-white px-2 py-0.5 rounded shadow-2xs">
-                      4TH MO FREE
+                <div className="pt-2 border-t border-zinc-200 flex items-baseline justify-between">
+                  <div>
+                    <span className="text-[10px] font-mono uppercase text-zinc-500 font-bold block">
+                      Total Payable Amount
+                    </span>
+                    <span className="font-ostrich text-3xl sm:text-4xl font-black text-zinc-950 tracking-tight leading-none">
+                      ₹{pricing3Plus1.finalPayable.toLocaleString('en-IN')}
                     </span>
                   </div>
-
-                  <p className="text-[11px] text-zinc-600 font-medium leading-tight pt-1">
-                    Your previous monthly subscription payment will be adjusted! Enjoy an additional ₹100 upgrade discount.
-                  </p>
+                  <span className="text-[10px] font-mono font-bold uppercase bg-zinc-950 text-white px-2 py-0.5 rounded shadow-2xs">
+                    4 MONTHS TOTAL
+                  </span>
                 </div>
-              ) : (
-                /* NEW CUSTOMER PRICING */
-                <div className="space-y-2 text-left">
-                  <div className="flex items-center justify-between text-xs text-zinc-600 font-semibold">
-                    <span>Three-Month Package (90 Days)</span>
-                    <span className="font-mono text-zinc-950 font-bold">₹{pricing3Plus1.packagePrice.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-zinc-700">
-                    <span>Fourth Month (30 Days)</span>
-                    <span className="font-mono text-emerald-700 font-bold uppercase">100% FREE (₹0)</span>
-                  </div>
 
-                  <div className="pt-2 border-t border-zinc-200 flex items-baseline justify-between">
-                    <div>
-                      <span className="text-[10px] font-mono uppercase text-zinc-500 font-bold block">
-                        Final Amount Payable
-                      </span>
-                      <span className="font-ostrich text-3xl sm:text-4xl font-black text-zinc-950 tracking-tight leading-none">
-                        ₹{pricing3Plus1.finalPayable.toLocaleString('en-IN')}
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-mono font-bold uppercase bg-zinc-950 text-white px-2 py-0.5 rounded shadow-2xs">
-                      4 MONTHS TOTAL
-                    </span>
-                  </div>
-
-                  <p className="text-[11px] text-zinc-600 font-medium leading-tight pt-1 font-mono">
-                    Effective rate: ₹62.50 / day for 120 days of fresh homely meals.
-                  </p>
-                </div>
-              )}
+                <p className="text-[11px] text-zinc-600 font-medium leading-tight pt-1 font-mono">
+                  Effective rate: ₹{STUVVY_3_PLUS_1_CONFIG.effectiveRatePerDay.toFixed(2)} / day for 120 days of fresh homely meals.
+                </p>
+              </div>
 
               {/* CTA BUTTON (HIGH-CONTRAST BLACK BUTTON WITH WHITE LETTERS) */}
               <button

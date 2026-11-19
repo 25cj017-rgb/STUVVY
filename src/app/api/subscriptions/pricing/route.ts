@@ -41,43 +41,15 @@ export async function POST(request: Request) {
       }
     }
 
-    if (isEligibleMonthly) {
-      return NextResponse.json({
-        success: true,
-        planId: STUVVY_3_PLUS_1_CONFIG.planId,
-        planName: STUVVY_3_PLUS_1_CONFIG.name,
-        isEligibleMonthlySubscriber: true,
-        packagePrice: STUVVY_3_PLUS_1_CONFIG.packagePrice, // ₹7,500
-        alreadyPaidCredit: STUVVY_3_PLUS_1_CONFIG.eligibleMonthlyCredit, // -₹2,500
-        upgradeDiscount: STUVVY_3_PLUS_1_CONFIG.upgradeDiscount, // -₹100
-        finalPayableAmount: STUVVY_3_PLUS_1_CONFIG.upgradePayablePrice, // ₹4,900
-        freeMonthsCount: 1,
-        totalDurationDays: STUVVY_3_PLUS_1_CONFIG.totalDays, // 120 days
-        freeMonthEntitlement: {
-          status: 'UPCOMING',
-          startsOnDay: 91,
-          durationDays: 30,
-          guaranteedFree: true
-        },
-        message: 'Your previous monthly subscription payment will be adjusted! Enjoy an additional ₹100 upgrade discount.',
-        customer: {
-          name: customerRecord?.name,
-          mobile: customerRecord?.mobileNo,
-          previousPlan: customerRecord?.plan
-        }
-      });
-    }
-
-    // Standard / New Customer Pricing
     return NextResponse.json({
       success: true,
       planId: STUVVY_3_PLUS_1_CONFIG.planId,
       planName: STUVVY_3_PLUS_1_CONFIG.name,
       isEligibleMonthlySubscriber: false,
-      packagePrice: STUVVY_3_PLUS_1_CONFIG.packagePrice, // ₹7,500
+      packagePrice: STUVVY_3_PLUS_1_CONFIG.packagePrice, // ₹7,999
       alreadyPaidCredit: 0,
       upgradeDiscount: 0,
-      finalPayableAmount: STUVVY_3_PLUS_1_CONFIG.newCustomerPrice, // ₹7,500
+      finalPayableAmount: STUVVY_3_PLUS_1_CONFIG.packagePrice, // ₹7,999
       freeMonthsCount: 1,
       totalDurationDays: STUVVY_3_PLUS_1_CONFIG.totalDays, // 120 days
       freeMonthEntitlement: {
@@ -86,7 +58,7 @@ export async function POST(request: Request) {
         durationDays: 30,
         guaranteedFree: true
       },
-      message: 'Subscribe for 3 Months upfront and get your 4th Month completely FREE!'
+      message: 'Pay ₹7,999 for 3 months upfront and enjoy your 4th month completely FREE! (Total 120 days of meals).'
     });
   } catch (err: any) {
     return NextResponse.json(

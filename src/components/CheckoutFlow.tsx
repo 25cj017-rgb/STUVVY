@@ -605,19 +605,6 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
                     <span className="font-mono font-bold text-white">₹{pricing3Plus1.packagePrice.toLocaleString('en-IN')}</span>
                   </div>
 
-                  {pricing3Plus1.isEligibleUpgrade && (
-                    <>
-                      <div className="flex justify-between text-zinc-300">
-                        <span>Already Paid – Monthly Subscription</span>
-                        <span className="font-mono font-bold text-emerald-400">-₹{pricing3Plus1.monthlyCredit.toLocaleString('en-IN')}</span>
-                      </div>
-                      <div className="flex justify-between text-zinc-300">
-                        <span>Special Upgrade Offer</span>
-                        <span className="font-mono font-bold text-emerald-400">-₹{pricing3Plus1.upgradeDiscount.toLocaleString('en-IN')}</span>
-                      </div>
-                    </>
-                  )}
-
                   <div className="flex justify-between text-zinc-300">
                     <span>Fourth Month Benefit (30 Days)</span>
                     <span className="text-emerald-400 font-black uppercase">100% FREE (₹0)</span>
@@ -628,11 +615,9 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
                     <span className="text-white font-mono font-bold">120 Days (4 Months)</span>
                   </div>
 
-                  {pricing3Plus1.isEligibleUpgrade && (
-                    <div className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-[11px] text-zinc-300 leading-snug">
-                      {pricing3Plus1.message}
-                    </div>
-                  )}
+                  <div className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-[11px] text-zinc-300 leading-snug">
+                    Pay for 3 months upfront (₹7,999) and enjoy your 4th month completely FREE! (Total 120 days of homely meals)
+                  </div>
                 </>
               ) : (
                 <>
@@ -667,7 +652,7 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
               <div className="pt-3 border-t border-zinc-800 flex justify-between items-baseline">
                 <div>
                   <div className="text-sm font-black text-white">
-                    {is3Plus1 && pricing3Plus1.isEligibleUpgrade ? 'Remaining Amount to Pay' : 'Total Amount Payable'}
+                    Total Amount Payable
                   </div>
                   <div className="text-[10px] text-zinc-400 font-medium">All taxes & fees included</div>
                 </div>

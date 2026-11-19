@@ -6,11 +6,9 @@ import { parseDateFlexible } from '../utils/subscriptionUtils';
  * 
  * Rules:
  * - 3 months paid (90 days) + 1 month completely free (30 days) = 120 days total.
- * - Standard 3-month package: ₹7,500
- * - Eligible monthly subscriber (already paid ₹2,500 monthly plan):
- *     ₹7,500 - ₹2,500 (credit) - ₹100 (upgrade discount) = ₹4,900 final payable.
- * - New / non-monthly customer: ₹7,500 final payable.
- * - Both receive the 4th month 100% free.
+ * - 3-month package: ₹7,999
+ * - Fourth month: 100% completely FREE (₹0).
+ * - Total payable: ₹7,999 for 120 days of meals.
  */
 export const STUVVY_3_PLUS_1_CONFIG = {
   planId: '3plus1',
@@ -24,23 +22,23 @@ export const STUVVY_3_PLUS_1_CONFIG = {
   
   // Pricing structure
   monthlyPrice: 2500,
-  packagePrice: 7500, // 3 months package
-  eligibleMonthlyCredit: 2500,
-  upgradeDiscount: 100,
-  upgradePayablePrice: 4900, // 7500 - 2500 - 100
-  newCustomerPrice: 7500,
+  packagePrice: 7999, // 3 months package
+  eligibleMonthlyCredit: 0,
+  upgradeDiscount: 0,
+  upgradePayablePrice: 7999,
+  newCustomerPrice: 7999,
 
   // Duration
   paidDurationDays: 90,
   freeDurationDays: 30,
   totalDays: 120, // 4 months total
-  effectiveRatePerDay: 62.5, // 7500 / 120 = ₹62.50 / day
+  effectiveRatePerDay: 66.65, // 7999 / 120 = ₹66.65 / day
 
   // Promotional Messages
   upgradeMessage:
-    'Your previous monthly subscription payment will be adjusted! Enjoy an additional ₹100 upgrade discount.',
+    'Pay ₹7,999 for 3 months upfront and enjoy your 4th month completely FREE! (Total 120 days of meals).',
   newCustomerMessage:
-    'Pay for 3 months upfront and receive your 4th consecutive month completely FREE (Total 120 days of meals).',
+    'Pay for 3 months upfront (₹7,999) and enjoy your 4th month completely FREE! (Total 120 days of meals).',
 } as const;
 
 export interface PricingCalculationResult {
@@ -56,57 +54,23 @@ export interface PricingCalculationResult {
 }
 
 /**
- * Checks whether a given user profile is an active/verified monthly subscriber
- * eligible for the ₹4,900 upgrade.
+ * Checks whether a given user profile is an active/verified monthly subscriber.
  */
 export function checkMonthlyUpgradeEligibility(user?: UserProfile | null): boolean {
-  if (!user) return false;
-
-  const currentPlan = (user.currentPlan || '').toLowerCase();
-  const rawSubscribedPlan = ((user as any).plan || '').toLowerCase();
-  const history = (user as any).subscriptionHistory || [];
-
-  const hasMonthlyInCurrent =
-    currentPlan.includes('month') ||
-    rawSubscribedPlan.includes('month');
-
-  const hasMonthlyInHistory = Array.isArray(history) && history.some((h: any) =>
-    (h.plan || '').toLowerCase().includes('month')
-  );
-
-  const paymentStatus = ((user as any).paymentStatus || '').toUpperCase();
-  const paymentAmount = parseInt(String((user as any).paymentAmount || '0').replace(/\D/g, ''), 10);
-  const isPaid = paymentStatus === 'PAID' || paymentAmount >= 2400 || (user as any).isVerified;
-
-  return (hasMonthlyInCurrent || hasMonthlyInHistory) && isPaid;
+  return false;
 }
 
 /**
  * Calculates authoritative pricing and dynamic breakdown for the 3+1 Meal Pass.
+ * Unified for all users: Pay ₹7,999 for 3 months and get the 4th month completely free.
  */
 export function calculate3Plus1Pricing(user?: UserProfile | null): PricingCalculationResult {
-  const isEligibleUpgrade = checkMonthlyUpgradeEligibility(user);
-
-  if (isEligibleUpgrade) {
-    return {
-      isEligibleUpgrade: true,
-      packagePrice: STUVVY_3_PLUS_1_CONFIG.packagePrice,
-      monthlyCredit: STUVVY_3_PLUS_1_CONFIG.eligibleMonthlyCredit,
-      upgradeDiscount: STUVVY_3_PLUS_1_CONFIG.upgradeDiscount,
-      finalPayable: STUVVY_3_PLUS_1_CONFIG.upgradePayablePrice, // ₹4,900
-      message: STUVVY_3_PLUS_1_CONFIG.upgradeMessage,
-      totalDays: STUVVY_3_PLUS_1_CONFIG.totalDays,
-      paidDays: STUVVY_3_PLUS_1_CONFIG.paidDurationDays,
-      freeDays: STUVVY_3_PLUS_1_CONFIG.freeDurationDays,
-    };
-  }
-
   return {
     isEligibleUpgrade: false,
     packagePrice: STUVVY_3_PLUS_1_CONFIG.packagePrice,
     monthlyCredit: 0,
     upgradeDiscount: 0,
-    finalPayable: STUVVY_3_PLUS_1_CONFIG.newCustomerPrice, // ₹7,500
+    finalPayable: STUVVY_3_PLUS_1_CONFIG.packagePrice, // ₹7,999
     message: STUVVY_3_PLUS_1_CONFIG.newCustomerMessage,
     totalDays: STUVVY_3_PLUS_1_CONFIG.totalDays,
     paidDays: STUVVY_3_PLUS_1_CONFIG.paidDurationDays,

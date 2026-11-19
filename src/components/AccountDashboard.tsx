@@ -270,7 +270,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
 
   if (rawPlan.includes('3+1') || rawPlan.includes('3plus1') || (rawPlan.includes('meal pass') && !rawPlan.includes('week'))) {
     optedPlanName = 'Stuvvy 3+1 Meal Pass';
-    optedPlanPrice = userPaidAmountNumber || 4900;
+    optedPlanPrice = userPaidAmountNumber || 7999;
     optedPlanPeriod = '/ 4 months';
     optedPlanDefaultDays = 120;
   } else if (rawPlan.includes('day') || rawPlan.includes('daily')) {
