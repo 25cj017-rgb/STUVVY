@@ -600,22 +600,22 @@ export const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
             <div className="space-y-3 text-xs">
               {is3Plus1 ? (
                 <>
-                  <div className="flex justify-between text-zinc-300">
+                  <div className="flex justify-between text-zinc-300 font-editorial">
                     <span>Three-Month Package (90 Days)</span>
-                    <span className="font-mono font-bold text-white">₹{pricing3Plus1.packagePrice.toLocaleString('en-IN')}</span>
+                    <span className="font-astrid font-bold text-white">₹{pricing3Plus1.packagePrice.toLocaleString('en-IN')}</span>
                   </div>
 
-                  <div className="flex justify-between text-zinc-300">
+                  <div className="flex justify-between text-zinc-300 font-editorial">
                     <span>Fourth Month Benefit (30 Days)</span>
-                    <span className="text-emerald-400 font-black uppercase">100% FREE (₹0)</span>
+                    <span className="text-emerald-400 font-bold uppercase tracking-astrid text-[11px]">100% FREE (₹0)</span>
                   </div>
 
-                  <div className="flex justify-between text-zinc-300">
+                  <div className="flex justify-between text-zinc-300 font-editorial">
                     <span>Total Service Coverage</span>
-                    <span className="text-white font-mono font-bold">120 Days (4 Months)</span>
+                    <span className="text-white font-astrid font-bold">120 Days (4 Months)</span>
                   </div>
 
-                  <div className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-[11px] text-zinc-300 leading-snug">
+                  <div className="p-2.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs font-editorial text-zinc-300 leading-snug">
                     Pay for 3 months upfront (₹7,999) and enjoy your 4th month completely FREE! (Total 120 days of homely meals)
                   </div>
                 </>

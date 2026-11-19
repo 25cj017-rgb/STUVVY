@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, Outfit } from "next/font/google";
+import { Plus_Jakarta_Sans, Outfit, Cinzel_Decorative, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -11,6 +11,20 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 const outfit = Outfit({
   variable: "--font-outfit",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const cinzelDecorative = Cinzel_Decorative({
+  variable: "--font-cinzel",
+  subsets: ["latin"],
+  weight: ["700", "900"],
+  display: "swap",
+});
+
+const cormorantGaramond = Cormorant_Garamond({
+  variable: "--font-cormorant",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -57,7 +71,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${plusJakartaSans.variable} ${outfit.variable} h-full antialiased`}>
+    <html lang="en" className={`${plusJakartaSans.variable} ${outfit.variable} ${cinzelDecorative.variable} ${cormorantGaramond.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans text-gray-900 bg-slate-900">{children}</body>
     </html>
   );

@@ -53,6 +53,29 @@
   --font-sans: var(--font-plus-jakarta), var(--font-outfit), system-ui, -apple-system, sans-serif;
   --font-heading: var(--font-outfit), var(--font-plus-jakarta), system-ui, sans-serif;
   --font-ostrich: 'Ostrich Sans', var(--font-heading), system-ui, sans-serif;
+  --font-luxury: var(--font-cinzel), 'Cinzel Decorative', 'Didot', 'Bodoni MT', serif;
+  --font-editorial: var(--font-cormorant), 'Cormorant Garamond', 'Baskerville', 'Playfair Display', serif;
+}
+
+/* Luxury Astrid Ligature & Editorial Display Styles */
+.font-astrid {
+  font-family: var(--font-luxury);
+  letter-spacing: 0.04em;
+}
+
+.font-editorial {
+  font-family: var(--font-editorial);
+  letter-spacing: -0.01em;
+}
+
+.tracking-astrid {
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.tracking-astrid-wide {
+  letter-spacing: 0.38em;
+  text-transform: uppercase;
 }
 
 /* Ostrich Sans Display Hierarchy Classes */
