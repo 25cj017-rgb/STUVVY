@@ -208,32 +208,32 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                   alt="Stuvvy"
                   className="h-8 sm:h-9 w-auto object-contain"
                 />
-                <span className="text-[9px] sm:text-[10px] font-editorial font-bold uppercase tracking-astrid bg-zinc-950 text-white px-3 py-1 rounded-full shadow-xs">
+                <span className="text-[10px] sm:text-xs font-mono font-black uppercase tracking-widest bg-zinc-950 text-white px-3 py-1 rounded-full shadow-xs">
                   ★ NEW LAUNCH
                 </span>
-                <span className="text-[9px] sm:text-[10px] font-editorial font-semibold uppercase tracking-astrid bg-zinc-100 text-zinc-700 px-3 py-1 rounded-full border border-zinc-200">
+                <span className="text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider bg-zinc-100 text-zinc-700 px-3 py-1 rounded-full border border-zinc-200">
                   SUBSCRIBE 3 MONTHS • GET 4TH MONTH FREE
                 </span>
               </div>
 
-              {/* HEADLINE & PROMOTIONAL COPY (ASTRID LUXURY LIGATURE & EDITORIAL STYLING) */}
-              <div className="space-y-2">
-                <div className="text-[10px] sm:text-[11px] font-editorial font-semibold text-zinc-500 uppercase tracking-astrid-wide">
-                  INTRODUCING • {STUVVY_3_PLUS_1_CONFIG.headline}
+              {/* HEADLINE & PROMOTIONAL COPY (NORMAL STUVVY HEADING FONT) */}
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-mono font-bold text-zinc-500 uppercase tracking-widest">
+                  {STUVVY_3_PLUS_1_CONFIG.headline}
                 </div>
-                <h3 className="font-astrid text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight text-zinc-950 uppercase leading-none">
+                <h3 className="text-2xl sm:text-3xl md:text-4xl font-black font-heading tracking-tight text-zinc-950 uppercase leading-none">
                   {STUVVY_3_PLUS_1_CONFIG.name}
                 </h3>
-                <p className="font-editorial text-sm sm:text-base font-bold tracking-astrid text-zinc-900 leading-snug">
+                <p className="font-heading text-sm sm:text-base font-extrabold text-zinc-800 leading-snug">
                   {STUVVY_3_PLUS_1_CONFIG.tagline}
                 </p>
-                <p className="text-xs sm:text-sm font-editorial text-zinc-600 font-medium leading-relaxed max-w-xl">
+                <p className="text-xs text-zinc-600 font-medium leading-relaxed max-w-xl">
                   {STUVVY_3_PLUS_1_CONFIG.subheadline} Total 120 days of authentic stone-ground homely meals with zero hassle.
                 </p>
               </div>
 
-              {/* BULLET HIGHLIGHTS (ASTRID EDITORIAL TYPOGRAPHY & CRISP CHECK ICONS) */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 text-xs font-editorial font-semibold text-zinc-800">
+              {/* BULLET HIGHLIGHTS (BLACK LETTERS WITH CRISP CHECK ICONS) */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 text-xs font-bold text-zinc-800">
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full bg-zinc-100 border border-zinc-300 flex items-center justify-center shrink-0">
                     <Check className="w-2.5 h-2.5 stroke-[3] text-zinc-950" />
@@ -265,30 +265,30 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
             <div className="lg:w-[380px] shrink-0 bg-zinc-50 border border-zinc-200 rounded-2xl p-4 sm:p-6 flex flex-col justify-between space-y-4">
               
               <div className="space-y-2 text-left">
-                <div className="flex items-center justify-between text-xs font-editorial font-semibold tracking-wide text-zinc-700">
+                <div className="flex items-center justify-between text-xs text-zinc-600 font-semibold">
                   <span>Three-Month Package (90 Days)</span>
-                  <span className="font-astrid text-zinc-950 font-bold">₹{pricing3Plus1.packagePrice.toLocaleString('en-IN')}</span>
+                  <span className="font-mono text-zinc-950 font-bold">₹{pricing3Plus1.packagePrice.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex items-center justify-between text-xs font-editorial font-semibold tracking-wide text-zinc-700">
+                <div className="flex items-center justify-between text-xs text-zinc-700">
                   <span>Fourth Month (30 Days)</span>
-                  <span className="font-editorial text-emerald-700 font-bold uppercase tracking-astrid">100% FREE (₹0)</span>
+                  <span className="font-mono text-emerald-700 font-bold uppercase">100% FREE (₹0)</span>
                 </div>
 
                 <div className="pt-2 border-t border-zinc-200 flex items-baseline justify-between">
                   <div>
-                    <span className="text-[10px] sm:text-[11px] font-editorial font-semibold uppercase tracking-astrid text-zinc-500 block">
+                    <span className="text-[10px] font-mono uppercase text-zinc-500 font-bold block">
                       Total Payable Amount
                     </span>
-                    <span className="font-astrid text-3xl sm:text-4xl font-bold text-zinc-950 tracking-tight leading-none">
+                    <span className="text-3xl sm:text-4xl font-black font-heading text-zinc-950 tracking-tight leading-none">
                       ₹{pricing3Plus1.finalPayable.toLocaleString('en-IN')}
                     </span>
                   </div>
-                  <span className="text-[9px] sm:text-[10px] font-editorial font-bold uppercase tracking-astrid bg-zinc-950 text-white px-2.5 py-1 rounded shadow-2xs">
+                  <span className="text-[10px] font-mono font-bold uppercase bg-zinc-950 text-white px-2 py-0.5 rounded shadow-2xs">
                     4 MONTHS TOTAL
                   </span>
                 </div>
 
-                <p className="text-xs font-editorial text-zinc-600 font-medium leading-tight pt-1">
+                <p className="text-[11px] text-zinc-600 font-medium leading-tight pt-1 font-mono">
                   Effective rate: ₹{STUVVY_3_PLUS_1_CONFIG.effectiveRatePerDay.toFixed(2)} / day for 120 days of fresh homely meals.
                 </p>
               </div>
@@ -297,7 +297,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
               <button
                 type="button"
                 onClick={() => onSelectPlan(PLAN_3_PLUS_1, 120, pricing3Plus1.finalPayable)}
-                className="w-full py-4 px-5 rounded-2xl bg-zinc-950 hover:bg-black text-white font-editorial font-bold text-xs sm:text-sm tracking-astrid uppercase transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] hover:scale-[1.01]"
+                className="w-full py-4 px-5 rounded-2xl bg-zinc-950 hover:bg-black text-white font-black text-xs sm:text-sm tracking-wider uppercase transition-all shadow-xl flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] hover:scale-[1.01]"
               >
                 <span>{STUVVY_3_PLUS_1_CONFIG.ctaText}</span>
                 <ArrowRight className="w-4 h-4 stroke-[3]" />
