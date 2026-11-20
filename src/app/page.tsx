@@ -352,7 +352,7 @@ export default function Home() {
   const handleAdminCodeLogin = (e: React.FormEvent) => {
     e.preventDefault();
     const cleaned = adminCodeInput.trim();
-    if (cleaned === '9344' || cleaned === '1234') {
+    if (cleaned === '8825') {
       setAdminCodeError('');
       setAdminCodeInput('');
       if (typeof window !== 'undefined') {

@@ -51,17 +51,17 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
     setTimeout(() => setToastMessage(''), 3000);
   };
 
-  // Check Admin PIN (default 9344 or 1234)
+  // Check Admin PIN (8825)
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pinInput === '9344' || pinInput === '1234' || pinInput === 'STUVVY') {
+    if (pinInput.trim() === '8825') {
       setIsAuthenticated(true);
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('stuvvy_admin_auth', 'true');
       }
       setPinError('');
     } else {
-      setPinError('Invalid Admin Passcode. Please enter 9344 to verify.');
+      setPinError('Invalid Admin Passcode. Please enter 8825 to verify.');
     }
   };
 
@@ -463,7 +463,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
                 type="password"
                 inputMode="numeric"
                 autoFocus
-                placeholder="Enter 4-Digit Admin PIN (e.g. 9344)"
+                placeholder="Enter 4-Digit Admin PIN"
                 value={pinInput}
                 onChange={(e) => {
                   setPinInput(e.target.value);
