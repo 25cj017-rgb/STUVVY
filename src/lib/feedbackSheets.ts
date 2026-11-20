@@ -18,7 +18,7 @@ export const FEEDBACK_SHEET_CSV_URL =
 export const FEEDBACK_SHEET_CSV_BACKUP_URL =
   'https://docs.google.com/spreadsheets/d/1mAmMsLeinW8FdSy8p8uQIRPDMGKls82U4n9F16lPpvk/export?format=csv';
 
-// Fallback initial reviews (including Sanjana's verified first-customer feedback and Yamuna J N's full feedback)
+// Fallback initial reviews (including Sanjana's verified first-customer feedback and Yamuna & Shalini's feedback form responses)
 export const DEFAULT_FEEDBACK_ENTRIES: FeedbackEntry[] = [
   {
     id: 'feedback-sanjana-1',
@@ -41,22 +41,14 @@ export const DEFAULT_FEEDBACK_ENTRIES: FeedbackEntry[] = [
     timestamp: '11/14/2026',
   },
   {
-    id: 'feedback-chandran-1',
-    name: 'Chandran',
-    mobile: '9444746064',
-    tag: 'Upgraded Subscriber',
-    rating: 5,
-    reviewText: 'Good work keep doing the same',
-    timestamp: '11/12/2026',
-  },
-  {
-    id: 'feedback-priyanka-1',
-    name: 'PRIYANKA S',
-    mobile: '7094704460',
+    id: 'feedback-shalini-1',
+    name: 'SHALINI',
+    mobile: '7548888549',
     tag: 'Monthly Subscriber',
     rating: 5,
-    reviewText: 'Good start',
-    timestamp: '11/12/2026',
+    reviewText:
+      "Good packaging , good quality ,good taste — Maintain the same quality and taste, don’t change",
+    timestamp: '11/16/2026',
   },
 ];
 

@@ -11,7 +11,7 @@ export interface LandingReviewEntry {
   rating?: number;
 }
 
-// Single genuine customer review for initial baseline
+// Fallback genuine customer feedback reviews (Sanjana, Yamuna, Shalini from the verified feedback form)
 export const DEFAULT_LANDING_REVIEWS: LandingReviewEntry[] = [
   {
     id: 'review-sanjana-1',
@@ -30,18 +30,12 @@ export const DEFAULT_LANDING_REVIEWS: LandingReviewEntry[] = [
       "Exceeded all my expectations. Stuvvy beats other delivery services on both price and service — Food exceeded all my expectation.. quality wise, quantity wise, and taste wise. I can't even point out a single standout dish because I genuinely enjoyed every single one. Stuvvy is already doing great work in food delivery. Compared to other delivery services that are costlier and not up to the mark, Stuvvy's service is more than satisfying. I hope you keep up this exact same standard as you grow and gain a huge number of customers. Wishing great heights for Stuvvy!",
   },
   {
-    id: 'review-chandran-1',
-    name: 'Chandran',
-    tag: 'Upgraded Subscriber',
-    rating: 5,
-    reviewText: 'Good work keep doing the same',
-  },
-  {
-    id: 'review-priyanka-1',
-    name: 'PRIYANKA S',
+    id: 'review-shalini-1',
+    name: 'SHALINI',
     tag: 'Monthly Subscriber',
     rating: 5,
-    reviewText: 'Good start',
+    reviewText:
+      "Good packaging , good quality ,good taste — Maintain the same quality and taste, don’t change",
   },
 ];
 

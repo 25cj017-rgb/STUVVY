@@ -52,7 +52,11 @@ function getDeliveredCountsByMobile(): Map<string, number> {
 
 export async function GET() {
   try {
-    const { source, customers: sheetCustomers } = await fetchCustomersFromSource();
+    // 1. Live customer feedback submissions from the Google Feedback Sheet
+    const { source: feedbackSource, feedback } = await fetchFeedbackFromSource();
+
+    // 2. Fetch customer details strictly for optional profile enrichment (locality, journey steps, delivery count)
+    const { customers: sheetCustomers } = await fetchCustomersFromSource();
     const rawCustomers: CustomerRow[] =
       sheetCustomers.length > 0
         ? sheetCustomers
@@ -75,135 +79,118 @@ export async function GET() {
 
     const testimonials: CustomerTestimonialItem[] = [];
 
-    for (const [custKey, rows] of byCustomer.entries()) {
-      const primaryRow = rows[rows.length - 1];
-      const firstRow = rows[0];
-      const mobile = (primaryRow.mobileNo || firstRow.mobileNo || '').replace(/\D/g, '').slice(-10);
-      const deliveredCount = deliveredCounts.get(mobile) || 0;
-      const normName = (primaryRow.name || firstRow.name || '').trim().toUpperCase();
-      const isSanjana = normName.includes('SANJANA');
-
-      // Build ordered, non-overwritten plan history
-      const history = primaryRow.subscriptionHistory && primaryRow.subscriptionHistory.length > 0
-        ? primaryRow.subscriptionHistory
-        : rows
-            .filter((r) => Boolean(r.plan))
-            .map((r) => ({ plan: r.plan as string, startDate: r.startDate, purchaseDate: r.purchaseDate, subscriberType: r.subscriberType }));
-
-      const distinctPlans: string[] = [];
-      for (const h of history) {
-        if (h.plan && distinctPlans[distinctPlans.length - 1] !== h.plan) {
-          distinctPlans.push(h.plan);
-        }
-      }
-
-      const hasUpgraded = distinctPlans.length > 1 || rows.some((r) => r.subscriberType === 'Upgrade');
-      const journeySteps: string[] = [];
-
-      if (distinctPlans.length > 1) {
-        // Show full upgrade journey, inserting "Food Delivered" between initial plan and upgrade when deliveries exist
-        journeySteps.push(distinctPlans[0]);
-        if (deliveredCount > 0) {
-          journeySteps.push('Food Delivered');
-        }
-        for (let i = 1; i < distinctPlans.length; i++) {
-          const upgradedLabel = distinctPlans[i].toLowerCase().includes('upgrade')
-            ? distinctPlans[i]
-            : `${distinctPlans[i]} Upgrade`;
-          journeySteps.push(upgradedLabel);
-        }
-      } else if (distinctPlans.length === 1) {
-        journeySteps.push(distinctPlans[0]);
-        if (deliveredCount > 0) {
-          journeySteps.push('Food Delivered');
-        }
-      }
-
-      const latestReviewRow = [...rows].reverse().find((r) => Boolean(r.review));
-      const latestRatingRow = [...rows].reverse().find((r) => typeof r.rating === 'number');
-      const latestPhotoRow = [...rows].reverse().find((r) => Boolean(r.photoUrl));
-
-      let customerReview = latestReviewRow?.review;
-      // Guarantee Sanjana's authentic first-customer review is anchored to Sanjana
-      if (isSanjana && (!customerReview || customerReview.length < 10)) {
-        customerReview = "Hi, The food is really good. And importantly it's exactly like home food. Especially I liked ur packing please keep doing the same. I'm really happy with ur service. I believe and wish you keep doing the same work all the time. I'm honestly happy with the taste and work….. One small request from my side is I personally don't want to include banana due to my dad's health requirements…";
-      }
-
-      // Guarantee Yamuna J N's authentic feedback is anchored to Yamuna J N
-      if (normName.includes('YAMUNA') && (!customerReview || customerReview.length < 10)) {
-        customerReview = "Exceeded all my expectations. Stuvvy beats other delivery services on both price and service — Food exceeded all my expectation.. quality wise, quantity wise, and taste wise. I can't even point out a single standout dish because I genuinely enjoyed every single one. Stuvvy is already doing great work in food delivery. Compared to other delivery services that are costlier and not up to the mark, Stuvvy's service is more than satisfying. I hope you keep up this exact same standard as you grow and gain a huge number of customers. Wishing great heights for Stuvvy!";
-      }
-
-      testimonials.push({
-        id: `cust-${custKey}`,
-        name: primaryRow.name || firstRow.name,
-        locality: primaryRow.locality || firstRow.locality,
-        photoUrl: latestPhotoRow?.photoUrl,
-        review: customerReview,
-        rating: latestRatingRow?.rating || 5,
-        journeySteps,
-        hasUpgraded,
-        isFirstCustomer: isSanjana,
-        deliveredCount,
-      });
-    }
-
-    // Merge live customer feedback submissions from the new Google Feedback Sheet
-    const { source: feedbackSource, feedback } = await fetchFeedbackFromSource();
-
+    // ONLY create testimonials from verified feedback submissions (never from customer details rows)
     for (const item of feedback) {
-      if (!item.reviewText) continue;
+      if (!item.reviewText || item.reviewText.trim().length === 0) continue;
+
       const cleanMobile = (item.mobile || '').replace(/\D/g, '').slice(-10);
       const cleanName = (item.name || '').trim().toUpperCase();
-      const itemKey = makeCustomerKey(item.name, item.mobile);
+      const isSanjana = cleanName.includes('SANJANA') || cleanMobile === '9444746064';
 
-      // Strictly match by BOTH name and mobile number or customer key
-      const existing = testimonials.find((t) => {
-        const tKey = t.id.replace(/^cust-/, '');
-        if (tKey && itemKey && tKey === itemKey) return true;
-
-        const tDigits = (t.id.split('_')[1] || '').replace(/\D/g, '').slice(-10);
-        const tNormName = (t.name || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-        const normItemName = cleanName.replace(/[^A-Z0-9]/g, '');
+      // Look up matching customer in customer details form strictly for metadata enrichment
+      let matchedRows: CustomerRow[] | undefined;
+      for (const [, rows] of byCustomer.entries()) {
+        const rName = (rows[0]?.name || '').trim().toUpperCase();
+        const rMobile = (rows[0]?.mobileNo || '').replace(/\D/g, '').slice(-10);
 
         // Prevent Sanjana & Chandran collision
-        if (normItemName.includes('SANJANA') && !tNormName.includes('SANJANA')) return false;
-        if (!normItemName.includes('SANJANA') && tNormName.includes('SANJANA')) return false;
+        if (isSanjana && !rName.includes('SANJANA')) continue;
+        if (!isSanjana && rName.includes('SANJANA')) continue;
 
-        if (cleanMobile && tDigits && cleanMobile === tDigits) {
-          if (!normItemName || !tNormName || tNormName.includes(normItemName) || normItemName.includes(tNormName)) {
-            return true;
+        if (cleanMobile && rMobile && cleanMobile === rMobile) {
+          matchedRows = rows;
+          break;
+        }
+        if (
+          cleanName &&
+          rName &&
+          (cleanName === rName || rName.includes(cleanName) || cleanName.includes(rName))
+        ) {
+          matchedRows = rows;
+          break;
+        }
+      }
+
+      let locality = 'Coimbatore';
+      let photoUrl: string | undefined;
+      let deliveredCount = cleanMobile ? deliveredCounts.get(cleanMobile) || 0 : 0;
+      let journeySteps: string[] = ['Verified Customer Review'];
+      let hasUpgraded = false;
+
+      if (matchedRows && matchedRows.length > 0) {
+        const primaryRow = matchedRows[matchedRows.length - 1];
+        const firstRow = matchedRows[0];
+        if (primaryRow.locality || firstRow.locality) {
+          locality = primaryRow.locality || firstRow.locality || locality;
+        }
+        const rMobile = (primaryRow.mobileNo || firstRow.mobileNo || '').replace(/\D/g, '').slice(-10);
+        if (rMobile && !deliveredCount) {
+          deliveredCount = deliveredCounts.get(rMobile) || 0;
+        }
+        const latestPhoto = [...matchedRows].reverse().find((r) => Boolean(r.photoUrl));
+        if (latestPhoto?.photoUrl) {
+          photoUrl = latestPhoto.photoUrl;
+        }
+
+        // Build authentic journey trail from verified subscription records
+        const history =
+          primaryRow.subscriptionHistory && primaryRow.subscriptionHistory.length > 0
+            ? primaryRow.subscriptionHistory
+            : matchedRows
+                .filter((r) => Boolean(r.plan))
+                .map((r) => ({
+                  plan: r.plan as string,
+                  startDate: r.startDate,
+                  purchaseDate: r.purchaseDate,
+                  subscriberType: r.subscriberType,
+                }));
+
+        const distinctPlans: string[] = [];
+        for (const h of history) {
+          if (h.plan && distinctPlans[distinctPlans.length - 1] !== h.plan) {
+            distinctPlans.push(h.plan);
           }
         }
 
-        return normItemName && tNormName && (tNormName === normItemName || tNormName.includes(normItemName) || normItemName.includes(tNormName));
-      });
+        hasUpgraded = distinctPlans.length > 1 || matchedRows.some((r) => r.subscriberType === 'Upgrade');
 
-      if (existing) {
-        existing.review = item.reviewText;
-        if (item.rating) existing.rating = item.rating;
-      } else {
-        testimonials.push({
-          id: `feedback-${item.id}`,
-          name: item.name,
-          locality: 'Coimbatore',
-          review: item.reviewText,
-          rating: item.rating || 5,
-          journeySteps: ['Verified Customer Review'],
-          hasUpgraded: false,
-          isFirstCustomer: cleanName.includes('SANJANA'),
-          deliveredCount: 1,
-        });
+        if (distinctPlans.length > 1) {
+          journeySteps = [distinctPlans[0]];
+          if (deliveredCount > 0) {
+            journeySteps.push('Food Delivered');
+          }
+          for (let i = 1; i < distinctPlans.length; i++) {
+            const upgradedLabel = distinctPlans[i].toLowerCase().includes('upgrade')
+              ? distinctPlans[i]
+              : `${distinctPlans[i]} Upgrade`;
+            journeySteps.push(upgradedLabel);
+          }
+        } else if (distinctPlans.length === 1) {
+          journeySteps = [distinctPlans[0]];
+          if (deliveredCount > 0) {
+            journeySteps.push('Food Delivered');
+          }
+        }
       }
+
+      testimonials.push({
+        id: `feedback-${item.id}`,
+        name: item.name,
+        locality,
+        photoUrl,
+        review: item.reviewText,
+        rating: item.rating || 5,
+        journeySteps,
+        hasUpgraded,
+        isFirstCustomer: isSanjana,
+        deliveredCount: deliveredCount || 1,
+      });
     }
 
     // Order: Sanjana ("Our First Customer") ALWAYS first, followed by customers with reviews, then upgrades
     testimonials.sort((a, b) => {
       if (a.isFirstCustomer && !b.isFirstCustomer) return -1;
       if (!a.isFirstCustomer && b.isFirstCustomer) return 1;
-      const aHasReview = a.review && a.review.trim().length > 0 ? 1 : 0;
-      const bHasReview = b.review && b.review.trim().length > 0 ? 1 : 0;
-      if (aHasReview !== bHasReview) return bHasReview - aHasReview;
       const aUpgrade = a.hasUpgraded ? 1 : 0;
       const bUpgrade = b.hasUpgraded ? 1 : 0;
       return bUpgrade - aUpgrade;
@@ -212,7 +199,7 @@ export async function GET() {
     return NextResponse.json(
       {
         success: true,
-        source: `${source} + ${feedbackSource}`,
+        source: feedbackSource,
         total: testimonials.length,
         testimonials,
         feedback,
