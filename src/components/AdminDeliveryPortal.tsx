@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ShieldCheck, CheckCircle2, AlertTriangle, Clock, Truck, 
   Search, Calendar, Filter, Phone, MessageSquare, RefreshCw, 
-  MapPin, User, ChevronRight, Lock, Key, ArrowLeft, Plus,
+  MapPin, User, ChevronRight, ChevronLeft, Lock, Key, ArrowLeft, Plus,
   FileText, Sparkles, X, Check, FileSpreadsheet, Ban, RotateCcw
 } from 'lucide-react';
 import { DeliveryLogItem } from '../app/api/admin/delivery-logs/route';
@@ -50,6 +50,50 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3000);
   };
+
+  // Quick Date Navigation Helpers
+  const handlePrevDay = () => {
+    const d = parseDateFlexible(selectedDate);
+    d.setDate(d.getDate() - 1);
+    setSelectedDate(
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    );
+  };
+
+  const handleNextDay = () => {
+    const d = parseDateFlexible(selectedDate);
+    d.setDate(d.getDate() + 1);
+    setSelectedDate(
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    );
+  };
+
+  const handleToday = () => {
+    const now = new Date();
+    setSelectedDate(
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    );
+  };
+
+  const formattedDateDisplay = useMemo(() => {
+    try {
+      const d = parseDateFlexible(selectedDate);
+      const now = new Date();
+      const isToday =
+        d.getFullYear() === now.getFullYear() &&
+        d.getMonth() === now.getMonth() &&
+        d.getDate() === now.getDate();
+      const formatted = d.toLocaleDateString('en-IN', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      });
+      return isToday ? `Today • ${formatted}` : formatted;
+    } catch {
+      return selectedDate;
+    }
+  }, [selectedDate]);
 
   // Check Admin PIN (8825)
   const handlePinSubmit = (e: React.FormEvent) => {
@@ -382,15 +426,49 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
     }
   };
 
-  // Filtered logs calculation
+  // Categorize logs into active queue vs closed plans
+  const closedLogs = useMemo(() => {
+    return logs.filter((l) => {
+      const cleanName = (l.customerName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const cleanMob = (l.customerMobile || '').replace(/\D/g, '').slice(-10);
+      return customerDetailsMap.get(`${cleanName}_${cleanMob}`)?.isClosed;
+    });
+  }, [logs, customerDetailsMap]);
+
+  const activeLogs = useMemo(() => {
+    return logs.filter((l) => {
+      const cleanName = (l.customerName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const cleanMob = (l.customerMobile || '').replace(/\D/g, '').slice(-10);
+      return !customerDetailsMap.get(`${cleanName}_${cleanMob}`)?.isClosed;
+    });
+  }, [logs, customerDetailsMap]);
+
+  const closedLogsCount = closedLogs.length;
+  const activeOrdersCount = activeLogs.length;
+
+  // The base set of logs for calculating counts on the current view queue:
+  const targetQueueLogs = showClosedPlans ? closedLogs : activeLogs;
+
+  const deliveredCount = targetQueueLogs.filter(l => l.status === 'delivered').length;
+  const outForDeliveryCount = targetQueueLogs.filter(l => l.status === 'out_for_delivery').length;
+  const pendingCount = targetQueueLogs.filter(l => l.status === 'pending').length;
+  const canceledCount = targetQueueLogs.filter(l => l.status === 'paused').length;
+  const notReceivedCount = targetQueueLogs.filter(l => l.status === 'not_received').length;
+
+  const deliveredPercent = targetQueueLogs.length > 0 ? Math.round((deliveredCount / targetQueueLogs.length) * 100) : 0;
+
+  // Filtered logs calculation (strictly honors active queue vs closed plans, plus search)
   const filteredLogs = useMemo(() => {
     return logs.filter(log => {
-      // Exclude closed/upgraded plans unless showClosedPlans is enabled OR specifically searched
       const cleanName = (log.customerName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
       const cleanMob = (log.customerMobile || '').replace(/\D/g, '').slice(-10);
       const custDetails = customerDetailsMap.get(`${cleanName}_${cleanMob}`);
-      if (!showClosedPlans && custDetails?.isClosed && !searchQuery.trim()) {
-        return false;
+      const isClosed = !!custDetails?.isClosed;
+
+      // Exclude closed plans when viewing active queue, and exclude active plans when viewing closed plans
+      if (!searchQuery.trim()) {
+        if (!showClosedPlans && isClosed) return false;
+        if (showClosedPlans && !isClosed) return false;
       }
 
       // Meal session filter
@@ -408,7 +486,10 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         const matchesMobile = (log.customerMobile || '').includes(q);
         const matchesAddress = (log.deliveryAddress || '').toLowerCase().includes(q);
         const matchesLocality = (log.locality || '').toLowerCase().includes(q);
-        if (!matchesName && !matchesMobile && !matchesAddress && !matchesLocality) {
+        const matchesPlan = (log.planName || '').toLowerCase().includes(q);
+        const matchesSession = (log.mealSession || '').toLowerCase().includes(q);
+        const matchesStatus = (log.status || '').toLowerCase().includes(q);
+        if (!matchesName && !matchesMobile && !matchesAddress && !matchesLocality && !matchesPlan && !matchesSession && !matchesStatus) {
           return false;
         }
       }
@@ -416,23 +497,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
     });
   }, [logs, selectedMealSession, selectedStatusFilter, searchQuery, showClosedPlans, customerDetailsMap]);
 
-  // Aggregate statistics
   const totalOrders = logs.length;
-  const closedLogsCount = useMemo(() => {
-    return logs.filter((l) => {
-      const cleanName = (l.customerName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-      const cleanMob = (l.customerMobile || '').replace(/\D/g, '').slice(-10);
-      return customerDetailsMap.get(`${cleanName}_${cleanMob}`)?.isClosed;
-    }).length;
-  }, [logs, customerDetailsMap]);
-
-  const activeOrdersCount = totalOrders - closedLogsCount;
-  const deliveredCount = logs.filter(l => l.status === 'delivered').length;
-  const outForDeliveryCount = logs.filter(l => l.status === 'out_for_delivery').length;
-  const pendingCount = logs.filter(l => l.status === 'pending').length;
-  const notReceivedCount = logs.filter(l => l.status === 'not_received').length;
-
-  const deliveredPercent = totalOrders > 0 ? Math.round((deliveredCount / totalOrders) * 100) : 0;
 
   // =========================================================================
   // 1. PIN AUTHENTICATION GATE
@@ -446,7 +511,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
           </div>
 
           <div>
-            <span className="font-ostrich text-2xl tracking-widest text-purple-900 block">
+            <span className="font-heading text-xl sm:text-2xl font-black text-purple-950 tracking-tight block">
               STUVVY KITCHEN ADMIN
             </span>
             <h2 className="text-xl sm:text-2xl font-black font-heading text-zinc-950 mt-1">
@@ -516,11 +581,11 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         </div>
       )}
 
-      {/* TOP HEADER: OSTRICH SANS TYPOGRAPHY WITH EMPHASIZED HIERARCHY */}
+      {/* TOP HEADER: NORMAL STUVVY HEADING TYPOGRAPHY */}
       <div className="bg-white/95 backdrop-blur-xl p-6 sm:p-8 rounded-[32px] border border-zinc-200/90 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
-            <span className="font-ostrich text-3xl sm:text-4xl text-purple-950 font-black tracking-wider leading-none">
+            <span className="font-heading text-2xl sm:text-3xl text-purple-950 font-black tracking-tight leading-none">
               STUVVY KITCHEN DISPATCH
             </span>
             <span className="text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-900 px-3 py-1 rounded-full border border-purple-200">
@@ -537,10 +602,31 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0 self-start md:self-center flex-wrap">
-          <div className="bg-emerald-50 text-emerald-800 border border-emerald-200 font-black text-xs px-3.5 py-2.5 rounded-xl flex items-center gap-1.5">
+          {/* EXCEL EXPORT DIRECT DOWNLOAD */}
+          <a
+            href={`/api/admin/export-excel?date=${selectedDate}`}
+            download={`stuvvy_dispatch_${selectedDate}.csv`}
+            className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-black text-xs px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+            title="Download Excel / CSV Dispatch Sheet for this date"
+          >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-            <span>Auto-Saved to Excel</span>
-          </div>
+            <span>Export Excel</span>
+          </a>
+
+          {/* MANUAL REFRESH BUTTON */}
+          <button
+            type="button"
+            onClick={() => {
+              setRefreshing(true);
+              fetchLogs();
+            }}
+            disabled={refreshing}
+            className="bg-zinc-100 hover:bg-zinc-200 text-zinc-800 border border-zinc-200 font-bold text-xs px-3 py-2.5 rounded-xl transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+            title="Refresh logs from Google Sheets & server"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 text-purple-700 ${refreshing ? 'animate-spin' : ''}`} />
+            <span>{refreshing ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
 
           {onBackToApp && (
             <button
@@ -555,21 +641,27 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         </div>
       </div>
 
-      {/* STATS OVERVIEW CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+      {/* STATS OVERVIEW CARDS (6-CARD COMPREHENSIVE DISPATCH GRID) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {/* Total Scheduled */}
         <div className="bg-white/95 p-4 rounded-2xl border border-zinc-200/90 shadow-2xs">
-          <span className="font-ostrich text-xs text-zinc-400 tracking-wider block">TOTAL SCHEDULED</span>
+          <span className="font-mono text-[10px] sm:text-[11px] font-bold text-zinc-500 uppercase tracking-wider block">
+            TOTAL SCHEDULED
+          </span>
           <div className="text-2xl font-black font-heading text-zinc-950 mt-1">
-            {totalOrders} <span className="text-xs text-zinc-400 font-normal">Meals</span>
+            {targetQueueLogs.length} <span className="text-xs text-zinc-400 font-normal">Meals</span>
           </div>
-          <div className="text-[10px] text-zinc-400 font-medium mt-0.5">Active Subscribers</div>
+          <div className="text-[10px] text-zinc-400 font-medium mt-0.5">
+            {showClosedPlans ? 'Closed Plans' : 'Active Queue'}
+          </div>
         </div>
 
         {/* Delivered */}
         <div className="bg-emerald-50/80 p-4 rounded-2xl border border-emerald-200/90 shadow-2xs">
-          <span className="font-ostrich text-xs text-emerald-800 tracking-wider block">DELIVERED & RECEIVED</span>
-          <div className="text-2xl font-black font-heading text-emerald-950 mt-1 flex items-baseline gap-2">
+          <span className="font-mono text-[10px] sm:text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">
+            DELIVERED
+          </span>
+          <div className="text-2xl font-black font-heading text-emerald-950 mt-1 flex items-baseline gap-1.5">
             <span>{deliveredCount}</span>
             <span className="text-xs font-bold text-emerald-700">({deliveredPercent}%)</span>
           </div>
@@ -578,7 +670,9 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
 
         {/* Out for Delivery */}
         <div className="bg-purple-50/80 p-4 rounded-2xl border border-purple-200/90 shadow-2xs">
-          <span className="font-ostrich text-xs text-purple-800 tracking-wider block">OUT FOR DELIVERY</span>
+          <span className="font-mono text-[10px] sm:text-[11px] font-bold text-purple-800 uppercase tracking-wider block">
+            OUT FOR DELIVERY
+          </span>
           <div className="text-2xl font-black font-heading text-purple-950 mt-1">
             {outForDeliveryCount}
           </div>
@@ -587,25 +681,38 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
 
         {/* Pending Dispatch */}
         <div className="bg-zinc-50 p-4 rounded-2xl border border-zinc-200/90 shadow-2xs">
-          <span className="font-ostrich text-xs text-zinc-500 tracking-wider block">PENDING DISPATCH</span>
+          <span className="font-mono text-[10px] sm:text-[11px] font-bold text-zinc-500 uppercase tracking-wider block">
+            PENDING
+          </span>
           <div className="text-2xl font-black font-heading text-zinc-900 mt-1">
             {pendingCount}
           </div>
           <div className="text-[10px] text-zinc-400 font-medium mt-0.5">In Kitchen Prep</div>
         </div>
 
+        {/* Canceled / Paused */}
+        <div className="bg-zinc-100/90 p-4 rounded-2xl border border-zinc-300 shadow-2xs">
+          <span className="font-mono text-[10px] sm:text-[11px] font-bold text-zinc-700 uppercase tracking-wider block">
+            CANCELED
+          </span>
+          <div className="text-2xl font-black font-heading text-zinc-900 mt-1">
+            {canceledCount}
+          </div>
+          <div className="text-[10px] text-zinc-500 font-medium mt-0.5">Order Paused</div>
+        </div>
+
         {/* Issues / Not Received */}
-        <div className={`p-4 rounded-2xl border shadow-2xs col-span-2 lg:col-span-1 ${
+        <div className={`p-4 rounded-2xl border shadow-2xs ${
           notReceivedCount > 0 ? 'bg-red-50 border-red-300 text-red-950' : 'bg-zinc-50 border-zinc-200/80 text-zinc-500'
         }`}>
-          <span className={`font-ostrich text-xs tracking-wider block ${notReceivedCount > 0 ? 'text-red-700 font-black' : 'text-zinc-400'}`}>
-            NOT RECEIVED / ISSUES
+          <span className={`font-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-wider block ${notReceivedCount > 0 ? 'text-red-700 font-black' : 'text-zinc-500'}`}>
+            NOT RECEIVED
           </span>
           <div className={`text-2xl font-black font-heading mt-1 ${notReceivedCount > 0 ? 'text-red-700' : 'text-zinc-900'}`}>
             {notReceivedCount}
           </div>
           <div className={`text-[10px] font-medium mt-0.5 ${notReceivedCount > 0 ? 'text-red-600 font-bold' : 'text-zinc-400'}`}>
-            {notReceivedCount > 0 ? 'Immediate Attention Required' : 'Zero Issues Reported'}
+            {notReceivedCount > 0 ? 'Attention Needed' : 'Zero Issues'}
           </div>
         </div>
       </div>
@@ -621,7 +728,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by customer name, mobile (+91), or address..."
+              placeholder="Search by customer name, mobile (+91), plan, meal, or address..."
               className="w-full pl-9 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold outline-none focus:border-purple-600 focus:bg-white transition-all text-zinc-950"
             />
             {searchQuery && (
@@ -636,14 +743,43 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
 
           {/* DATE PICKER & MEAL SESSION */}
           <div className="flex items-center gap-2.5 flex-wrap">
-            <div className="flex items-center gap-1.5 bg-zinc-50 border border-zinc-200 rounded-xl px-3 py-1.5">
-              <Calendar className="w-3.5 h-3.5 text-purple-700" />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="text-xs font-bold text-zinc-900 bg-transparent outline-none cursor-pointer"
-              />
+            {/* QUICK DATE CONTROLS: PREV, DATE PICKER, NEXT, TODAY */}
+            <div className="flex items-center gap-1 bg-zinc-50 border border-zinc-200 rounded-xl p-1">
+              <button
+                type="button"
+                onClick={handlePrevDay}
+                title="Previous Day"
+                className="w-7 h-7 rounded-lg hover:bg-zinc-200 text-zinc-600 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center gap-1.5 px-1.5">
+                <Calendar className="w-3.5 h-3.5 text-purple-700" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="text-xs font-bold text-zinc-900 bg-transparent outline-none cursor-pointer"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleNextDay}
+                title="Next Day"
+                className="w-7 h-7 rounded-lg hover:bg-zinc-200 text-zinc-600 flex items-center justify-center transition-colors cursor-pointer"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleToday}
+                className="text-[10px] font-black uppercase px-2 py-1 rounded-md bg-purple-100 hover:bg-purple-200 text-purple-900 transition-colors cursor-pointer"
+              >
+                Today
+              </button>
             </div>
 
             {/* Session buttons */}
@@ -673,10 +809,11 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
             </span>
 
             {[
-              { id: 'All', label: `All Orders (${filteredLogs.length})` },
+              { id: 'All', label: `All Orders (${targetQueueLogs.length})` },
               { id: 'delivered', label: `✓ Delivered (${deliveredCount})` },
               { id: 'out_for_delivery', label: `🚚 Out for Delivery (${outForDeliveryCount})` },
               { id: 'pending', label: `⏳ Pending (${pendingCount})` },
+              { id: 'paused', label: `🚫 Canceled (${canceledCount})` },
               { id: 'not_received', label: `⚠️ Not Received (${notReceivedCount})` },
             ].map((pill) => (
               <button
@@ -697,7 +834,10 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
           <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-center">
             <button
               type="button"
-              onClick={() => setShowClosedPlans(false)}
+              onClick={() => {
+                setShowClosedPlans(false);
+                setSelectedStatusFilter('All');
+              }}
               className={`px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer ${
                 !showClosedPlans
                   ? 'bg-purple-900 text-white shadow-xs'
@@ -708,7 +848,10 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
             </button>
             <button
               type="button"
-              onClick={() => setShowClosedPlans(true)}
+              onClick={() => {
+                setShowClosedPlans(true);
+                setSelectedStatusFilter('All');
+              }}
               className={`px-3 py-1 rounded-full text-xs font-black transition-all cursor-pointer ${
                 showClosedPlans
                   ? 'bg-zinc-800 text-white shadow-xs'
@@ -727,10 +870,13 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1">
           <span className="text-xs font-black uppercase tracking-wider text-zinc-500">
-            Showing {filteredLogs.length} of {totalOrders} customer delivery logs
+            Showing {filteredLogs.length} of {targetQueueLogs.length} {showClosedPlans ? 'closed' : 'active'} delivery logs
           </span>
-          <span className="text-xs text-zinc-400 font-medium">
-            Date: <strong className="text-zinc-900">{selectedDate}</strong>
+          <span className="text-xs text-zinc-500 font-bold flex items-center gap-1.5">
+            <span>Dispatch Date:</span>
+            <strong className="text-zinc-950 font-black bg-zinc-100 px-2.5 py-0.5 rounded-md border border-zinc-200">
+              {formattedDateDisplay}
+            </strong>
           </span>
         </div>
 
@@ -778,7 +924,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100">
                     <div className="space-y-1 min-w-0">
                       <div className="flex items-center gap-2.5 flex-wrap">
-                        <span className="font-ostrich text-lg font-black text-purple-950 tracking-wider">
+                        <span className="font-heading text-base sm:text-lg font-black text-zinc-950 tracking-tight">
                           {primary.customerName}
                         </span>
                         <span className="text-[10px] font-black uppercase bg-zinc-100 text-zinc-700 px-2 py-0.5 rounded-md border border-zinc-200">
