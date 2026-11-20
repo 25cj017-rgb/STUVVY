@@ -248,17 +248,26 @@ export async function fetchFeedbackFromSource(): Promise<{ source: string; feedb
     console.warn('Error reading local feedback.csv:', err);
   }
 
-  // 4. Merge default/local entries with live sheet entries so verified customers are never lost
+  // 4. Deduplicate entries by mobile number (or name if mobile missing)
   const mergedMap = new Map<string, FeedbackEntry>();
 
+  // Add fallback entries first (like Sanjana's verified first-customer feedback)
   for (const item of fallbackEntries) {
-    const key = `${(item.name || '').trim().toUpperCase()}_${(item.mobile || '').replace(/\D/g, '').slice(-10)}`;
-    mergedMap.set(key, item);
+    const digits = (item.mobile || '').replace(/\D/g, '').slice(-10);
+    const key = digits || (item.name || '').trim().toUpperCase();
+    if (key) mergedMap.set(key, item);
   }
 
+  // Live entries from the Customer Feedback Google Sheet take priority
   for (const item of liveEntries) {
-    const key = `${(item.name || '').trim().toUpperCase()}_${(item.mobile || '').replace(/\D/g, '').slice(-10)}`;
-    mergedMap.set(key, item);
+    const digits = (item.mobile || '').replace(/\D/g, '').slice(-10);
+    const key = digits || (item.name || '').trim().toUpperCase();
+    if (key) {
+      // If already present from fallback with a formatted full name, retain the fuller name
+      const prev = mergedMap.get(key);
+      const chosenName = prev && prev.name.length > item.name.length ? prev.name : item.name;
+      mergedMap.set(key, { ...item, name: chosenName });
+    }
   }
 
   const combined = Array.from(mergedMap.values());
