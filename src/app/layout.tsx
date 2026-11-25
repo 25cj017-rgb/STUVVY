@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Outfit } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -11,6 +12,43 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 const outfit = Outfit({
   variable: "--font-outfit",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const ostrichSans = localFont({
+  src: [
+    {
+      path: "../../public/fonts/ostrich-sans-black.woff",
+      weight: "900",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/ostrich-sans-heavy.otf",
+      weight: "800",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/ostrich-sans-bold.woff",
+      weight: "700",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/ostrich-sans-bold.woff",
+      weight: "600",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/ostrich-sans-medium.otf",
+      weight: "500",
+      style: "normal",
+    },
+    {
+      path: "../../public/fonts/ostrich-sans-bold.woff",
+      weight: "400",
+      style: "normal",
+    },
+  ],
+  variable: "--font-ostrich",
   display: "swap",
 });
 
@@ -57,7 +95,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${plusJakartaSans.variable} ${outfit.variable} h-full antialiased`}>
+    <html lang="en" className={`${plusJakartaSans.variable} ${outfit.variable} ${ostrichSans.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans text-gray-900 bg-slate-900">{children}</body>
     </html>
   );

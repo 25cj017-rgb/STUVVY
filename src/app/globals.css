@@ -76,12 +76,12 @@
 
   --font-sans: var(--font-plus-jakarta), var(--font-outfit), system-ui, -apple-system, sans-serif;
   --font-heading: var(--font-outfit), var(--font-plus-jakarta), system-ui, sans-serif;
-  --font-ostrich: 'Ostrich Sans', var(--font-heading), system-ui, sans-serif;
+  --font-ostrich: var(--font-ostrich), 'Ostrich Sans', var(--font-heading), system-ui, sans-serif;
 }
 
 /* Ostrich Sans Display Hierarchy Classes */
 .font-ostrich {
-  font-family: 'Ostrich Sans', var(--font-heading), sans-serif;
+  font-family: var(--font-ostrich), 'Ostrich Sans', var(--font-heading), sans-serif !important;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
