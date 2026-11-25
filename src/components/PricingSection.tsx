@@ -240,12 +240,12 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                 </span>
               </div>
 
-              {/* HEADLINE & PROMOTIONAL COPY (NORMAL STUVVY HEADING FONT) */}
+              {/* HEADLINE & PROMOTIONAL COPY (STUVVY OSTRICH DISPLAY FONT) */}
               <div className="space-y-1.5">
                 <div className="text-[11px] font-mono font-bold text-zinc-500 uppercase tracking-widest">
                   {STUVVY_3_PLUS_1_CONFIG.headline}
                 </div>
-                <h3 className="text-2xl sm:text-3xl md:text-4xl font-black font-heading tracking-tight text-zinc-950 uppercase leading-none">
+                <h3 className="font-ostrich text-3xl sm:text-4xl md:text-5xl font-black tracking-wider text-zinc-950 uppercase leading-none">
                   {STUVVY_3_PLUS_1_CONFIG.name}
                 </h3>
                 <p className="font-heading text-sm sm:text-base font-extrabold text-zinc-800 leading-snug">
@@ -303,7 +303,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                     <span className="text-[10px] font-mono uppercase text-zinc-500 font-bold block">
                       Total Payable Amount
                     </span>
-                    <span className="text-3xl sm:text-4xl font-black font-heading text-zinc-950 tracking-tight leading-none">
+                    <span className="font-ostrich text-3xl sm:text-4xl font-black text-zinc-950 tracking-wider leading-none">
                       ₹{pricing3Plus1.finalPayable.toLocaleString('en-IN')}
                     </span>
                   </div>
@@ -609,7 +609,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                 </div>
 
                 <div>
-                  <h4 className="text-lg font-black font-heading text-zinc-950">
+                  <h4 className="font-ostrich text-2xl font-black tracking-wider text-zinc-950 uppercase">
                     STUVVY 3+1 MEAL PASS
                   </h4>
                   <p className="text-xs text-zinc-600 font-medium mt-0.5">
@@ -619,8 +619,8 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
 
                 <div className="bg-white p-3 rounded-2xl border border-zinc-200 flex items-baseline justify-between text-xs">
                   <div>
-                    <div className="font-black text-xl text-zinc-950">₹7,999</div>
-                    <div className="text-[10px] text-zinc-500">for 4 Full Months (120 Days)</div>
+                    <div className="font-ostrich font-black text-2xl text-zinc-950 tracking-wider">₹7,999</div>
+                    <div className="text-[10px] text-zinc-500 font-mono">for 4 Full Months (120 Days)</div>
                   </div>
                   <div className="text-right">
                     <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">

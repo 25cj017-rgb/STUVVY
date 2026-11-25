@@ -691,8 +691,8 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                   <CreditCard className="w-6 h-6 text-purple-200" />
                 </div>
                 <div className="space-y-0.5">
-                  <div className="font-ostrich text-2xl font-black text-purple-950 tracking-wider leading-none">
-                    Stuvvy Cards
+                  <div className="font-ostrich text-2xl font-black text-purple-950 tracking-wider leading-none uppercase">
+                    STUVVY CARDS
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[9px] font-black uppercase bg-purple-100 text-purple-900 px-2 py-0.5 rounded-full border border-purple-200">
@@ -726,8 +726,8 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                   <Package className="w-6 h-6 text-blue-700" />
                 </div>
                 <div className="space-y-0.5">
-                  <div className="font-ostrich text-2xl font-black text-purple-950 tracking-wider leading-none">
-                    My Order & Delivery Logs
+                  <div className="font-ostrich text-2xl font-black text-purple-950 tracking-wider leading-none uppercase">
+                    MY ORDER & DELIVERY LOGS
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[9px] font-black uppercase bg-blue-100 text-blue-900 px-2 py-0.5 rounded-full border border-blue-200">
@@ -761,8 +761,8 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                   <Calendar className="w-6 h-6 text-emerald-700" />
                 </div>
                 <div className="space-y-0.5">
-                  <div className="font-ostrich text-2xl font-black text-purple-950 tracking-wider leading-none">
-                    Delivery Calendar & Plan Schedule
+                  <div className="font-ostrich text-2xl font-black text-purple-950 tracking-wider leading-none uppercase">
+                    DELIVERY CALENDAR & PLAN SCHEDULE
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full border border-emerald-200">
@@ -796,8 +796,8 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                   <FileText className="w-6 h-6 text-amber-700" />
                 </div>
                 <div className="space-y-0.5">
-                  <div className="font-ostrich text-2xl font-black text-purple-950 tracking-wider leading-none">
-                    Subscription Logs
+                  <div className="font-ostrich text-2xl font-black text-purple-950 tracking-wider leading-none uppercase">
+                    SUBSCRIPTION LOGS
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[9px] font-black uppercase bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-200">
@@ -831,8 +831,8 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                   <Phone className="w-6 h-6 text-blue-700" />
                 </div>
                 <div className="space-y-0.5">
-                  <div className="font-ostrich text-2xl font-black text-purple-950 tracking-wider leading-none">
-                    Kitchen Admin & Hotline Help
+                  <div className="font-ostrich text-2xl font-black text-purple-950 tracking-wider leading-none uppercase">
+                    KITCHEN ADMIN & HOTLINE HELP
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[9px] font-black uppercase bg-blue-50 text-blue-800 px-2 py-0.5 rounded-full border border-blue-200">
