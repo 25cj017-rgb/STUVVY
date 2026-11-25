@@ -272,20 +272,25 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         });
       }
 
+      // Avoid duplicate customer cards from existingLogs if the customer is already in customerMap from Google Sheets
+      const existingMobileSet = new Set(Array.from(customerMap.values()).map(c => c.mobile));
       for (const l of existingLogs) {
         const mob = (l.customerMobile || '').replace(/\D/g, '').slice(-10);
-        const planKey = (l as any).planKey || makePlanKey(l.customerName, mob, l.planName, l.date);
-        if (mob && planKey && !customerMap.has(planKey)) {
+        if (!mob || existingMobileSet.has(mob)) continue;
+        const custKey = makeCustKey(l.customerName, mob);
+        const planKey = `OFFLINE_${custKey}_${(l.planName || 'PLAN').toUpperCase()}`;
+        if (!customerMap.has(planKey)) {
           customerMap.set(planKey, {
             planKey,
-            customerKey: makeCustKey(l.customerName, mob),
+            customerKey: custKey,
             name: l.customerName,
             mobile: mob,
-            plan: l.planName,
+            plan: l.planName || 'Monthly',
             address: l.deliveryAddress,
             locality: l.locality || '',
             isClosed: false,
           });
+          existingMobileSet.add(mob);
         }
       }
 
@@ -305,21 +310,32 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
             : allSessions;
 
         for (const session of optedMeals) {
-          const found = combinedExisting.find(
-            (l) =>
-              (l.customerMobile || '').replace(/\D/g, '').slice(-10) === info.mobile &&
-              makeCustKey(l.customerName, l.customerMobile) === info.customerKey &&
-              l.mealSession === session &&
-              ((l as any).planKey === planKey || (!l.planName || l.planName.toLowerCase() === info.plan.toLowerCase()))
-          );
+          const found = combinedExisting.find((l) => {
+            const lMob = (l.customerMobile || '').replace(/\D/g, '').slice(-10);
+            const lCustKey = makeCustKey(l.customerName, lMob);
+            const sameCust = (lMob === info.mobile) || (lCustKey === info.customerKey);
+            if (!sameCust) return false;
+            if (l.mealSession !== session) return false;
+            if ((l as any).planKey && (l as any).planKey === planKey) return true;
+            if (l.planName && info.plan && l.planName.trim().toLowerCase() === info.plan.trim().toLowerCase()) return true;
+            return true;
+          });
+
           if (found) {
             mergedLogs.push({
               ...found,
+              id: found.id || `LOG-${selectedDate}-${cleanNameSlug}-${info.mobile}-${session.toLowerCase()}-${cleanPlanSlug}`,
               planKey,
+              customerName: info.name,
+              customerMobile: info.mobile,
+              planName: info.plan,
+              deliveryAddress: info.address || found.deliveryAddress,
+              locality: info.locality || found.locality,
+              mealSession: session,
             });
           } else {
             mergedLogs.push({
-              id: `LOG-${selectedDate}-${cleanNameSlug}-${info.mobile}-${cleanPlanSlug}-${session.toLowerCase()}`,
+              id: `LOG-${selectedDate}-${cleanNameSlug}-${info.mobile}-${session.toLowerCase()}-${cleanPlanSlug}`,
               planKey,
               date: selectedDate,
               customerName: info.name,
@@ -433,7 +449,16 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
   };
 
   const getLogPlanKey = (l: DeliveryLogItem) => {
-    return (l as any).planKey || `${l.customerName}_${l.customerMobile}_${l.planName}`;
+    if ((l as any).planKey) return (l as any).planKey;
+    const mob = (l.customerMobile || '').replace(/\D/g, '').slice(-10);
+    for (const [pKey, details] of customerDetailsMap.entries()) {
+      if (details.mobile === mob) {
+        if (!l.planName || details.plan.toLowerCase() === l.planName.toLowerCase()) {
+          return pKey;
+        }
+      }
+    }
+    return `${l.customerName}_${mob}_${l.planName}`;
   };
 
   // Categorize logs into active queue vs closed plans
@@ -479,10 +504,8 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
       const isClosed = !!planDetails?.isClosed;
 
       // Exclude closed plans when viewing active queue, and exclude active plans when viewing closed plans
-      if (!searchQuery.trim()) {
-        if (!showClosedPlans && isClosed) return false;
-        if (showClosedPlans && !isClosed) return false;
-      }
+      if (!showClosedPlans && isClosed) return false;
+      if (showClosedPlans && !isClosed) return false;
 
       // Meal session filter
       if (selectedMealSession !== 'All' && log.mealSession !== selectedMealSession) {
@@ -914,7 +937,14 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
               filteredLogs.reduce((acc, log) => {
                 const key = getLogPlanKey(log);
                 const list = acc.get(key) || [];
-                list.push(log);
+                const existingIdx = list.findIndex(item => item.mealSession === log.mealSession);
+                if (existingIdx >= 0) {
+                  if (log.status !== 'pending' && list[existingIdx].status === 'pending') {
+                    list[existingIdx] = log;
+                  }
+                } else {
+                  list.push(log);
+                }
                 acc.set(key, list);
                 return acc;
               }, new Map<string, DeliveryLogItem[]>())
