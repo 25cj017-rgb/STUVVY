@@ -3,18 +3,18 @@
 import React, { useState, useEffect } from 'react';
 import { PlanOption } from './PricingSection';
 import { SubscriptionCalendar, CalendarDay } from './SubscriptionCalendar';
-import { UserProfile } from '../types';
+import { UserProfile, SubscriptionHistoryEntry } from '../types';
 import type { DeliveryLogItem } from '../app/api/admin/delivery-logs/route';
 import { StuvvyCard } from './StuvvyCard';
 import { StuvvyStarRewards } from './StuvvyStarRewards';
-import { calculateSubscriptionSchedule, parseDateFlexible } from '../utils/subscriptionUtils';
+import { calculateSubscriptionSchedule, parseDateFlexible, formatDisplayDate, getPlanDurationDays } from '../utils/subscriptionUtils';
 import { getFreeMonthStatus } from '../config/subscriptionConfig';
 import { 
   User, Calendar, CreditCard, MapPin, PauseCircle, PlayCircle, 
   RefreshCw, ShieldCheck, CheckCircle2, Clock, ChevronRight, AlertCircle, 
   ArrowLeft, Lock, Phone, Utensils, Sparkles, LogOut, Check, MessageSquare,
   Award, Gift, Star, CalendarRange, Timer, UserCheck, LogIn, Eye, ChevronLeft,
-  Mail, ShieldAlert, Package, Truck, AlertTriangle, RotateCcw, X
+  Mail, ShieldAlert, Package, Truck, AlertTriangle, RotateCcw, X, FileText, History
 } from 'lucide-react';
 
 interface AccountDashboardProps {
@@ -27,7 +27,7 @@ interface AccountDashboardProps {
   isGuestUser?: boolean;
 }
 
-type AccountSubScreen = 'menu' | 'stuvvy-cards' | 'delivery-logs' | 'calendar-schedule' | 'preferences' | 'support';
+type AccountSubScreen = 'menu' | 'stuvvy-cards' | 'delivery-logs' | 'calendar-schedule' | 'subscription-logs' | 'support';
 
 export const AccountDashboard: React.FC<AccountDashboardProps> = ({ 
   activePlan, 
@@ -46,18 +46,81 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
   const [deliveryLogs, setDeliveryLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
 
+  // Subscription history logs state
+  const [subscriptionLogs, setSubscriptionLogs] = useState<SubscriptionHistoryEntry[]>([]);
+  const [loadingSubscriptions, setLoadingSubscriptions] = useState(false);
+
   // Emergency contact modal / request
   const [adminNote, setAdminNote] = useState('');
   const [requestSent, setRequestSent] = useState(false);
 
-  // Dietary Preferences State
-  const [preferences, setPreferences] = useState({
-    pureVeg: true,
-    southIndian: true,
-    lowGi: false,
-    lessSpicy: true,
-    jainNoGarlic: false
-  });
+  // Fetch subscription history records for this user from /api/customers or user profile
+  useEffect(() => {
+    if (!user?.mobileNumber) return;
+    const cleanMobile = user.mobileNumber.replace(/\D/g, '').slice(-10);
+    const normName = (user.fullName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    if (user.subscriptionHistory && user.subscriptionHistory.length > 0) {
+      setSubscriptionLogs(user.subscriptionHistory);
+    }
+
+    setLoadingSubscriptions(true);
+    fetch('/api/customers', { cache: 'no-store' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          const matchedCust = (data.customers || []).find((c: any) => {
+            const cMob = (c.mobileNo || '').replace(/\D/g, '').slice(-10);
+            const cName = (c.name || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+            return cMob === cleanMobile && (!normName || cName === normName);
+          });
+
+          if (matchedCust?.subscriptionHistory && matchedCust.subscriptionHistory.length > 0) {
+            setSubscriptionLogs(matchedCust.subscriptionHistory);
+          } else {
+            const subs = (data.allSubmissions || []).filter((s: any) => {
+              const sMob = (s.mobileNo || '').replace(/\D/g, '').slice(-10);
+              const sName = (s.name || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+              return sMob === cleanMobile && (!normName || sName === normName);
+            });
+            if (subs.length > 0) {
+              const built: SubscriptionHistoryEntry[] = subs.map((sub: any, idx: number) => {
+                const duration = getPlanDurationDays(sub.plan);
+                const start = parseDateFlexible(sub.startDate);
+                const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + duration - 1);
+                const orderStatus = (sub.orderStatus || '').trim().toLowerCase();
+                const isExplicitlyClosed =
+                  orderStatus.includes('closed') ||
+                  orderStatus === 'delivered' ||
+                  orderStatus === 'completed' ||
+                  orderStatus === 'expired' ||
+                  orderStatus === 'inactive';
+                const now = new Date();
+                const isDateExpired = now.getTime() > end.getTime();
+                const isClosed = isExplicitlyClosed || isDateExpired;
+
+                return {
+                  plan: sub.plan || 'Monthly',
+                  startDate: formatDisplayDate(start),
+                  purchaseDate: sub.purchaseDate,
+                  endDate: formatDisplayDate(end),
+                  durationDays: duration,
+                  subscriberType: sub.subscriberType || (idx === 0 ? 'New' : 'Upgrade'),
+                  orderStatus: sub.orderStatus || (isClosed ? 'Closed plan' : 'Active'),
+                  paymentAmount: sub.paymentAmount,
+                  paymentStatus: sub.paymentStatus || 'PAID',
+                  requestedMeals: sub.requestedMeals,
+                  isClosed,
+                };
+              });
+              setSubscriptionLogs(built);
+            }
+          }
+        }
+      })
+      .catch(err => console.error('Error fetching customer subscription logs:', err))
+      .finally(() => setLoadingSubscriptions(false));
+  }, [user?.mobileNumber, user?.fullName, user?.subscriptionHistory]);
 
   // Fetch real delivery records for this subscriber + sync with local Admin updates
   // Strictly checks BOTH customer name and mobile number to prevent data collision between shared phone numbers
@@ -118,6 +181,8 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
         const hash = window.location.hash.toLowerCase();
         if (hash.includes('stuvvy-card') || hash.includes('reward')) {
           setActiveScreen('stuvvy-cards');
+        } else if (hash.includes('subscription')) {
+          setActiveScreen('subscription-logs');
         } else if (hash.includes('log') || hash.includes('order')) {
           setActiveScreen('delivery-logs');
         } else if (hash.includes('calendar') || hash.includes('schedule')) {
@@ -346,7 +411,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
     'stuvvy-cards': 'Stuvvy Card & Loyalty Stars',
     'delivery-logs': 'My Order & Delivery Logs',
     'calendar-schedule': 'Delivery Calendar & Plan Schedule',
-    preferences: 'Dietary Preferences',
+    'subscription-logs': 'Subscription Logs',
     support: 'Kitchen Admin & Support'
   };
 
@@ -720,26 +785,26 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
               </div>
             </button>
 
-            {/* OPTION 4: DIETARY PREFERENCES */}
+            {/* OPTION 4: SUBSCRIPTION LOGS */}
             <button
               type="button"
-              onClick={() => setActiveScreen('preferences')}
+              onClick={() => setActiveScreen('subscription-logs')}
               className="w-full py-4 px-3 sm:px-4 flex items-center justify-between text-left hover:bg-purple-50/50 rounded-2xl transition-all group cursor-pointer"
             >
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-orange-100 text-orange-900 flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform border border-orange-200">
-                  <Utensils className="w-6 h-6 text-orange-600" />
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-900 flex items-center justify-center shadow-xs shrink-0 group-hover:scale-105 transition-transform border border-amber-200">
+                  <FileText className="w-6 h-6 text-amber-700" />
                 </div>
                 <div className="space-y-0.5">
                   <div className="font-ostrich text-2xl font-black text-purple-950 tracking-wider leading-none">
-                    Dietary Preferences & Health
+                    Subscription Logs
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[9px] font-black uppercase bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-200">
-                      Included Free
+                    <span className="text-[9px] font-black uppercase bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-200">
+                      {subscriptionLogs.length > 0 ? `${subscriptionLogs.length} Plans Recorded` : 'Current & Past Plans'}
                     </span>
                     <span className="text-xs text-zinc-500 font-medium">
-                      100% Pure Veg, South Indian spices & mild chili options
+                      Start & end dates, duration, order status & payment records
                     </span>
                   </div>
                 </div>
@@ -747,7 +812,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
 
               <div className="flex items-center gap-2 shrink-0 ml-3">
                 <span className="hidden sm:inline-block text-xs font-bold text-zinc-400 group-hover:text-purple-800">
-                  Customize
+                  View Logs
                 </span>
                 <div className="w-8 h-8 rounded-full bg-zinc-100 group-hover:bg-purple-900 group-hover:text-white flex items-center justify-center transition-colors">
                   <ChevronRight className="w-4 h-4 text-zinc-600 group-hover:text-white stroke-[2.5]" />
@@ -1197,52 +1262,178 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
       )}
 
       {/* ========================================================================= */}
-      {/* 6. SUB-SCREEN: DIETARY PREFERENCES                                        */}
+      {/* 6. SUB-SCREEN: SUBSCRIPTION LOGS (CURRENT & PAST SUBSCRIPTIONS)           */}
       {/* ========================================================================= */}
-      {activeScreen === 'preferences' && (
-        <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[32px] p-6 sm:p-7 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-zinc-100 pb-3">
-            <div className="flex items-center gap-2.5">
-              <Utensils className="w-4 h-4 text-orange-600" />
-              <h3 className="text-base font-black font-heading text-zinc-950">
-                Dietary Preferences & Health Customizations
-              </h3>
+      {activeScreen === 'subscription-logs' && (
+        <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[32px] p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100 pb-4">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <FileText className="w-5 h-5 text-purple-900" />
+                <h3 className="text-lg sm:text-xl font-black font-heading text-zinc-950">
+                  Subscription Logs & Plan History
+                </h3>
+              </div>
+              <p className="text-xs text-zinc-500 font-medium mt-0.5">
+                View your current and previous Stuvvy subscriptions, valid duration, start and end dates, and payment receipts.
+              </p>
             </div>
-            <span className="text-[10px] bg-emerald-50 text-emerald-800 px-2 py-0.5 rounded-full font-black border border-emerald-200">
-              Included Free
-            </span>
+
+            <button
+              type="button"
+              onClick={onNavigateToPlans}
+              className="bg-zinc-950 hover:bg-zinc-800 text-white font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-md flex items-center gap-1.5 cursor-pointer self-start sm:self-center shrink-0"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>Upgrade / Renew Plan</span>
+            </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            {[
-              { key: 'pureVeg', title: '100% Pure Vegetarian', desc: 'No eggs, strictly vegetarian kitchen utensils' },
-              { key: 'southIndian', title: 'Traditional South Indian Flavor', desc: 'Authentic stone-ground sambar & rasam powders' },
-              { key: 'lowGi', title: 'Low-GI / Diabetic Friendly', desc: 'Millets and unpolished brown rice substitutes' },
-              { key: 'lessSpicy', title: 'Mild Spice Level', desc: 'Gentle on digestion, minimal black pepper/chili' },
-            ].map((pref) => {
-              const isChecked = (preferences as any)[pref.key];
-
-              return (
-                <div 
-                  key={pref.key}
-                  onClick={() => setPreferences(prev => ({ ...prev, [pref.key]: !isChecked }))}
-                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start justify-between ${
-                    isChecked ? 'bg-orange-50/40 border-orange-300' : 'bg-zinc-50 border-zinc-200/80 hover:bg-zinc-100'
-                  }`}
-                >
-                  <div>
-                    <div className="font-extrabold text-zinc-900">{pref.title}</div>
-                    <div className="text-[10px] text-zinc-500 mt-0.5">{pref.desc}</div>
-                  </div>
-                  <div className={`w-5 h-5 rounded-lg flex items-center justify-center shrink-0 ml-2 ${
-                    isChecked ? 'bg-orange-500 text-white' : 'border border-zinc-300 bg-white'
-                  }`}>
-                    {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                  </div>
+          {loadingSubscriptions ? (
+            <div className="p-10 text-center space-y-2">
+              <RefreshCw className="w-6 h-6 text-purple-700 animate-spin mx-auto" />
+              <p className="text-xs text-zinc-500 font-bold">Loading your subscription history...</p>
+            </div>
+          ) : subscriptionLogs.length === 0 ? (
+            /* FALLBACK SINGLE ENTRY IF NONE FETCHED */
+            <div className="p-6 rounded-3xl border border-zinc-200 bg-zinc-50/60 space-y-4">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="font-heading font-black text-lg text-zinc-950">
+                    {optedPlanName}
+                  </span>
+                  <span className="text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-0.5 rounded-md">
+                    {schedule.status} Plan
+                  </span>
                 </div>
-              );
-            })}
-          </div>
+                {currentUser.paymentAmount && (
+                  <span className="text-xs font-black text-zinc-900 bg-white border border-zinc-200 px-3 py-1 rounded-xl">
+                    Paid: ₹{currentUser.paymentAmount} ({currentUser.paymentStatus || 'PAID'})
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="p-3 bg-white rounded-2xl border border-zinc-200">
+                  <span className="text-[10px] text-zinc-400 font-bold uppercase block">Delivery Start</span>
+                  <span className="font-black text-zinc-900 mt-0.5 block">{schedule.startDateStr}</span>
+                </div>
+                <div className="p-3 bg-white rounded-2xl border border-zinc-200">
+                  <span className="text-[10px] text-zinc-400 font-bold uppercase block">Delivery End</span>
+                  <span className="font-black text-zinc-900 mt-0.5 block">{schedule.endDateStr}</span>
+                </div>
+                <div className="p-3 bg-white rounded-2xl border border-zinc-200">
+                  <span className="text-[10px] text-zinc-400 font-bold uppercase block">Duration</span>
+                  <span className="font-black text-zinc-900 mt-0.5 block">{schedule.durationDays} Days</span>
+                </div>
+                <div className="p-3 bg-white rounded-2xl border border-zinc-200">
+                  <span className="text-[10px] text-zinc-400 font-bold uppercase block">Status</span>
+                  <span className="font-black text-zinc-900 mt-0.5 block">{currentUser.orderStatus || schedule.status}</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {subscriptionLogs.map((entry, index) => {
+                const isCurrent = !entry.isClosed && index === subscriptionLogs.length - 1;
+                return (
+                  <div
+                    key={index}
+                    className={`rounded-3xl p-5 sm:p-6 border transition-all ${
+                      isCurrent
+                        ? 'bg-purple-50/40 border-purple-300 shadow-xs'
+                        : entry.isClosed
+                        ? 'bg-zinc-50 border-zinc-200/90'
+                        : 'bg-white border-zinc-200'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-200/70">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <span className="font-heading font-black text-lg sm:text-xl text-zinc-950 tracking-tight">
+                            {entry.plan}
+                          </span>
+                          {isCurrent ? (
+                            <span className="text-[10px] font-black uppercase bg-emerald-100 text-emerald-800 border border-emerald-300 px-2.5 py-0.5 rounded-md flex items-center gap-1">
+                              <Sparkles className="w-3 h-3 text-emerald-600" />
+                              <span>Current Active Subscription</span>
+                            </span>
+                          ) : entry.isClosed ? (
+                            <span className="text-[10px] font-black uppercase bg-zinc-200 text-zinc-700 border border-zinc-300 px-2.5 py-0.5 rounded-md">
+                              ✓ Completed / Closed Plan
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-black uppercase bg-blue-100 text-blue-800 border border-blue-200 px-2.5 py-0.5 rounded-md">
+                              {entry.orderStatus || 'Registered'}
+                            </span>
+                          )}
+                          {entry.subscriberType && (
+                            <span className="text-[10px] font-bold uppercase bg-zinc-100 text-zinc-600 border border-zinc-200 px-2 py-0.5 rounded-md">
+                              {entry.subscriberType}
+                            </span>
+                          )}
+                        </div>
+                        {entry.orderStatus && (
+                          <p className="text-xs text-zinc-500 font-medium">
+                            Kitchen Dispatch Status: <strong className="text-zinc-800">{entry.orderStatus}</strong>
+                          </p>
+                        )}
+                      </div>
+
+                      {entry.paymentAmount && (
+                        <div className="bg-white border border-zinc-200 px-3.5 py-1.5 rounded-2xl shadow-2xs self-start sm:self-center shrink-0">
+                          <span className="text-[10px] font-bold text-zinc-400 uppercase block">Amount Paid</span>
+                          <span className="text-sm font-black text-zinc-950">
+                            ₹{entry.paymentAmount} <span className="text-[10px] text-emerald-600 font-bold">({entry.paymentStatus || 'PAID'})</span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 text-xs">
+                      <div className="p-3 bg-white rounded-2xl border border-zinc-200/90 shadow-2xs">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 block">
+                          Delivery Start Date
+                        </span>
+                        <span className="font-black text-zinc-950 text-sm mt-0.5 block">
+                          {entry.startDate || 'Scheduled'}
+                        </span>
+                      </div>
+
+                      <div className="p-3 bg-white rounded-2xl border border-zinc-200/90 shadow-2xs">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 block">
+                          Delivery End Date
+                        </span>
+                        <span className="font-black text-zinc-950 text-sm mt-0.5 block">
+                          {entry.endDate || 'Calculated'}
+                        </span>
+                      </div>
+
+                      <div className="p-3 bg-white rounded-2xl border border-zinc-200/90 shadow-2xs">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 block">
+                          Total Duration
+                        </span>
+                        <span className="font-black text-zinc-950 text-sm mt-0.5 block">
+                          {entry.durationDays || (entry.plan.toLowerCase().includes('week') ? 7 : entry.plan.toLowerCase().includes('day') ? 1 : 30)} Days
+                        </span>
+                      </div>
+
+                      <div className="p-3 bg-white rounded-2xl border border-zinc-200/90 shadow-2xs">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 block">
+                          Meals Included
+                        </span>
+                        <span className="font-black text-zinc-950 text-xs mt-0.5 block">
+                          {entry.requestedMeals && entry.requestedMeals.length > 0
+                            ? entry.requestedMeals.join(', ')
+                            : 'Breakfast, Lunch, Dinner'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

@@ -39,6 +39,20 @@ export interface MenuItem {
   weekNumber?: number;
 }
 
+export interface SubscriptionHistoryEntry {
+  plan: string;
+  startDate?: string;
+  purchaseDate?: string;
+  endDate?: string;
+  durationDays?: number;
+  subscriberType?: string;
+  orderStatus?: string;
+  paymentAmount?: string;
+  paymentStatus?: string;
+  requestedMeals?: string[];
+  isClosed?: boolean;
+}
+
 export interface UserProfile {
   id: string;
   fullName: string;
@@ -68,6 +82,7 @@ export interface UserProfile {
   requestedMeals?: string[];
   subscriberType?: string;
   previousPlan?: string;
+  subscriptionHistory?: SubscriptionHistoryEntry[];
   hasInsulatedLunchBox?: boolean;
   lunchBoxDeposit?: number;
 }

@@ -1,11 +1,19 @@
 import fs from 'fs';
 import path from 'path';
+import { getPlanDurationDays, parseDateFlexible } from '@/utils/subscriptionUtils';
 
 export interface SubscriptionHistoryEntry {
   plan: string;
   startDate?: string;
   purchaseDate?: string;
+  endDate?: string;
+  durationDays?: number;
   subscriberType?: string;
+  orderStatus?: string;
+  paymentAmount?: string;
+  paymentStatus?: string;
+  requestedMeals?: string[];
+  isClosed?: boolean;
 }
 
 export interface CustomerRow {
@@ -96,6 +104,44 @@ export function makeCustomerKey(name?: string, mobile?: string): string {
   return `${cleanName}_${cleanMobile}`;
 }
 
+function buildHistoryEntry(sub: CustomerRow, isLatest: boolean): SubscriptionHistoryEntry {
+  const normPlan = normalizePlanLabel(sub.plan);
+  const duration = getPlanDurationDays(sub.plan);
+  let endDate: string | undefined;
+  let isClosed = false;
+
+  if (sub.startDate) {
+    const sDate = parseDateFlexible(sub.startDate);
+    const eDate = new Date(sDate.getFullYear(), sDate.getMonth(), sDate.getDate() + duration - 1);
+    endDate = `${eDate.getDate()} ${eDate.toLocaleString('en-IN', { month: 'short' })} ${eDate.getFullYear()}`;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    eDate.setHours(23, 59, 59, 999);
+    if (now.getTime() > eDate.getTime()) {
+      isClosed = true;
+    }
+  }
+
+  const rawOrderStatus = (sub.orderStatus || '').toLowerCase();
+  if (rawOrderStatus.includes('closed') || rawOrderStatus === 'completed' || rawOrderStatus === 'expired') {
+    isClosed = true;
+  }
+
+  return {
+    plan: normPlan,
+    startDate: sub.startDate,
+    purchaseDate: sub.purchaseDate,
+    endDate,
+    durationDays: duration,
+    subscriberType: isLatest ? (sub.subscriberType || 'Active') : 'Previous Plan',
+    orderStatus: sub.orderStatus,
+    paymentAmount: sub.paymentAmount,
+    paymentStatus: sub.paymentStatus,
+    requestedMeals: sub.requestedMeals,
+    isClosed,
+  };
+}
+
 /**
  * Attaches non-destructive chronological subscriptionHistory[] to each customer row
  * by grouping rows with matching normalized name AND 10-digit mobile number.
@@ -126,12 +172,7 @@ export function attachSubscriptionHistories(rows: CustomerRow[]): CustomerRow[] 
         });
       }
       if (single.plan) {
-        history.push({
-          plan: normalizePlanLabel(single.plan),
-          startDate: single.startDate,
-          purchaseDate: single.purchaseDate,
-          subscriberType: single.subscriberType || 'Active',
-        });
+        history.push(buildHistoryEntry(single, true));
       }
       const consecutiveMonths = single.previousPlan || single.subscriberType === 'Upgrade' ? 2 : 1;
       consolidated.push({
@@ -165,12 +206,7 @@ export function attachSubscriptionHistories(rows: CustomerRow[]): CustomerRow[] 
       const sub = submissions[i];
       if (!sub.plan) continue;
       const isLatest = i === submissions.length - 1;
-      history.push({
-        plan: normalizePlanLabel(sub.plan),
-        startDate: sub.startDate,
-        purchaseDate: sub.purchaseDate,
-        subscriberType: isLatest ? (sub.subscriberType || 'Upgraded Active') : 'Previous Plan',
-      });
+      history.push(buildHistoryEntry(sub, isLatest));
     }
 
     // Merge addresses without duplicates
@@ -202,7 +238,7 @@ export function attachSubscriptionHistories(rows: CustomerRow[]): CustomerRow[] 
   return consolidated;
 }
 
-export function parseCsvContent(fileContent: string): CustomerRow[] {
+export function parseRawSubmissions(fileContent: string): CustomerRow[] {
   const lines = fileContent
     .split(/\r?\n/)
     .map((l) => l.trim())
@@ -354,10 +390,19 @@ export function parseCsvContent(fileContent: string): CustomerRow[] {
     }
   }
 
-  return attachSubscriptionHistories(customers);
+  return customers;
 }
 
-export async function fetchCustomersFromSource(): Promise<{ source: string; customers: CustomerRow[] }> {
+export function parseCsvContent(fileContent: string): CustomerRow[] {
+  const raw = parseRawSubmissions(fileContent);
+  return attachSubscriptionHistories(raw);
+}
+
+export async function fetchCustomersFromSource(): Promise<{
+  source: string;
+  customers: CustomerRow[];
+  allSubmissions: CustomerRow[];
+}> {
   try {
     const sheetRes = await fetch(GOOGLE_SHEET_CSV_URL, {
       cache: 'no-store',
@@ -368,9 +413,10 @@ export async function fetchCustomersFromSource(): Promise<{ source: string; cust
 
     if (sheetRes.ok) {
       const csvText = await sheetRes.text();
-      const customers = parseCsvContent(csvText);
+      const allSubmissions = parseRawSubmissions(csvText);
+      const customers = attachSubscriptionHistories(allSubmissions);
       if (customers.length > 0) {
-        return { source: 'google-sheets-live', customers };
+        return { source: 'google-sheets-live', customers, allSubmissions };
       }
     }
   } catch (sheetErr) {
@@ -394,13 +440,14 @@ export async function fetchCustomersFromSource(): Promise<{ source: string; cust
 
     if (csvPath && fs.existsSync(/*turbopackIgnore: true*/ csvPath)) {
       const fileContent = fs.readFileSync(/*turbopackIgnore: true*/ csvPath, 'utf8');
-      const customers = parseCsvContent(fileContent);
-      return { source: 'local-customers.csv', customers };
+      const allSubmissions = parseRawSubmissions(fileContent);
+      const customers = attachSubscriptionHistories(allSubmissions);
+      return { source: 'local-customers.csv', customers, allSubmissions };
     }
   } catch (error) {
     console.error('Error reading local customers.csv:', error);
   }
 
-  return { source: 'empty', customers: [] };
+  return { source: 'empty', customers: [], allSubmissions: [] };
 }
 

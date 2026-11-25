@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Check, Sparkles, Plus, Minus, Lightbulb, Zap, ArrowRight, ShieldCheck, Eye, Star } from 'lucide-react';
+import { Check, Sparkles, Plus, Minus, Lightbulb, Zap, ArrowRight, ShieldCheck, Eye, Star, AlertCircle, X } from 'lucide-react';
 
 import { UserProfile } from '../types';
 import { STUVVY_3_PLUS_1_CONFIG, calculate3Plus1Pricing } from '../config/subscriptionConfig';
+import { calculateSubscriptionSchedule, parseDateFlexible } from '../utils/subscriptionUtils';
 
 export interface PlanOption {
   id: string;
@@ -121,12 +122,32 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
     ? (SUBSCRIPTION_PLANS.find(p => p.id === userPlanNormalized || userPlanNormalized.includes(p.id) || p.name.toLowerCase().includes(userPlanNormalized)) || null)
     : null;
 
+  // Upgrade modal & unlocked plans state
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [showAllPlansUnlocked, setShowAllPlansUnlocked] = useState(false);
+
+  // Compute subscription schedule and expiration status
+  const schedule = user?.startDate ? calculateSubscriptionSchedule(user.startDate, user.purchaseDate, user.plan) : null;
+  const isPlanExpired = schedule
+    ? schedule.status === 'Expired' || Boolean(user?.orderStatus && (
+        user.orderStatus.toLowerCase().includes('closed') ||
+        user.orderStatus.toLowerCase().includes('expired') ||
+        user.orderStatus.toLowerCase().includes('completed')
+      ))
+    : Boolean(user?.orderStatus && (
+        user.orderStatus.toLowerCase().includes('closed') ||
+        user.orderStatus.toLowerCase().includes('expired') ||
+        user.orderStatus.toLowerCase().includes('completed')
+      ));
+
   // Pricing calculation for Stuvvy 3+1 Meal Pass (Unified: Pay ₹7,999 for 3 months, get 4th month FREE)
   const pricing3Plus1 = calculate3Plus1Pricing(user);
 
   // The 3 standard plans for the bottom grid
   const standardPlans = SUBSCRIPTION_PLANS.filter(p => p.id !== '3plus1');
-  const plansToDisplay = assignedPlan && assignedPlan.id !== '3plus1' ? [assignedPlan] : standardPlans;
+  const plansToDisplay = (assignedPlan && assignedPlan.id !== '3plus1' && !showAllPlansUnlocked)
+    ? [assignedPlan]
+    : standardPlans;
 
   const userPaidAmount = user?.paymentAmount
     ? parseInt(user.paymentAmount.replace(/\D/g, ''), 10) || undefined
@@ -174,16 +195,19 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
       {!isCompactView && (
         <div className="text-center max-w-2xl mx-auto mb-10">
           <span className="text-[11px] font-bold uppercase tracking-widest text-zinc-600 bg-zinc-100 px-3 py-1 rounded-full border border-zinc-200">
-            {assignedPlan ? 'Your Registered Plan' : 'Flexible Subscription Options'}
+            {assignedPlan && !showAllPlansUnlocked ? (isPlanExpired ? 'Plan Expired' : 'Your Registered Plan') : 'Flexible Subscription Options'}
           </span>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-zinc-950 font-heading mt-3 tracking-tight">
-            {assignedPlan ? `Your Assigned Plan: ${assignedPlan.name}` : 'Select Your Meal Subscription'}
+            {assignedPlan && !showAllPlansUnlocked
+              ? (isPlanExpired ? `Subscription Ended: ${assignedPlan.name}` : `Your Assigned Plan: ${assignedPlan.name}`)
+              : 'Select Your Meal Subscription'}
           </h2>
           <p className="text-xs sm:text-sm text-zinc-500 font-medium mt-2 leading-relaxed">
-            {assignedPlan ? (
+            {assignedPlan && !showAllPlansUnlocked ? (
               <span>
                 Registered under <strong>{user?.fullName}</strong>
-                {user?.startDate ? ` • Deliveries begin ${user.startDate}` : ''}.
+                {user?.startDate ? ` • Deliveries began ${user.startDate}` : ''}
+                {schedule?.endDateStr ? ` • Ended ${schedule.endDateStr}` : ''}.
               </span>
             ) : (
               'Adjust days to automatically calculate your price. Pause or change plans anytime.'
@@ -362,10 +386,17 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
             >
               {/* Savings / Popular / Assigned Badge */}
               {isAssigned ? (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1 rounded-full shadow-md whitespace-nowrap border border-emerald-500 flex items-center gap-1.5">
-                  <Sparkles className="w-3 h-3 text-emerald-200" />
-                  <span>Your Active Plan • Paid ₹{userPaidAmount || calculatedPrice}</span>
-                </div>
+                isPlanExpired ? (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-zinc-950 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1 rounded-full shadow-md whitespace-nowrap border border-zinc-700 flex items-center gap-1.5">
+                    <AlertCircle className="w-3 h-3 text-red-400" />
+                    <span>Plan Expired • Ended {schedule?.endDateStr || 'Recently'}</span>
+                  </div>
+                ) : (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1 rounded-full shadow-md whitespace-nowrap border border-emerald-500 flex items-center gap-1.5">
+                    <Sparkles className="w-3 h-3 text-emerald-200" />
+                    <span>Your Active Plan • Paid ₹{userPaidAmount || calculatedPrice}</span>
+                  </div>
+                )
               ) : plan.savingsBadge ? (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-zinc-950 text-white text-[10px] font-black uppercase tracking-widest px-3.5 py-1 rounded-full shadow-md whitespace-nowrap border border-zinc-800">
                   {plan.savingsBadge}
@@ -389,39 +420,48 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                   {plan.description}
                 </p>
 
-                {/* DAY INCREASING & DECREASING CONTROL BUTTONS */}
-                <div className="mt-5 p-3.5 bg-zinc-50 border border-zinc-200/80 rounded-2xl space-y-2">
-                  <div className="flex items-center justify-between text-xs font-extrabold text-zinc-900">
-                    <span className="text-[11px] text-zinc-600 font-bold">Subscription Days:</span>
-                    <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-xl border border-zinc-200 shadow-2xs">
-                      <button
-                        type="button"
-                        onClick={() => handleDecrementDays(plan.id)}
-                        className="w-6 h-6 rounded-lg bg-zinc-100 hover:bg-zinc-900 hover:text-white text-zinc-800 flex items-center justify-center font-black transition-colors cursor-pointer"
-                        title="Decrease Day"
-                      >
-                        <Minus className="w-3.5 h-3.5 stroke-[3]" />
-                      </button>
-
-                      <span className="text-xs font-black text-zinc-900 min-w-[50px] text-center">
-                        {currentDays} {currentDays === 1 ? 'Day' : 'Days'}
-                      </span>
-
-                      <button
-                        type="button"
-                        onClick={() => handleIncrementDays(plan.id)}
-                        className="w-6 h-6 rounded-lg bg-zinc-100 hover:bg-zinc-900 hover:text-white text-zinc-800 flex items-center justify-center font-black transition-colors cursor-pointer"
-                        title="Increase Day"
-                      >
-                        <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                      </button>
-                    </div>
+                {/* DAY INCREASING & DECREASING CONTROL BUTTONS (STATIC WHEN EXPIRED) */}
+                {isAssigned && isPlanExpired ? (
+                  <div className="mt-5 p-3.5 bg-zinc-100/90 border border-zinc-200 rounded-2xl flex items-center justify-between text-xs font-bold text-zinc-700">
+                    <span className="text-[11px] text-zinc-500 font-bold">Subscription Duration:</span>
+                    <span className="text-xs font-black text-zinc-900 bg-white px-3 py-1 rounded-xl border border-zinc-200 shadow-2xs">
+                      {currentDays} {currentDays === 1 ? 'Day' : 'Days'} (Completed)
+                    </span>
                   </div>
+                ) : (
+                  <div className="mt-5 p-3.5 bg-zinc-50 border border-zinc-200/80 rounded-2xl space-y-2">
+                    <div className="flex items-center justify-between text-xs font-extrabold text-zinc-900">
+                      <span className="text-[11px] text-zinc-600 font-bold">Subscription Days:</span>
+                      <div className="flex items-center gap-2 bg-white px-2.5 py-1 rounded-xl border border-zinc-200 shadow-2xs">
+                        <button
+                          type="button"
+                          onClick={() => handleDecrementDays(plan.id)}
+                          className="w-6 h-6 rounded-lg bg-zinc-100 hover:bg-zinc-900 hover:text-white text-zinc-800 flex items-center justify-center font-black transition-colors cursor-pointer"
+                          title="Decrease Day"
+                        >
+                          <Minus className="w-3.5 h-3.5 stroke-[3]" />
+                        </button>
 
-                  <p className="text-[10px] text-zinc-400 font-medium text-right">
-                    Rate: ₹{plan.ratePerDay.toFixed(2)}/day
-                  </p>
-                </div>
+                        <span className="text-xs font-black text-zinc-900 min-w-[50px] text-center">
+                          {currentDays} {currentDays === 1 ? 'Day' : 'Days'}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => handleIncrementDays(plan.id)}
+                          className="w-6 h-6 rounded-lg bg-zinc-100 hover:bg-zinc-900 hover:text-white text-zinc-800 flex items-center justify-center font-black transition-colors cursor-pointer"
+                          title="Increase Day"
+                        >
+                          <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <p className="text-[10px] text-zinc-400 font-medium text-right">
+                      Rate: ₹{plan.ratePerDay.toFixed(2)}/day
+                    </p>
+                  </div>
+                )}
 
                 {/* DYNAMIC PRICE DISPLAY */}
                 <div className="my-5">
@@ -438,8 +478,15 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                   </p>
                 </div>
 
-                {/* WEEKLY SUGGESTION CALLOUT FOR INDIVIDUAL CARDS (Hidden if user already has an active paid plan) */}
-                {isAssigned && userPaidAmount ? (
+                {/* CALLOUT BANNER (EXPIRED NOTICE OR ACTIVE PLAN OR PROMO) */}
+                {isAssigned && isPlanExpired ? (
+                  <div className="mb-5 p-2.5 bg-zinc-100 border border-zinc-200 rounded-xl text-[11px] text-zinc-800 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-zinc-700 shrink-0" />
+                    <span className="font-bold text-[10px]">
+                      Your {plan.name} has ended. Upgrade or renew to continue delicious meals without interruption!
+                    </span>
+                  </div>
+                ) : isAssigned && userPaidAmount ? (
                   <div className="mb-5 p-2.5 bg-emerald-50 border border-emerald-200/80 rounded-xl text-[11px] text-emerald-900 flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
                     <span className="font-bold text-[10px]">
@@ -493,23 +540,159 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                   <span>View Menu ({plan.name})</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => onSelectPlan(plan, currentDays, calculatedPrice)}
-                  className={`w-full py-3.5 px-4 rounded-2xl font-extrabold text-xs tracking-wide transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer ${
-                    plan.isPopular
-                      ? 'bg-zinc-950 hover:bg-zinc-800 text-white shadow-md'
-                      : 'bg-zinc-900 hover:bg-zinc-800 text-white'
-                  }`}
-                >
-                  <span>{isAssigned && userPaidAmount ? `Active Plan (₹${userPaidAmount})` : `Select ${plan.name} (₹${calculatedPrice})`}</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
+                {isAssigned && isPlanExpired ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsUpgradeModalOpen(true)}
+                    className="w-full py-3.5 px-4 rounded-2xl font-black text-xs tracking-wide transition-all shadow-md bg-zinc-950 hover:bg-zinc-800 text-white flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Upgrade Plan →</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onSelectPlan(plan, currentDays, calculatedPrice)}
+                    className={`w-full py-3.5 px-4 rounded-2xl font-extrabold text-xs tracking-wide transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer ${
+                      plan.isPopular
+                        ? 'bg-zinc-950 hover:bg-zinc-800 text-white shadow-md'
+                        : 'bg-zinc-900 hover:bg-zinc-800 text-white'
+                    }`}
+                  >
+                    <span>{isAssigned && userPaidAmount ? `Active Plan (₹${userPaidAmount})` : `Select ${plan.name} (₹${calculatedPrice})`}</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* UPGRADE PLAN OPTIONS MODAL */}
+      {isUpgradeModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white text-zinc-950 w-full max-w-xl rounded-[32px] border border-zinc-200 p-6 sm:p-8 shadow-2xl relative space-y-6 max-h-[90vh] overflow-y-auto">
+            {/* CLOSE BUTTON */}
+            <button
+              type="button"
+              onClick={() => setIsUpgradeModalOpen(false)}
+              className="absolute top-5 right-5 w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 flex items-center justify-center text-zinc-700 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4 stroke-[2.5]" />
+            </button>
+
+            {/* HEADER */}
+            <div className="space-y-1.5 text-left pr-8">
+              <span className="text-[10px] font-mono font-black uppercase tracking-widest bg-zinc-950 text-white px-3 py-1 rounded-full">
+                UPGRADE YOUR PLAN
+              </span>
+              <h3 className="text-2xl sm:text-3xl font-black font-heading tracking-tight text-zinc-950 mt-2">
+                Choose Your Next Meal Journey
+              </h3>
+              <p className="text-xs text-zinc-500 font-medium">
+                Your previous plan has ended. Select one of the two options below to continue delicious homely meals:
+              </p>
+            </div>
+
+            {/* TWO OPTIONS */}
+            <div className="space-y-4 text-left">
+              {/* OPTION 1: 3+1 MEAL PASS */}
+              <div className="border-2 border-zinc-950 rounded-3xl p-5 sm:p-6 bg-zinc-50/50 space-y-3.5 relative overflow-hidden">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-zinc-950 text-white px-2.5 py-0.5 rounded-md">
+                    ★ OPTION 1 • RECOMMENDED
+                  </span>
+                  <span className="text-xs font-mono font-black text-zinc-900 bg-white border border-zinc-200 px-2 py-0.5 rounded-md">
+                    4TH MONTH FREE
+                  </span>
+                </div>
+
+                <div>
+                  <h4 className="text-lg font-black font-heading text-zinc-950">
+                    STUVVY 3+1 MEAL PASS
+                  </h4>
+                  <p className="text-xs text-zinc-600 font-medium mt-0.5">
+                    Subscribe for 3 Months (₹7,999) upfront and enjoy your entire <strong>4th Month completely FREE</strong>!
+                  </p>
+                </div>
+
+                <div className="bg-white p-3 rounded-2xl border border-zinc-200 flex items-baseline justify-between text-xs">
+                  <div>
+                    <div className="font-black text-xl text-zinc-950">₹7,999</div>
+                    <div className="text-[10px] text-zinc-500">for 4 Full Months (120 Days)</div>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                      ₹66.65 / day effective
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsUpgradeModalOpen(false);
+                    onSelectPlan(PLAN_3_PLUS_1, 120, 7999);
+                  }}
+                  className="w-full py-3.5 px-4 rounded-2xl font-black text-xs tracking-wide bg-zinc-950 hover:bg-zinc-800 text-white flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  <span>CLAIM 4TH MONTH FREE (₹7,999) →</span>
+                </button>
+              </div>
+
+              {/* OPTION 2: OTHER PLANS */}
+              <div className="border border-zinc-200 rounded-3xl p-5 sm:p-6 bg-white space-y-3.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-zinc-100 text-zinc-700 px-2.5 py-0.5 rounded-md border border-zinc-200">
+                    OPTION 2 • FLEXIBLE PLANS
+                  </span>
+                </div>
+
+                <div>
+                  <h4 className="text-base font-black font-heading text-zinc-950">
+                    Choose Other Subscription Plans
+                  </h4>
+                  <p className="text-xs text-zinc-500 font-medium mt-0.5">
+                    Prefer regular renewal? Pick from Daily (₹149/day), Weekly (₹689/week), or Monthly (₹2,499/month) plans.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                  <div className="p-2 rounded-xl bg-zinc-50 border border-zinc-200">
+                    <div className="font-bold text-zinc-800">Daily</div>
+                    <div className="text-[10px] text-zinc-500">₹149/day</div>
+                  </div>
+                  <div className="p-2 rounded-xl bg-zinc-50 border border-zinc-200">
+                    <div className="font-bold text-zinc-800">Weekly</div>
+                    <div className="text-[10px] text-zinc-500">₹689/week</div>
+                  </div>
+                  <div className="p-2 rounded-xl bg-zinc-50 border border-zinc-200">
+                    <div className="font-bold text-zinc-800">Monthly</div>
+                    <div className="text-[10px] text-zinc-500">₹2,499/mo</div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsUpgradeModalOpen(false);
+                    setShowAllPlansUnlocked(true);
+                    setTimeout(() => {
+                      const el = document.getElementById('pricing');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }, 100);
+                  }}
+                  className="w-full py-3.5 px-4 rounded-2xl font-black text-xs tracking-wide bg-zinc-100 hover:bg-zinc-200 text-zinc-900 border border-zinc-200 flex items-center justify-center gap-2 cursor-pointer transition-all"
+                >
+                  <span>Select Other Plans →</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Trust Guarantee Note */}
       {!isCompactView && (

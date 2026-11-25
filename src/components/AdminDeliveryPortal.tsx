@@ -144,40 +144,37 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
       }
       const combinedExisting = Array.from(mergedById.values());
 
-      let custList: Array<{
-        name: string;
-        mobileNo: string;
-        plan?: string;
-        address?: string;
-        locality?: string;
-        paymentAmount?: string;
-        paymentStatus?: string;
-        orderStatus?: string;
-        startDate?: string;
-        purchaseDate?: string;
-        subscriberType?: string;
-        previousPlan?: string;
-        requestedMeals?: string[];
-      }> = [];
+      let allPlanSubmissions: any[] = [];
       if (custRes && custRes.ok) {
         const custData = await custRes.json();
-        if (custData?.success && Array.isArray(custData.customers)) {
-          custList = custData.customers;
+        if (custData?.success) {
+          allPlanSubmissions = Array.isArray(custData.allSubmissions) && custData.allSubmissions.length > 0
+            ? custData.allSubmissions
+            : (Array.isArray(custData.customers) ? custData.customers : []);
         }
       }
 
       // Helper to generate unique key combining customer name and 10-digit mobile number
-      // This strictly prevents customers with the same mobile (e.g. Sanjana and Chandran) from merging
       const makeCustKey = (name?: string, mobile?: string) => {
         const n = (name || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
         const m = (mobile || '').replace(/\D/g, '').slice(-10);
         return `${n}_${m}`;
       };
 
-      // Map customer details and their opted meals from Google Sheets
+      // Helper to generate unique plan key so every plan subscription is tracked separately (even when upgraded)
+      const makePlanKey = (name?: string, mobile?: string, plan?: string, startDate?: string, sNo?: number | string) => {
+        const custKey = makeCustKey(name, mobile);
+        const p = (plan || 'plan').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+        const d = (startDate || '').replace(/\D/g, '') || String(sNo || '');
+        return `${custKey}_${p}_${d}`;
+      };
+
+      // Map plan details and their opted meals from Google Sheets
       const customerMap = new Map<
         string,
         {
+          planKey: string;
+          customerKey: string;
           name: string;
           mobile: string;
           plan: string;
@@ -196,83 +193,92 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         }
       >();
 
-      for (const c of custList) {
+      for (let idx = 0; idx < allPlanSubmissions.length; idx++) {
+        const c = allPlanSubmissions[idx];
         const mob = (c.mobileNo || '').replace(/\D/g, '').slice(-10);
+        if (!mob) continue;
         const custKey = makeCustKey(c.name, mob);
-        if (mob && custKey) {
-          const rawOrderStatus = (c.orderStatus || '').trim().toLowerCase();
-          const isExplicitlyClosed =
-            rawOrderStatus === 'delivered' ||
-            rawOrderStatus === 'closed' ||
-            rawOrderStatus === 'completed' ||
-            rawOrderStatus === 'inactive' ||
-            rawOrderStatus === 'expired';
+        const planKey = makePlanKey(c.name, mob, c.plan, c.startDate, c.sNo || idx);
 
-          // Automatic Plan Date Check:
-          // Daily = 1 day, Weekly = 7 days, Monthly = 30 days
-          const duration = getPlanDurationDays(c.plan);
-          const startDateObj = parseDateFlexible(c.startDate);
-          startDateObj.setHours(0, 0, 0, 0);
+        const rawOrderStatus = (c.orderStatus || '').trim().toLowerCase();
+        const isExplicitlyClosed =
+          rawOrderStatus.includes('closed') ||
+          rawOrderStatus === 'delivered' ||
+          rawOrderStatus === 'completed' ||
+          rawOrderStatus === 'expired' ||
+          rawOrderStatus === 'inactive';
 
-          // The last active day of the customer's subscription
-          const lastActiveDate = new Date(
-            startDateObj.getFullYear(),
-            startDateObj.getMonth(),
-            startDateObj.getDate() + duration - 1
-          );
-          lastActiveDate.setHours(23, 59, 59, 999);
+        // Automatic Plan Date Check:
+        // Daily = 1 day, Weekly = 7 days, Monthly = 30 days
+        const duration = getPlanDurationDays(c.plan);
+        const startDateObj = parseDateFlexible(c.startDate);
+        startDateObj.setHours(0, 0, 0, 0);
 
-          const selDateObj = parseDateFlexible(selectedDate);
-          selDateObj.setHours(0, 0, 0, 0);
+        // The last active day of the customer's subscription
+        const lastActiveDate = new Date(
+          startDateObj.getFullYear(),
+          startDateObj.getMonth(),
+          startDateObj.getDate() + duration - 1
+        );
+        lastActiveDate.setHours(23, 59, 59, 999);
 
-          // If the selected dispatch date is strictly after the plan's end date, the plan has ended!
-          const isDateExpired = selDateObj.getTime() > lastActiveDate.getTime();
-          const isUpcoming = selDateObj.getTime() < startDateObj.getTime();
-          const isClosed = isExplicitlyClosed || isDateExpired;
+        const selDateObj = parseDateFlexible(selectedDate);
+        selDateObj.setHours(0, 0, 0, 0);
 
-          let closeReason = 'This plan is closed & fully delivered. No kitchen dispatch required.';
-          let closeReasonTag = 'Completed';
+        // If the selected dispatch date is strictly after the plan's end date, the plan has ended!
+        const isDateExpired = selDateObj.getTime() > lastActiveDate.getTime();
+        const isUpcoming = selDateObj.getTime() < startDateObj.getTime();
+        const isClosed = isExplicitlyClosed || isDateExpired;
 
-          if (isExplicitlyClosed && (c.subscriberType?.toLowerCase().includes('upgrad') || c.previousPlan)) {
-            closeReason = 'This plan was upgraded to Monthly Plan. No dispatch required for this old plan.';
-            closeReasonTag = 'Completed / Upgraded';
-          } else if (duration === 1) {
-            closeReason = `This 1-day Daily Plan ended on ${lastActiveDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}. No active dispatch required today.`;
-            closeReasonTag = '1-Day Plan Completed';
-          } else if (isDateExpired) {
-            closeReason = `This ${duration}-day ${c.plan || ''} Plan ended on ${lastActiveDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}. Plan duration completed.`;
-            closeReasonTag = 'Plan Duration Ended';
-          }
+        let closeReason = 'This plan is closed & fully delivered. No kitchen dispatch required.';
+        let closeReasonTag = 'Plan Closed';
 
-          const upcomingReason = isUpcoming
-            ? `Plan begins on ${c.startDate || 'scheduled date'}. No delivery required for ${selectedDate}.`
-            : undefined;
-
-          customerMap.set(custKey, {
-            name: c.name,
-            mobile: mob,
-            plan: c.plan || 'Monthly',
-            address: c.address || '',
-            locality: c.locality || '',
-            paymentAmount: c.paymentAmount,
-            paymentStatus: c.paymentStatus,
-            orderStatus: c.orderStatus,
-            startDate: c.startDate,
-            isClosed,
-            closeReason,
-            closeReasonTag,
-            isUpcoming,
-            upcomingReason,
-            requestedMeals: c.requestedMeals,
-          });
+        if (isExplicitlyClosed && (c.subscriberType?.toLowerCase().includes('upgrad') || c.previousPlan)) {
+          closeReason = 'This plan was upgraded to a new plan. No dispatch required for this old plan.';
+          closeReasonTag = 'Completed / Upgraded';
+        } else if (duration === 1) {
+          closeReason = `This 1-day Daily Plan ended on ${lastActiveDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}. No active dispatch required today.`;
+          closeReasonTag = '1-Day Plan Closed';
+        } else if (isDateExpired) {
+          closeReason = `This ${duration}-day ${c.plan || ''} Plan ended on ${lastActiveDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}. Plan duration completed.`;
+          closeReasonTag = `Plan Ended (${lastActiveDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })})`;
+        } else if (isExplicitlyClosed) {
+          closeReason = `Plan marked as Closed in Google Sheets.`;
+          closeReasonTag = 'Plan Closed';
         }
+
+        const upcomingReason = isUpcoming
+          ? `Plan begins on ${c.startDate || 'scheduled date'}. No delivery required for ${selectedDate}.`
+          : undefined;
+
+        customerMap.set(planKey, {
+          planKey,
+          customerKey: custKey,
+          name: c.name,
+          mobile: mob,
+          plan: c.plan || 'Monthly',
+          address: c.address || '',
+          locality: c.locality || '',
+          paymentAmount: c.paymentAmount,
+          paymentStatus: c.paymentStatus,
+          orderStatus: c.orderStatus,
+          startDate: c.startDate,
+          isClosed,
+          closeReason,
+          closeReasonTag,
+          isUpcoming,
+          upcomingReason,
+          requestedMeals: c.requestedMeals,
+        });
       }
 
       for (const l of existingLogs) {
         const mob = (l.customerMobile || '').replace(/\D/g, '').slice(-10);
-        const custKey = makeCustKey(l.customerName, mob);
-        if (mob && custKey && !customerMap.has(custKey)) {
-          customerMap.set(custKey, {
+        const planKey = (l as any).planKey || makePlanKey(l.customerName, mob, l.planName, l.date);
+        if (mob && planKey && !customerMap.has(planKey)) {
+          customerMap.set(planKey, {
+            planKey,
+            customerKey: makeCustKey(l.customerName, mob),
             name: l.customerName,
             mobile: mob,
             plan: l.planName,
@@ -286,8 +292,9 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
       const allSessions: Array<'Breakfast' | 'Lunch' | 'Dinner'> = ['Breakfast', 'Lunch', 'Dinner'];
       const mergedLogs: DeliveryLogItem[] = [];
 
-      for (const [custKey, info] of customerMap.entries()) {
+      for (const [planKey, info] of customerMap.entries()) {
         const cleanNameSlug = (info.name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+        const cleanPlanSlug = (info.plan || 'plan').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
 
         // Respect the meals the customer opted for in Google Sheets (e.g. Breakfast, Lunch, Dinner)
         const optedMeals =
@@ -301,14 +308,19 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
           const found = combinedExisting.find(
             (l) =>
               (l.customerMobile || '').replace(/\D/g, '').slice(-10) === info.mobile &&
-              makeCustKey(l.customerName, l.customerMobile) === custKey &&
-              l.mealSession === session
+              makeCustKey(l.customerName, l.customerMobile) === info.customerKey &&
+              l.mealSession === session &&
+              ((l as any).planKey === planKey || (!l.planName || l.planName.toLowerCase() === info.plan.toLowerCase()))
           );
           if (found) {
-            mergedLogs.push(found);
+            mergedLogs.push({
+              ...found,
+              planKey,
+            });
           } else {
             mergedLogs.push({
-              id: `LOG-${selectedDate}-${cleanNameSlug}-${info.mobile}-${session.toLowerCase()}`,
+              id: `LOG-${selectedDate}-${cleanNameSlug}-${info.mobile}-${cleanPlanSlug}-${session.toLowerCase()}`,
+              planKey,
               date: selectedDate,
               customerName: info.name,
               customerMobile: info.mobile,
@@ -420,25 +432,33 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
     }
   };
 
+  const getLogPlanKey = (l: DeliveryLogItem) => {
+    return (l as any).planKey || `${l.customerName}_${l.customerMobile}_${l.planName}`;
+  };
+
   // Categorize logs into active queue vs closed plans
   const closedLogs = useMemo(() => {
     return logs.filter((l) => {
-      const cleanName = (l.customerName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-      const cleanMob = (l.customerMobile || '').replace(/\D/g, '').slice(-10);
-      return customerDetailsMap.get(`${cleanName}_${cleanMob}`)?.isClosed;
+      const pKey = getLogPlanKey(l);
+      return customerDetailsMap.get(pKey)?.isClosed;
     });
   }, [logs, customerDetailsMap]);
 
   const activeLogs = useMemo(() => {
     return logs.filter((l) => {
-      const cleanName = (l.customerName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-      const cleanMob = (l.customerMobile || '').replace(/\D/g, '').slice(-10);
-      return !customerDetailsMap.get(`${cleanName}_${cleanMob}`)?.isClosed;
+      const pKey = getLogPlanKey(l);
+      return !customerDetailsMap.get(pKey)?.isClosed;
     });
   }, [logs, customerDetailsMap]);
 
-  const closedLogsCount = closedLogs.length;
-  const activeOrdersCount = activeLogs.length;
+  // Count by number of distinct plans (NOT multiplied by meal sessions!)
+  const activePlansCount = useMemo(() => {
+    return new Set(activeLogs.map((l) => getLogPlanKey(l))).size;
+  }, [activeLogs]);
+
+  const closedPlansCount = useMemo(() => {
+    return new Set(closedLogs.map((l) => getLogPlanKey(l))).size;
+  }, [closedLogs]);
 
   // The base set of logs for calculating counts on the current view queue:
   const targetQueueLogs = showClosedPlans ? closedLogs : activeLogs;
@@ -454,10 +474,9 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
   // Filtered logs calculation (strictly honors active queue vs closed plans, plus search)
   const filteredLogs = useMemo(() => {
     return logs.filter(log => {
-      const cleanName = (log.customerName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-      const cleanMob = (log.customerMobile || '').replace(/\D/g, '').slice(-10);
-      const custDetails = customerDetailsMap.get(`${cleanName}_${cleanMob}`);
-      const isClosed = !!custDetails?.isClosed;
+      const pKey = getLogPlanKey(log);
+      const planDetails = customerDetailsMap.get(pKey);
+      const isClosed = !!planDetails?.isClosed;
 
       // Exclude closed plans when viewing active queue, and exclude active plans when viewing closed plans
       if (!searchQuery.trim()) {
@@ -643,7 +662,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
             TOTAL SCHEDULED
           </span>
           <div className="text-2xl font-black font-heading text-zinc-950 mt-1">
-            {targetQueueLogs.length} <span className="text-xs text-zinc-400 font-normal">Meals</span>
+            {showClosedPlans ? closedPlansCount : activePlansCount} <span className="text-xs text-zinc-400 font-normal">Plans ({targetQueueLogs.length} Meals)</span>
           </div>
           <div className="text-[10px] text-zinc-400 font-medium mt-0.5">
             {showClosedPlans ? 'Closed Plans' : 'Active Queue'}
@@ -838,7 +857,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
                   : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
               }`}
             >
-              Active Queue ({activeOrdersCount})
+              Active Queue ({activePlansCount})
             </button>
             <button
               type="button"
@@ -852,7 +871,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
                   : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
               }`}
             >
-              Closed Plans ({closedLogsCount})
+              Closed Plans ({closedPlansCount})
             </button>
           </div>
         </div>
@@ -864,7 +883,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 px-1">
           <span className="text-xs font-black uppercase tracking-wider text-zinc-500">
-            Showing {filteredLogs.length} of {targetQueueLogs.length} {showClosedPlans ? 'closed' : 'active'} delivery logs
+            Showing {new Set(filteredLogs.map(l => getLogPlanKey(l))).size} of {showClosedPlans ? closedPlansCount : activePlansCount} {showClosedPlans ? 'closed' : 'active'} delivery plans
           </span>
           <span className="text-xs text-zinc-500 font-bold flex items-center gap-1.5">
             <span>Dispatch Date:</span>
@@ -893,25 +912,23 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
           <div className="space-y-4">
             {Array.from(
               filteredLogs.reduce((acc, log) => {
-                const cleanName = (log.customerName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-                const cleanMob = (log.customerMobile || '').replace(/\D/g, '').slice(-10);
-                const key = `${cleanName}_${cleanMob}`;
+                const key = getLogPlanKey(log);
                 const list = acc.get(key) || [];
                 list.push(log);
                 acc.set(key, list);
                 return acc;
               }, new Map<string, DeliveryLogItem[]>())
-            ).map(([custKey, custLogs]) => {
+            ).map(([planKey, custLogs]) => {
               const primary = custLogs[0];
               const mealOrder: Record<string, number> = { Breakfast: 0, Lunch: 1, Dinner: 2 };
               const sortedMeals = [...custLogs].sort(
                 (a, b) => (mealOrder[a.mealSession] ?? 9) - (mealOrder[b.mealSession] ?? 9)
               );
-              const custDetails = customerDetailsMap.get(custKey);
+              const custDetails = customerDetailsMap.get(planKey);
 
               return (
                 <div
-                  key={custKey}
+                  key={planKey}
                   className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-3xl p-4 sm:p-5 shadow-2xs space-y-4"
                 >
                   {/* CUSTOMER HEADER */}

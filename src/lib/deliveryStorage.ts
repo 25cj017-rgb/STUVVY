@@ -4,6 +4,7 @@ import os from 'os';
 
 export interface DeliveryLogItem {
   id: string; // e.g. "LOG-2026-11-18-yamuna-9626531680-lunch"
+  planKey?: string;
   date: string; // "2026-11-18"
   customerName: string;
   customerMobile: string;
