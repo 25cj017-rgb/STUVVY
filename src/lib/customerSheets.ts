@@ -45,30 +45,59 @@ export const GOOGLE_SHEET_CSV_URL =
   process.env.GOOGLE_SHEETS_CSV_URL ||
   'https://docs.google.com/spreadsheets/d/11Q7UbFV2V4kZZID1VloM80pD-rKMFdfD_6HYUfgHa6g/export?format=csv';
 
-// Parses a CSV line supporting quoted strings with commas and escaped quotes
-export function parseCsvLine(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
+// RFC 4180 compliant CSV parser supporting multiline fields inside quotes and escaped quotes
+export function parseCsvRows(text: string): string[][] {
+  const rows: string[][] = [];
+  let currRow: string[] = [];
+  let currField = '';
   let inQuotes = false;
+  let i = 0;
+  const n = text.length;
 
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
+  while (i < n) {
+    const c = text[i];
+    const nextC = i + 1 < n ? text[i + 1] : '';
+
+    if (c === '"') {
+      if (inQuotes && nextC === '"') {
+        currField += '"';
+        i++; // skip escaped quote
       } else {
         inQuotes = !inQuotes;
       }
-    } else if (char === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
+    } else if (c === ',' && !inQuotes) {
+      currRow.push(currField.trim());
+      currField = '';
+    } else if ((c === '\r' || c === '\n') && !inQuotes) {
+      if (c === '\r' && nextC === '\n') {
+        i++; // handle CRLF
+      }
+      currRow.push(currField.trim());
+      currField = '';
+      if (currRow.some((f) => f.length > 0)) {
+        rows.push(currRow);
+      }
+      currRow = [];
     } else {
-      current += char;
+      currField += c;
+    }
+    i++;
+  }
+
+  if (currField.length > 0 || currRow.length > 0) {
+    currRow.push(currField.trim());
+    if (currRow.some((f) => f.length > 0)) {
+      rows.push(currRow);
     }
   }
-  result.push(current.trim());
-  return result;
+
+  return rows;
+}
+
+// Parses a single CSV line for backward compatibility
+export function parseCsvLine(line: string): string[] {
+  const rows = parseCsvRows(line);
+  return rows.length > 0 ? rows[0] : [];
 }
 
 function normalizePlanLabel(rawPlan?: string): string {
@@ -239,16 +268,13 @@ export function attachSubscriptionHistories(rows: CustomerRow[]): CustomerRow[] 
 }
 
 export function parseRawSubmissions(fileContent: string): CustomerRow[] {
-  const lines = fileContent
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+  const rows = parseCsvRows(fileContent);
 
-  if (lines.length <= 1) {
+  if (rows.length <= 1) {
     return [];
   }
 
-  const headers = parseCsvLine(lines[0]).map((h) => h.replace(/\s+/g, ' ').toUpperCase().trim());
+  const headers = rows[0].map((h) => h.replace(/\s+/g, ' ').toUpperCase().trim());
 
   const timestampIdx = headers.findIndex((h) => h.includes('TIMESTAMP') || h.includes('PURCHASE') || h.includes('ORDER DATE'));
   const nameIdx = headers.findIndex((h) => h.includes('FULL NAME') || h.includes('NAME'));
@@ -293,8 +319,8 @@ export function parseRawSubmissions(fileContent: string): CustomerRow[] {
 
   const customers: CustomerRow[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const parts = parseCsvLine(lines[i]);
+  for (let i = 1; i < rows.length; i++) {
+    const parts = rows[i];
     if (parts.length === 0 || parts.every((p) => !p)) continue;
 
     const sNo = sNoIdx >= 0 && parts[sNoIdx] && !isNaN(parseInt(parts[sNoIdx], 10)) ? parseInt(parts[sNoIdx], 10) : i;

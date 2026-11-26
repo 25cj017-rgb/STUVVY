@@ -18,7 +18,7 @@ export const FEEDBACK_SHEET_CSV_URL =
 export const FEEDBACK_SHEET_CSV_BACKUP_URL =
   'https://docs.google.com/spreadsheets/d/1mAmMsLeinW8FdSy8p8uQIRPDMGKls82U4n9F16lPpvk/export?format=csv';
 
-// Fallback initial reviews (including Sanjana's verified first-customer feedback and Yamuna & Shalini's feedback form responses)
+// Fallback initial reviews (including Sanjana's verified first-customer feedback and live feedback form responses)
 export const DEFAULT_FEEDBACK_ENTRIES: FeedbackEntry[] = [
   {
     id: 'feedback-sanjana-1',
@@ -50,46 +50,85 @@ export const DEFAULT_FEEDBACK_ENTRIES: FeedbackEntry[] = [
       "Good packaging , good quality ,good taste — Maintain the same quality and taste, don’t change",
     timestamp: '11/16/2026',
   },
+  {
+    id: 'feedback-chhaya-1',
+    name: 'CHHAYA MARY',
+    mobile: '7974432841',
+    tag: 'Weekly Subscriber',
+    rating: 5,
+    reviewText:
+      "One the best food service i had from stuvvy. Best part is delivering food on proper time. Packing is perfect. Food is tasty and healthy as exact home cooked meal.",
+    timestamp: '11/25/2026',
+  },
+  {
+    id: 'feedback-pradeep-1',
+    name: 'PRADEEP J',
+    mobile: '9751178184',
+    tag: 'Weekly Subscriber',
+    rating: 5,
+    reviewText:
+      "The food is very delicious, fresh, and well prepared. The overall quality and taste of the food are excellent. Food is served with good care, and the variety of food provided is satisfying. Rice and side dishes, are flavourful and well balanced. The food is served at the right temperature, and the portions are also adequate. Appreciate the team for maintaining good hygiene, food quality, and timely service. I am highly satisfied with the food supply. Keep up the excellent work!",
+    timestamp: '11/26/2026',
+  },
 ];
 
-// Helper to parse CSV lines safely handling quotes and commas
-function parseCsvLine(line: string): string[] {
-  const result: string[] = [];
-  let current = '';
+// RFC 4180 compliant CSV parser supporting multiline fields inside quotes and escaped quotes
+export function parseCsvRows(text: string): string[][] {
+  const rows: string[][] = [];
+  let currRow: string[] = [];
+  let currField = '';
   let inQuotes = false;
+  let i = 0;
+  const n = text.length;
 
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++;
+  while (i < n) {
+    const c = text[i];
+    const nextC = i + 1 < n ? text[i + 1] : '';
+
+    if (c === '"') {
+      if (inQuotes && nextC === '"') {
+        currField += '"';
+        i++; // skip escaped quote
       } else {
         inQuotes = !inQuotes;
       }
-    } else if (char === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
+    } else if (c === ',' && !inQuotes) {
+      currRow.push(currField.trim());
+      currField = '';
+    } else if ((c === '\r' || c === '\n') && !inQuotes) {
+      if (c === '\r' && nextC === '\n') {
+        i++; // handle CRLF
+      }
+      currRow.push(currField.trim());
+      currField = '';
+      if (currRow.some((f) => f.length > 0)) {
+        rows.push(currRow);
+      }
+      currRow = [];
     } else {
-      current += char;
+      currField += c;
+    }
+    i++;
+  }
+
+  if (currField.length > 0 || currRow.length > 0) {
+    currRow.push(currField.trim());
+    if (currRow.some((f) => f.length > 0)) {
+      rows.push(currRow);
     }
   }
-  result.push(current.trim());
-  return result;
+
+  return rows;
 }
 
 export function parseFeedbackCsv(fileContent: string): FeedbackEntry[] {
-  const lines = fileContent
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
+  const rows = parseCsvRows(fileContent);
+  if (rows.length <= 1) return [];
 
-  if (lines.length <= 1) return [];
-
-  const headers = parseCsvLine(lines[0]).map((h) => h.replace(/\s+/g, ' ').toUpperCase().trim());
+  const headers = rows[0].map((h) => h.replace(/\s+/g, ' ').toUpperCase().trim());
 
   const timestampIdx = headers.findIndex((h) => h.includes('TIMESTAMP') || h.includes('DATE') || h.includes('TIME'));
-  const nameIdx = headers.findIndex((h) => h === 'NAME' || h.includes('FULL NAME') || h.includes('NAME') || h.includes('CUSTOMER'));
+  const nameIdx = headers.findIndex((h) => h === 'NAME' || h === 'FULL NAME' || h.startsWith('NAME') || h.includes('CUSTOMER NAME'));
   const mobileIdx = headers.findIndex((h) => h.includes('MOBILE') || h.includes('PHONE') || h.includes('WHATSAPP'));
   const planIdx = headers.findIndex((h) => h === 'PLAN' || (h.includes('PLAN') && !h.includes('PLANNED')));
   const ratingIdx = headers.findIndex(
@@ -97,26 +136,18 @@ export function parseFeedbackCsv(fileContent: string): FeedbackEntry[] {
   );
   const reviewIdx = headers.findIndex(
     (h) =>
-      !h.includes('SPILLAGE') &&
-      !h.includes('REVIEWING') &&
-      !h.includes('PLANNED') &&
-      !h.includes('OKAY') &&
-      (h.includes('VALUABLE REVIEWS') ||
-        h.includes('VALUABLE REVIEW') ||
-        h.includes('REVIEWS ABOUT') ||
-        h.includes('FEEDBACK') ||
-        h.includes('TESTIMONIAL') ||
-        (h.includes('REVIEW') && !h.includes('WHICH MEALS')) ||
-        (h.includes('EXPERIENCE') && !h.includes('SPILLAGE')))
+      h.includes('VALUABLE REVIEWS') ||
+      h.includes('VALUABLE REVIEW') ||
+      h.includes('REVIEWS ABOUT') ||
+      (h.includes('REVIEW') && !h.includes('WHICH MEALS'))
   );
+  const suggestionsIdx = headers.findIndex((h) => h === 'ANY SUGGESTIONS' || (h.includes('SUGGESTION') && !h.includes('SHARE')));
   const consentIdx = headers.findIndex((h) => h.includes('OKAY WITH IT') || h.includes('PLANNED TO SHARE'));
-  const suggestionsIdx = headers.findIndex((h) => h.includes('SUGGESTION'));
-  const favoriteDishIdx = headers.findIndex((h) => h.includes('ENJOY THE MOST'));
 
   const entries: FeedbackEntry[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const parts = parseCsvLine(lines[i]);
+  for (let i = 1; i < rows.length; i++) {
+    const parts = rows[i];
     if (parts.length === 0 || parts.every((p) => !p)) continue;
 
     // Check user consent if asked in form
@@ -127,12 +158,17 @@ export function parseFeedbackCsv(fileContent: string): FeedbackEntry[] {
       }
     }
 
-    const rawName = (nameIdx >= 0 ? parts[nameIdx] : parts[1] || '').replace(/^"|"$/g, '').trim().toUpperCase();
-    const rawMobile = (mobileIdx >= 0 ? parts[mobileIdx] : '').replace(/\D/g, '').slice(-10);
-    const rawTimestamp = (timestampIdx >= 0 ? parts[timestampIdx] : '').replace(/^"|"$/g, '').trim();
+    const rawName = (nameIdx >= 0 && parts[nameIdx] ? parts[nameIdx] : '').replace(/^"|"$/g, '').trim().toUpperCase();
+    const rawMobile = (mobileIdx >= 0 && parts[mobileIdx] ? parts[mobileIdx] : '').replace(/\D/g, '').slice(-10);
+    const rawTimestamp = (timestampIdx >= 0 && parts[timestampIdx] ? parts[timestampIdx] : '').replace(/^"|"$/g, '').trim();
+
+    // Guard against header rows or empty names
+    if (!rawName || rawName === 'NAME' || rawName.includes('QUALITY') || rawName.includes('RATE')) {
+      continue;
+    }
 
     // Parse rating
-    let rating: number | undefined;
+    let rating: number = 5;
     if (ratingIdx >= 0 && parts[ratingIdx]) {
       const parsedNum = parseFloat(parts[ratingIdx].replace(/[^\d.]/g, ''));
       if (!Number.isNaN(parsedNum) && parsedNum >= 1 && parsedNum <= 5) {
@@ -140,39 +176,41 @@ export function parseFeedbackCsv(fileContent: string): FeedbackEntry[] {
       }
     }
 
-    // Parse review text: check both "Valuable Reviews" and "Any Suggestions"
+    // Parse ONLY genuine review text: prioritize column 20 ("Valuable Reviews"), fallback to column 19 ("Any Suggestions")
     const valReview = reviewIdx >= 0 && parts[reviewIdx] ? parts[reviewIdx].replace(/^"|"$/g, '').trim() : '';
     const suggestions = suggestionsIdx >= 0 && parts[suggestionsIdx] ? parts[suggestionsIdx].replace(/^"|"$/g, '').trim() : '';
 
     let reviewText = '';
     if (valReview && suggestions && valReview.toLowerCase() !== suggestions.toLowerCase()) {
-      reviewText = `${valReview} — ${suggestions}`;
+      // If valReview is short and suggestions has substantive review text (like Yamuna/Shalini)
+      if (valReview.length < 80 && suggestions.length > 25 && !suggestions.toLowerCase().startsWith('include')) {
+        reviewText = `${valReview} — ${suggestions}`;
+      } else {
+        reviewText = valReview;
+      }
     } else {
       reviewText = valReview || suggestions;
     }
 
-    if (!reviewText) {
-      // Fallback: pick the column with the longest string as review text
-      let longest = '';
-      for (const p of parts) {
-        const cleaned = p.replace(/^"|"$/g, '').trim();
-        if (cleaned.length > longest.length && cleaned.length > 15) {
-          longest = cleaned;
-        }
-      }
-      reviewText = longest;
-    }
+    // Clean up excessive whitespace and line breaks inside the review
+    reviewText = reviewText.replace(/\r\n|\r|\n/g, ' ').replace(/\s+/g, ' ').trim();
 
-    if (reviewText && reviewText.length > 3) {
+    // Do NOT include reviews that are just "YES", "NO", or consent answers
+    if (
+      reviewText &&
+      reviewText.length > 5 &&
+      !reviewText.toUpperCase().startsWith('YES !') &&
+      !reviewText.toUpperCase().startsWith('NO ')
+    ) {
       const isSanjana = rawName.includes('SANJANA') || rawMobile === '9444746064';
       const tag = isSanjana ? 'Our First Customer' : 'Verified Subscriber';
 
       entries.push({
         id: `feedback-sheet-${i}-${rawMobile || rawName.slice(0, 4)}`,
-        name: rawName || 'STUVVY SUBSCRIBER',
+        name: rawName,
         mobile: rawMobile || undefined,
         reviewText,
-        rating: rating || 5,
+        rating,
         tag,
         timestamp: rawTimestamp || undefined,
       });

@@ -11,7 +11,7 @@ export interface LandingReviewEntry {
   rating?: number;
 }
 
-// Fallback genuine customer feedback reviews (Sanjana, Yamuna, Shalini from the verified feedback form)
+// Fallback genuine customer feedback reviews (Sanjana, Yamuna, Shalini, Chhaya Mary, and Pradeep J from the verified feedback form)
 export const DEFAULT_LANDING_REVIEWS: LandingReviewEntry[] = [
   {
     id: 'review-sanjana-1',
@@ -36,6 +36,22 @@ export const DEFAULT_LANDING_REVIEWS: LandingReviewEntry[] = [
     rating: 5,
     reviewText:
       "Good packaging , good quality ,good taste — Maintain the same quality and taste, don’t change",
+  },
+  {
+    id: 'review-chhaya-1',
+    name: 'CHHAYA MARY',
+    tag: 'Weekly Subscriber',
+    rating: 5,
+    reviewText:
+      "One the best food service i had from stuvvy. Best part is delivering food on proper time. Packing is perfect. Food is tasty and healthy as exact home cooked meal.",
+  },
+  {
+    id: 'review-pradeep-1',
+    name: 'PRADEEP J',
+    tag: 'Weekly Subscriber',
+    rating: 5,
+    reviewText:
+      "The food is very delicious, fresh, and well prepared. The overall quality and taste of the food are excellent. Food is served with good care, and the variety of food provided is satisfying. Rice and side dishes, are flavourful and well balanced. The food is served at the right temperature, and the portions are also adequate. Appreciate the team for maintaining good hygiene, food quality, and timely service. I am highly satisfied with the food supply. Keep up the excellent work!",
   },
 ];
 

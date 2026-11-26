@@ -173,9 +173,11 @@ export async function GET() {
         }
       }
 
+      const displayName = (matchedRows && matchedRows[0]?.name ? matchedRows[0].name : item.name).trim().toUpperCase();
+
       testimonials.push({
         id: `feedback-${item.id}`,
-        name: item.name,
+        name: displayName,
         locality,
         photoUrl,
         review: item.reviewText,
