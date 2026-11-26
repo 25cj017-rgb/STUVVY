@@ -43,12 +43,30 @@ export const LoginSidebar: React.FC<LoginSidebarProps> = ({
       setIsSuccess(true);
       
       setTimeout(() => {
+        const cust = authResult.customer;
+        const addrs = cust?.addresses && cust.addresses.length > 0
+          ? cust.addresses
+          : (cust?.address ? [cust.address] : []);
+
         onLoginSuccess({
           ...user,
-          fullName: authResult.customer?.name || fullName,
-          mobileNumber: authResult.customer?.mobileNo || mobileNumber,
-          dob: authResult.customer?.dob || dob,
-          address: authResult.customer?.address || '',
+          fullName: cust?.name || fullName,
+          mobileNumber: cust?.mobileNo || mobileNumber,
+          dob: cust?.dob || dob,
+          address: addrs[0] || cust?.address || '',
+          addresses: addrs,
+          selectedAddress: addrs[0] || cust?.address || '',
+          plan: cust?.plan,
+          startDate: cust?.startDate,
+          purchaseDate: cust?.purchaseDate,
+          paymentStatus: cust?.paymentStatus,
+          paymentAmount: cust?.paymentAmount,
+          orderStatus: cust?.orderStatus,
+          requestedMeals: cust?.requestedMeals,
+          subscriberType: cust?.subscriberType,
+          previousPlan: cust?.previousPlan,
+          consecutiveMonths: cust?.consecutiveMonths || 1,
+          subscriptionHistory: cust?.subscriptionHistory,
           isVerified: true
         });
         onClose();

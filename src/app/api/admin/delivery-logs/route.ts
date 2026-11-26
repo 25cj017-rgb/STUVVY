@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { areCustomerNamesMatching } from '@/utils/customerMatching';
 import {
   getSavedLogs,
   saveLogs,
@@ -27,11 +28,7 @@ export async function GET(request: Request) {
     logs = logs.filter((l) => (l.customerMobile || '').replace(/\D/g, '').slice(-10) === cleanFilter);
   }
   if (filterName) {
-    const cleanName = filterName.trim().toUpperCase();
-    logs = logs.filter((l) => {
-      const lName = (l.customerName || '').trim().toUpperCase();
-      return lName === cleanName || lName.includes(cleanName) || cleanName.includes(lName);
-    });
+    logs = logs.filter((l) => areCustomerNamesMatching(l.customerName, filterName));
   }
 
   // Sort by updatedAt descending

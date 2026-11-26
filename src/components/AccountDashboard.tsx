@@ -8,6 +8,7 @@ import type { DeliveryLogItem } from '../app/api/admin/delivery-logs/route';
 import { StuvvyCard } from './StuvvyCard';
 import { StuvvyStarRewards } from './StuvvyStarRewards';
 import { calculateSubscriptionSchedule, parseDateFlexible, formatDisplayDate, getPlanDurationDays } from '../utils/subscriptionUtils';
+import { areCustomerNamesMatching } from '../utils/customerMatching';
 import { getFreeMonthStatus } from '../config/subscriptionConfig';
 import { 
   User, Calendar, CreditCard, MapPin, PauseCircle, PlayCircle, 
@@ -42,6 +43,10 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
   const [isPaused, setIsPaused] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
+  // Live synced user profile updated from customer database
+  const [syncedUser, setSyncedUser] = useState<UserProfile | null>(null);
+  const currentUser: UserProfile = (syncedUser || user || {}) as UserProfile;
+
   // Delivery logs state for verified subscriber
   const [deliveryLogs, setDeliveryLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
@@ -58,7 +63,6 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
   useEffect(() => {
     if (!user?.mobileNumber) return;
     const cleanMobile = user.mobileNumber.replace(/\D/g, '').slice(-10);
-    const normName = (user.fullName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
     if (user.subscriptionHistory && user.subscriptionHistory.length > 0) {
       setSubscriptionLogs(user.subscriptionHistory);
@@ -71,17 +75,43 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
         if (data.success) {
           const matchedCust = (data.customers || []).find((c: any) => {
             const cMob = (c.mobileNo || '').replace(/\D/g, '').slice(-10);
-            const cName = (c.name || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-            return cMob === cleanMobile && (!normName || cName === normName);
+            if (cMob !== cleanMobile) return false;
+            return (
+              !user.fullName ||
+              areCustomerNamesMatching(c.name, user.fullName) ||
+              (c.aliases && c.aliases.some((a: string) => areCustomerNamesMatching(a, user.fullName)))
+            );
           });
 
-          if (matchedCust?.subscriptionHistory && matchedCust.subscriptionHistory.length > 0) {
-            setSubscriptionLogs(matchedCust.subscriptionHistory);
+          if (matchedCust) {
+            if (matchedCust.subscriptionHistory && matchedCust.subscriptionHistory.length > 0) {
+              setSubscriptionLogs(matchedCust.subscriptionHistory);
+            }
+            const addrs = matchedCust.addresses && matchedCust.addresses.length > 0
+              ? matchedCust.addresses
+              : (matchedCust.address ? [matchedCust.address] : []);
+            setSyncedUser(prev => ({
+              ...(prev || user),
+              plan: matchedCust.plan || prev?.plan || user.plan,
+              paymentAmount: matchedCust.paymentAmount || prev?.paymentAmount || user.paymentAmount,
+              paymentStatus: matchedCust.paymentStatus || prev?.paymentStatus || user.paymentStatus,
+              orderStatus: matchedCust.orderStatus || prev?.orderStatus || user.orderStatus,
+              startDate: matchedCust.startDate || prev?.startDate || user.startDate,
+              purchaseDate: matchedCust.purchaseDate || prev?.purchaseDate || user.purchaseDate,
+              subscriberType: matchedCust.subscriberType || prev?.subscriberType || user.subscriberType,
+              previousPlan: matchedCust.previousPlan || prev?.previousPlan || user.previousPlan,
+              address: addrs[0] || matchedCust.address || prev?.address || user.address,
+              addresses: addrs.length > 0 ? addrs : (prev?.addresses || user.addresses),
+              selectedAddress: addrs[0] || prev?.selectedAddress || user.selectedAddress,
+              requestedMeals: matchedCust.requestedMeals || prev?.requestedMeals || user.requestedMeals,
+              consecutiveMonths: matchedCust.consecutiveMonths || prev?.consecutiveMonths || user.consecutiveMonths || 1,
+              subscriptionHistory: matchedCust.subscriptionHistory || prev?.subscriptionHistory || user.subscriptionHistory,
+            }));
           } else {
             const subs = (data.allSubmissions || []).filter((s: any) => {
               const sMob = (s.mobileNo || '').replace(/\D/g, '').slice(-10);
-              const sName = (s.name || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-              return sMob === cleanMobile && (!normName || sName === normName);
+              if (sMob !== cleanMobile) return false;
+              return !user.fullName || areCustomerNamesMatching(s.name, user.fullName);
             });
             if (subs.length > 0) {
               const built: SubscriptionHistoryEntry[] = subs.map((sub: any, idx: number) => {
@@ -145,7 +175,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
                 localLogs = parsed.filter(
                   (l) =>
                     (l.customerMobile || '').replace(/\D/g, '').slice(-10) === cleanMobile &&
-                    (!userNormName || (l.customerName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '') === userNormName)
+                    (!user.fullName || areCustomerNamesMatching(l.customerName, user.fullName))
                 );
               }
             }
@@ -311,7 +341,7 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
   // =========================================================================
   // 2. VERIFIED SUBSCRIBER VIEW (SHOWN ONLY WHEN USER IS LOGGED IN)
   // =========================================================================
-  const currentUser: UserProfile = user;
+
 
   const [activeAddress, setActiveAddress] = useState<string>(
     currentUser.selectedAddress || currentUser.address || (currentUser.addresses && currentUser.addresses[0]) || ''

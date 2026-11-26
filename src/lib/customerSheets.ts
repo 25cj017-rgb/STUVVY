@@ -1,6 +1,7 @@
-import fs from 'fs';
-import path from 'path';
 import { getPlanDurationDays, parseDateFlexible } from '@/utils/subscriptionUtils';
+import { areCustomerNamesMatching, makeCustomerKey } from '@/utils/customerMatching';
+
+export { areCustomerNamesMatching, makeCustomerKey };
 
 export interface SubscriptionHistoryEntry {
   plan: string;
@@ -23,6 +24,7 @@ export interface CustomerRow {
   dob: string;
   address: string;
   addresses?: string[];
+  aliases?: string[];
   plan?: string;
   startDate?: string;
   purchaseDate?: string;
@@ -127,12 +129,6 @@ function parseSortableTime(dateStr?: string): number {
   return 0;
 }
 
-export function makeCustomerKey(name?: string, mobile?: string): string {
-  const cleanName = (name || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-  const cleanMobile = (mobile || '').replace(/\D/g, '').slice(-10);
-  return `${cleanName}_${cleanMobile}`;
-}
-
 function buildHistoryEntry(sub: CustomerRow, isLatest: boolean): SubscriptionHistoryEntry {
   const normPlan = normalizePlanLabel(sub.plan);
   const duration = getPlanDurationDays(sub.plan);
@@ -163,7 +159,7 @@ function buildHistoryEntry(sub: CustomerRow, isLatest: boolean): SubscriptionHis
     endDate,
     durationDays: duration,
     subscriberType: isLatest ? (sub.subscriberType || 'Active') : 'Previous Plan',
-    orderStatus: sub.orderStatus,
+    orderStatus: isClosed ? (sub.orderStatus || 'Closed plan') : (sub.orderStatus || 'Active'),
     paymentAmount: sub.paymentAmount,
     paymentStatus: sub.paymentStatus,
     requestedMeals: sub.requestedMeals,
@@ -172,25 +168,66 @@ function buildHistoryEntry(sub: CustomerRow, isLatest: boolean): SubscriptionHis
 }
 
 /**
- * Attaches non-destructive chronological subscriptionHistory[] to each customer row
- * by grouping rows with matching normalized name AND 10-digit mobile number.
- * This guarantees customers sharing a phone number (e.g. Sanjana and Chandran)
- * are NEVER merged or confused.
+ * Attaches non-destructive chronological subscriptionHistory[] to each customer
+ * by clustering submissions using 10-digit mobile number + flexible name matching.
+ * This automatically links upgrades across name variations (e.g. "Chhaya" and "Chhaya Mary")
+ * while keeping distinct customers sharing a mobile (e.g. "Sanjana" and "Chandran") strictly separate.
  */
 export function attachSubscriptionHistories(rows: CustomerRow[]): CustomerRow[] {
-  const grouped = new Map<string, CustomerRow[]>();
+  interface CustomerCluster {
+    mobile: string;
+    primaryName: string;
+    aliases: string[];
+    submissions: CustomerRow[];
+  }
+
+  const clusters: CustomerCluster[] = [];
 
   for (const row of rows) {
-    const key = makeCustomerKey(row.name, row.mobileNo);
-    if (!key) continue;
-    const list = grouped.get(key) || [];
-    list.push(row);
-    grouped.set(key, list);
+    const cleanMobile = (row.mobileNo || '').replace(/\D/g, '').slice(-10);
+    const rowName = (row.name || '').trim();
+
+    let matchedCluster: CustomerCluster | undefined;
+    if (cleanMobile) {
+      matchedCluster = clusters.find((c) => {
+        if (c.mobile !== cleanMobile) return false;
+        // Check if names match phonetically, via tokens, or prefix
+        if (areCustomerNamesMatching(c.primaryName, rowName)) return true;
+        if (c.aliases.some((a) => areCustomerNamesMatching(a, rowName))) return true;
+        // If an upgrade flag is present on the same phone number
+        const hasUpgradeFlag =
+          row.subscriberType === 'Upgrade' ||
+          !!row.previousPlan ||
+          c.submissions.some((s) => s.subscriberType === 'Upgrade' || !!s.previousPlan);
+        if (hasUpgradeFlag) {
+          const initialA = (c.primaryName || '').trim()[0]?.toUpperCase();
+          const initialB = (rowName || '').trim()[0]?.toUpperCase();
+          if (initialA && initialB && initialA === initialB) return true;
+        }
+        return false;
+      });
+    }
+
+    if (matchedCluster) {
+      matchedCluster.submissions.push(row);
+      if (rowName && !matchedCluster.aliases.includes(rowName)) {
+        matchedCluster.aliases.push(rowName);
+      }
+    } else {
+      clusters.push({
+        mobile: cleanMobile,
+        primaryName: rowName,
+        aliases: rowName ? [rowName] : [],
+        submissions: [row],
+      });
+    }
   }
 
   const consolidated: CustomerRow[] = [];
 
-  for (const [, submissions] of grouped) {
+  for (const cluster of clusters) {
+    const { submissions, aliases } = cluster;
+
     if (submissions.length === 1) {
       const single = submissions[0];
       const history: SubscriptionHistoryEntry[] = [];
@@ -206,6 +243,7 @@ export function attachSubscriptionHistories(rows: CustomerRow[]): CustomerRow[] 
       const consecutiveMonths = single.previousPlan || single.subscriberType === 'Upgrade' ? 2 : 1;
       consolidated.push({
         ...single,
+        aliases: aliases.length > 0 ? aliases : [single.name],
         subscriptionHistory: history.length > 0 ? history : undefined,
         consecutiveMonths,
       });
@@ -255,6 +293,7 @@ export function attachSubscriptionHistories(rows: CustomerRow[]): CustomerRow[] 
 
     consolidated.push({
       ...latest,
+      aliases: aliases.length > 0 ? aliases : [latest.name],
       address: allAddresses[0] || latest.address,
       addresses: allAddresses.length > 0 ? allAddresses : (latest.addresses || []),
       previousPlan: previousPlan ? normalizePlanLabel(previousPlan) : undefined,
@@ -450,6 +489,8 @@ export async function fetchCustomersFromSource(): Promise<{
   }
 
   try {
+    const fs = await import('fs');
+    const path = await import('path');
     const rootPath = path.join(process.cwd(), 'customers.csv');
     const publicPath = path.join(process.cwd(), 'public', 'customers.csv');
 

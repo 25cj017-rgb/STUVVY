@@ -1,3 +1,5 @@
+import { areCustomerNamesMatching } from '@/utils/customerMatching';
+
 export interface CustomerRecord {
   sNo: number;
   name: string;      // e.g. "SRI RAM V K"
@@ -5,6 +7,7 @@ export interface CustomerRecord {
   dob: string;       // e.g. "26-10-2007"
   address?: string;  // Primary address
   addresses?: string[]; // Multiple addresses if customer has 2+ locations
+  aliases?: string[];   // Name variations and previous registered names
   plan?: string;     // e.g. "Weekly" or "Monthly" or "Daily"
   startDate?: string; // e.g. "03-11-2026" or "2026-11-03"
   purchaseDate?: string;
@@ -19,6 +22,7 @@ export interface CustomerRecord {
   consecutiveMonths?: number;
   review?: string;
   rating?: number;
+  subscriptionHistory?: any[];
 }
 
 // Initial demo customers fallback
@@ -148,10 +152,12 @@ export const lookupCustomerByNameAndMobile = (name: string, mobile: string): Cus
   const normMobile = normalizeMobile(mobile);
   const activeDb = dynamicCustomers.length > 0 ? dynamicCustomers : DEMO_CUSTOMERS_DATABASE;
   return activeDb.find(c => {
-    const cName = c.name.trim().toUpperCase();
     const cMobile = normalizeMobile(c.mobileNo);
-    const nameMatch = cName === normName || cName.includes(normName) || normName.includes(cName);
-    return nameMatch && cMobile === normMobile;
+    if (cMobile !== normMobile) return false;
+    return (
+      areCustomerNamesMatching(c.name, normName) ||
+      (c.aliases && c.aliases.some(a => areCustomerNamesMatching(a, normName)))
+    );
   });
 };
 
@@ -252,17 +258,19 @@ export const validateCustomerLogin = (
   // Search in dynamic Google Sheet / CSV database
   const activeDb = dynamicCustomers.length > 0 ? dynamicCustomers : DEMO_CUSTOMERS_DATABASE;
   const match = activeDb.find((cust) => {
-    const custName = cust.name.trim().toUpperCase();
     const custMobile = normalizeMobile(cust.mobileNo);
-
-    // Flexible name matching (exact or contains)
-    const nameMatches = custName === normName || custName.includes(normName) || normName.includes(custName);
     const mobileMatches = custMobile === normMobile;
+    if (!mobileMatches) return false;
+
+    // Flexible name matching (exact, prefix, token, phonetic, or alias)
+    const nameMatches =
+      areCustomerNamesMatching(cust.name, normName) ||
+      (cust.aliases && cust.aliases.some((a) => areCustomerNamesMatching(a, normName)));
     
     // Flexible DOB matching that works with YYYY/MM/DD, M/D/YYYY, D/M/YYYY
     const dobMatches = areDobsEqual(cust.dob, dobInput);
 
-    return nameMatches && mobileMatches && dobMatches;
+    return nameMatches && dobMatches;
   });
 
   if (match) {

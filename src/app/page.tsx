@@ -19,6 +19,7 @@ import { MenuItem, DayOfWeek, MealTime, UserProfile, CartItem } from '../types';
 import { CheckCircle2, X, Eye, Phone, Lock, Sparkles, Utensils, LogIn, ChevronRight, ShieldCheck } from 'lucide-react';
 
 import { validateCustomerLogin, setDynamicCustomers } from '../data/customerAuth';
+import { areCustomerNamesMatching } from '../utils/customerMatching';
 import { CalendarDay } from '../components/SubscriptionCalendar';
 import { STUVVY_3_PLUS_1_CONFIG, calculate3Plus1Pricing } from '../config/subscriptionConfig';
 
@@ -120,9 +121,12 @@ export default function Home() {
               const userNormName = (prevUser.fullName || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
               const matched = data.customers.find((c: any) => {
                 const cDigits = (c.mobileNo || '').replace(/\D/g, '').slice(-10);
-                const cNormName = (c.name || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-                const nameMatches = !userNormName || cNormName === userNormName || cNormName.includes(userNormName) || userNormName.includes(cNormName);
-                return cDigits === userDigits && nameMatches;
+                if (cDigits !== userDigits) return false;
+                return (
+                  !userNormName ||
+                  areCustomerNamesMatching(c.name, prevUser.fullName) ||
+                  (c.aliases && c.aliases.some((a: string) => areCustomerNamesMatching(a, prevUser.fullName)))
+                );
               });
               if (matched) {
                 const addrs = matched.addresses && matched.addresses.length > 0
@@ -161,6 +165,7 @@ export default function Home() {
                   subscriberType: matched.subscriberType || (prevUser as any).subscriberType,
                   previousPlan: matched.previousPlan || (prevUser as any).previousPlan,
                   consecutiveMonths: (matched as any).consecutiveMonths || prevUser.consecutiveMonths || 1,
+                  subscriptionHistory: (matched as any).subscriptionHistory || prevUser.subscriptionHistory,
                   starsEarned: prevUser.starsEarned || 1
                 };
               }
