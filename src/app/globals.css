@@ -1,68 +1,7 @@
 @import "tailwindcss";
 
-/* ========================================================================= */
-/* OSTRICH SANS OFFICIAL WEBFONT FAMILY                                      */
-/* ========================================================================= */
-@font-face {
-  font-family: 'Ostrich Sans';
-  src: url('/fonts/ostrich-sans-black.woff') format('woff'),
-       url('/fonts/ostrich-sans-black.otf') format('opentype'),
-       url('/fonts/ostrich-sans-bold.woff') format('woff'),
-       url('/fonts/ostrich-sans-bold.ttf') format('truetype');
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Ostrich Sans';
-  src: url('/fonts/ostrich-sans-heavy.otf') format('opentype'),
-       url('/fonts/ostrich-sans-black.woff') format('woff'),
-       url('/fonts/ostrich-sans-bold.woff') format('woff');
-  font-weight: 800;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Ostrich Sans';
-  src: url('/fonts/ostrich-sans-bold.woff') format('woff'),
-       url('/fonts/ostrich-sans-bold.otf') format('opentype'),
-       url('/fonts/ostrich-sans-bold.ttf') format('truetype');
-  font-weight: 700;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Ostrich Sans';
-  src: url('/fonts/ostrich-sans-bold.woff') format('woff'),
-       url('/fonts/ostrich-sans-bold.ttf') format('truetype');
-  font-weight: 600;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Ostrich Sans';
-  src: url('/fonts/ostrich-sans-medium.otf') format('opentype'),
-       url('/fonts/ostrich-sans-bold.woff') format('woff');
-  font-weight: 500;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Ostrich Sans';
-  src: url('/fonts/ostrich-sans-bold.woff') format('woff'),
-       url('/fonts/ostrich-sans-bold.ttf') format('truetype');
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
-
 :root {
-  /* Premium Stuvvy Color Palette */
+  /* Quiet Luxury Editorial Color Palette */
   --bg-main: #0B0F17;
   --bg-card: #131B2A;
   --text-primary: #F9FAFB;
@@ -74,37 +13,21 @@
   --accent-emerald: #10B981;
   --accent-amber: #F59E0B;
 
-  --font-sans: var(--font-plus-jakarta), var(--font-outfit), system-ui, -apple-system, sans-serif;
-  --font-heading: var(--font-outfit), var(--font-plus-jakarta), system-ui, sans-serif;
-  --font-ostrich: var(--font-ostrich), 'Ostrich Sans', var(--font-heading), system-ui, sans-serif;
+  --font-sans: var(--font-plus-jakarta), system-ui, -apple-system, sans-serif;
+  --font-heading: var(--font-fraunces), Georgia, 'Times New Roman', serif;
+  --font-editorial: var(--font-fraunces), Georgia, serif;
+  --font-ostrich: var(--font-fraunces), Georgia, serif;
 }
 
-/* Ostrich Sans Display Hierarchy Classes */
-.font-ostrich {
-  font-family: var(--font-ostrich), 'Ostrich Sans', var(--font-heading), sans-serif !important;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
-.font-ostrich-black {
-  font-family: 'Ostrich Sans', var(--font-heading), sans-serif;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.font-ostrich-heavy {
-  font-family: 'Ostrich Sans', var(--font-heading), sans-serif;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-}
-
+/* Quiet Luxury Editorial Display Classes */
+.font-editorial,
+.font-ostrich,
+.font-ostrich-black,
+.font-ostrich-heavy,
 .font-ostrich-bold {
-  font-family: 'Ostrich Sans', var(--font-heading), sans-serif;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-family: var(--font-fraunces), Georgia, serif !important;
+  letter-spacing: -0.015em;
+  text-transform: none;
 }
 
 html, body {

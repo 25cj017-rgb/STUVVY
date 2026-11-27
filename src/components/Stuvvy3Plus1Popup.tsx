@@ -77,7 +77,7 @@ export const Stuvvy3Plus1Popup: React.FC<Stuvvy3Plus1PopupProps> = ({
           <div className="font-mono text-[10px] sm:text-[11px] font-bold text-zinc-500 uppercase tracking-widest">
             {STUVVY_3_PLUS_1_CONFIG.headline}
           </div>
-          <h2 className="font-ostrich text-3xl sm:text-4xl md:text-5xl font-black tracking-wider text-zinc-950 uppercase leading-none">
+          <h2 className="font-heading text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-zinc-950 leading-none">
             {STUVVY_3_PLUS_1_CONFIG.name}
           </h2>
           <p className="font-heading text-xs sm:text-sm md:text-base font-extrabold text-zinc-700 leading-snug">
@@ -101,7 +101,7 @@ export const Stuvvy3Plus1Popup: React.FC<Stuvvy3Plus1PopupProps> = ({
                 <span className="text-[10px] sm:text-[11px] font-mono uppercase tracking-wider text-zinc-500 font-bold block">
                   Total Payable Amount
                 </span>
-                <span className="font-ostrich text-3xl sm:text-4xl font-black text-zinc-950 tracking-wider leading-none">
+                <span className="font-heading text-3xl sm:text-4xl font-black text-zinc-950 tracking-tight leading-none">
                   ₹{pricing.finalPayable.toLocaleString('en-IN')}
                 </span>
               </div>

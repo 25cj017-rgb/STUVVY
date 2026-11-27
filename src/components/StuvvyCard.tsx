@@ -126,10 +126,10 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
                 </div>
                 <div>
                   <div className="flex items-center gap-1">
-                    <span className="font-ostrich text-lg font-black tracking-widest text-purple-950 leading-none">
+                    <span className="font-heading text-xl font-black tracking-tight text-purple-950 leading-none">
                       STUVVY
                     </span>
-                    <span className="font-ostrich text-[9px] font-black tracking-wider bg-purple-100 text-purple-900 px-1.5 py-0.2 rounded border border-purple-200">
+                    <span className="font-sans text-[9px] font-bold tracking-wider bg-purple-100 text-purple-900 px-1.5 py-0.2 rounded border border-purple-200">
                       PASS
                     </span>
                   </div>
@@ -155,7 +155,7 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
               </div>
 
               <div className="text-right">
-                <div className="font-ostrich text-[9px] font-bold tracking-wider text-zinc-400">PLAN OPTED</div>
+                <div className="font-sans text-[9px] font-bold tracking-wider text-zinc-400">PLAN OPTED</div>
                 <div className="text-xs font-black text-purple-950 leading-tight">{planName}</div>
                 {is3Plus1 && (
                   <div className="text-[7.5px] font-mono font-black text-zinc-900 bg-white px-1.5 py-0.5 rounded border border-purple-200 mt-0.5 inline-block uppercase">
@@ -169,7 +169,7 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
             <div className="relative z-10 pt-1 border-t border-purple-100/80 space-y-1">
               <div className="flex items-end justify-between gap-2">
                 <div className="flex-1 min-w-0 pr-2 text-left">
-                  <div className="font-ostrich text-[8.5px] font-bold text-zinc-400 tracking-widest">
+                  <div className="font-sans text-[8.5px] font-bold text-zinc-400 tracking-wider">
                     CARDHOLDER
                   </div>
                   <div className="text-xs sm:text-sm font-black text-zinc-900 font-heading tracking-wide truncate">
@@ -179,19 +179,19 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
 
                 <div className="flex items-center gap-3 shrink-0 text-right">
                   <div>
-                    <div className="font-ostrich text-[8px] font-bold text-zinc-400 tracking-wider">
+                    <div className="font-sans text-[8px] font-bold text-zinc-400 tracking-wider">
                       VALID FRM
                     </div>
-                    <div className="font-ostrich text-xs font-black text-purple-950">
+                    <div className="font-sans text-xs font-black text-purple-950 font-mono">
                       {validFromStr}
                     </div>
                   </div>
 
                   <div>
-                    <div className="font-ostrich text-[8px] font-bold text-zinc-400 tracking-wider">
+                    <div className="font-sans text-[8px] font-bold text-zinc-400 tracking-wider">
                       VALID THRU
                     </div>
-                    <div className="font-ostrich text-xs font-black text-purple-950">
+                    <div className="font-sans text-xs font-black text-purple-950 font-mono">
                       {validThruStr}
                     </div>
                   </div>
@@ -241,7 +241,7 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
                   STV-{last4}
                 </span>
               </div>
-              <div className="text-[7.5px] font-black font-ostrich tracking-wider text-purple-900 bg-purple-100/90 px-1.5 py-0.5 rounded border border-purple-200">
+              <div className="text-[7.5px] font-black font-sans tracking-wider text-purple-900 bg-purple-100/90 px-1.5 py-0.5 rounded border border-purple-200">
                 KITCHEN PASS
               </div>
             </div>
@@ -249,7 +249,7 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
             {/* 3. MERGED 12-STAR LOYALTY TRACKER (STARS ONLY - NO EXPLANATIONS) */}
             <div className="space-y-1 py-0.5">
               <div className="flex items-center justify-between text-[8px] font-bold text-zinc-600 px-0.5">
-                <span className="font-ostrich text-[9.5px] font-black text-purple-950 tracking-widest">
+                <span className="font-heading text-xs font-black text-purple-950 tracking-normal">
                   STUVVY 12-STAR REWARDS
                 </span>
                 <span className="text-[8px] font-black text-purple-900 bg-white/80 px-1.5 py-0.2 rounded-full border border-purple-200">

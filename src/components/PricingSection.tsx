@@ -245,7 +245,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                 <div className="text-[11px] font-mono font-bold text-zinc-500 uppercase tracking-widest">
                   {STUVVY_3_PLUS_1_CONFIG.headline}
                 </div>
-                <h3 className="font-ostrich text-3xl sm:text-4xl md:text-5xl font-black tracking-wider text-zinc-950 uppercase leading-none">
+                <h3 className="font-heading text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-zinc-950 leading-none">
                   {STUVVY_3_PLUS_1_CONFIG.name}
                 </h3>
                 <p className="font-heading text-sm sm:text-base font-extrabold text-zinc-800 leading-snug">
@@ -303,7 +303,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                     <span className="text-[10px] font-mono uppercase text-zinc-500 font-bold block">
                       Total Payable Amount
                     </span>
-                    <span className="font-ostrich text-3xl sm:text-4xl font-black text-zinc-950 tracking-wider leading-none">
+                    <span className="font-heading text-3xl sm:text-4xl font-black text-zinc-950 tracking-tight leading-none">
                       ₹{pricing3Plus1.finalPayable.toLocaleString('en-IN')}
                     </span>
                   </div>
@@ -609,8 +609,8 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                 </div>
 
                 <div>
-                  <h4 className="font-ostrich text-2xl font-black tracking-wider text-zinc-950 uppercase">
-                    STUVVY 3+1 MEAL PASS
+                  <h4 className="font-heading text-xl sm:text-2xl font-black tracking-tight text-zinc-950">
+                    Stuvvy 3+1 Meal Pass
                   </h4>
                   <p className="text-xs text-zinc-600 font-medium mt-0.5">
                     Subscribe for 3 Months (₹7,999) upfront and enjoy your entire <strong>4th Month completely FREE</strong>!
@@ -619,7 +619,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
 
                 <div className="bg-white p-3 rounded-2xl border border-zinc-200 flex items-baseline justify-between text-xs">
                   <div>
-                    <div className="font-ostrich font-black text-2xl text-zinc-950 tracking-wider">₹7,999</div>
+                    <div className="font-heading font-black text-2xl text-zinc-950 tracking-tight">₹7,999</div>
                     <div className="text-[10px] text-zinc-500 font-mono">for 4 Full Months (120 Days)</div>
                   </div>
                   <div className="text-right">

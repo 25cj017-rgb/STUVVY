@@ -1127,8 +1127,8 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
           <div className="bg-white/95 backdrop-blur-xl p-6 sm:p-8 rounded-[32px] border border-zinc-200/90 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
-            <span className="font-heading text-2xl sm:text-3xl text-purple-950 font-black tracking-tight leading-none">
-              STUVVY KITCHEN DISPATCH
+            <span className="font-heading text-2xl sm:text-3xl text-zinc-950 font-black tracking-tight leading-none">
+              Stuvvy Kitchen Dispatch
             </span>
             <span className="text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-900 px-3 py-1 rounded-full border border-purple-200">
               Live Order Logs
