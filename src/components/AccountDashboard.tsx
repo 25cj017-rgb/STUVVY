@@ -920,6 +920,8 @@ export const AccountDashboard: React.FC<AccountDashboardProps> = ({
               endDateStr={schedule.endDateStr}
               status={schedule.status}
               consecutiveMonths={currentUser.consecutiveMonths || (currentUser.previousPlan || currentUser.subscriberType === 'Upgrade' ? 2 : 1)}
+              paidAmount={userPaidAmountNumber || currentUser.paymentAmount}
+              has7999Offer={optedPlanPrice === 7999 || userPaidAmountNumber === 7999 || optedPlanName.includes('3+1') || (currentUser.plan || '').includes('7999')}
               avatarUrl="/user-avatar.jpg"
             />
 

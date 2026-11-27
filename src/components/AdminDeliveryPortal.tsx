@@ -5,7 +5,8 @@ import {
   ShieldCheck, CheckCircle2, AlertTriangle, Clock, Truck, 
   Search, Calendar, Filter, Phone, MessageSquare, RefreshCw, 
   MapPin, User, ChevronRight, ChevronLeft, Lock, Key, ArrowLeft, Plus,
-  FileText, Sparkles, X, Check, FileSpreadsheet, Ban, RotateCcw
+  FileText, Sparkles, X, Check, FileSpreadsheet, Ban, RotateCcw,
+  BookOpen, ArrowRight, TrendingUp, Layers, Package
 } from 'lucide-react';
 import { DeliveryLogItem } from '../app/api/admin/delivery-logs/route';
 import { parseDateFlexible, getPlanDurationDays } from '../utils/subscriptionUtils';
@@ -38,6 +39,9 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<'All' | 'delivered' | 'out_for_delivery' | 'pending' | 'not_received' | 'paused'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [showClosedPlans, setShowClosedPlans] = useState<boolean>(false);
+  const [adminNavScreen, setAdminNavScreen] = useState<'dispatches' | 'customer-plans'>('dispatches');
+  const [directorySearch, setDirectorySearch] = useState('');
+  const [rawSubmissions, setRawSubmissions] = useState<any[]>([]);
 
   // Issue modal state
   const [activeIssueLog, setActiveIssueLog] = useState<DeliveryLogItem | null>(null);
@@ -49,6 +53,126 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3000);
+  };
+
+  // Instant full CSV export with BOM so Excel opens with all customer data perfectly
+  const handleExportCsv = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const candidateLogs = targetQueueLogs.length > 0 ? targetQueueLogs : logs;
+    const dateLogs = candidateLogs.filter((l) => l.date === selectedDate);
+    const exportData = dateLogs.length > 0 ? dateLogs : candidateLogs;
+
+    if (exportData.length === 0) {
+      showToast('No customer orders found to export for ' + selectedDate);
+      return;
+    }
+
+    const headers = [
+      'CUSTOMER NAME',
+      'DATE',
+      'STATUS',
+      'MOBILE NUMBER',
+      'SUBSCRIPTION PLAN',
+      'MEAL SESSION',
+      'DELIVERY ADDRESS',
+      'DELIVERED TIME',
+      'DELIVERY / ISSUE NOTE'
+    ];
+
+    const escapeCsv = (val?: string) => {
+      if (!val) return '""';
+      return `"${String(val).replace(/"/g, '""')}"`;
+    };
+
+    const rows = exportData.map((l) => {
+      let statusFormatted = 'PENDING';
+      if (l.status === 'delivered') statusFormatted = 'DELIVERED';
+      else if (l.status === 'not_received') statusFormatted = 'NOT DELIVERED';
+      else if (l.status === 'paused') statusFormatted = 'CANCELED';
+      else if (l.status === 'out_for_delivery') statusFormatted = 'OUT FOR DELIVERY';
+
+      return [
+        escapeCsv(l.customerName),
+        escapeCsv(l.date || selectedDate),
+        escapeCsv(statusFormatted),
+        escapeCsv(l.customerMobile),
+        escapeCsv(l.planName),
+        escapeCsv(l.mealSession),
+        escapeCsv(l.deliveryAddress),
+        escapeCsv(l.deliveredAt || '-'),
+        escapeCsv(l.issueReason || l.recipientNote || '-')
+      ].join(',');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Stuvvy_Delivery_Report_${selectedDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${exportData.length} delivery records to Excel`);
+  };
+
+  // Instant export of Customer Plans Directory to Excel CSV
+  const handleExportPlansCsv = () => {
+    if (filteredDirectory.length === 0) {
+      showToast('No customer plans to export');
+      return;
+    }
+
+    const headers = [
+      'CUSTOMER NAME',
+      'MOBILE NUMBER',
+      'CURRENT PLAN',
+      'PAID STATUS',
+      'PAID AMOUNT',
+      'START DATE',
+      'END DATE',
+      'DURATION (DAYS)',
+      'PAST PLANS / UPGRADES'
+    ];
+
+    const escapeCsv = (val?: string) => {
+      if (!val) return '""';
+      return `"${String(val).replace(/"/g, '""')}"`;
+    };
+
+    const rows = filteredDirectory.map((item) => {
+      const pastPlansStr =
+        item.previousPlans && item.previousPlans.length > 0
+          ? item.previousPlans.map((p) => `${p.name} (${p.startDate || ''})`).join(' -> ')
+          : item.isUpgraded
+          ? 'Upgraded'
+          : 'None (Direct Plan)';
+
+      return [
+        escapeCsv(item.name),
+        escapeCsv(item.mobile),
+        escapeCsv(item.currentPlan.name),
+        escapeCsv(item.currentPlan.paymentStatus || 'Paid'),
+        escapeCsv(item.currentPlan.paymentAmount || '-'),
+        escapeCsv(item.currentPlan.startDate),
+        escapeCsv(item.currentPlan.endDate),
+        escapeCsv(String(item.currentPlan.durationDays || 30)),
+        escapeCsv(pastPlansStr),
+      ].join(',');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Stuvvy_Customer_Plans_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showToast(`Exported ${filteredDirectory.length} customer plan records to Excel`);
   };
 
   // Quick Date Navigation Helpers
@@ -353,6 +477,7 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
       }
 
       setCustomerDetailsMap(new Map(customerMap));
+      setRawSubmissions(allPlanSubmissions);
       setLogs(mergedLogs.length > 0 ? mergedLogs : combinedExisting);
     } catch (err) {
       console.error('Failed to load logs:', err);
@@ -535,6 +660,178 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
 
   const totalOrders = logs.length;
 
+  // Assemble horizontal directory of all plans with previous plan / upgrade tracking
+  const allPlansDirectory = useMemo(() => {
+    const customerGroups = new Map<string, any[]>();
+
+    const makeKey = (name?: string, mobile?: string) => {
+      const mob = (mobile || '').replace(/\D/g, '').slice(-10);
+      if (mob) return mob;
+      return (name || '').trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+    };
+
+    // 1. Group raw submissions
+    for (const sub of rawSubmissions) {
+      const key = makeKey(sub.name, sub.mobileNo);
+      if (!key) continue;
+      const list = customerGroups.get(key) || [];
+      list.push(sub);
+      customerGroups.set(key, list);
+    }
+
+    // 2. Fallback to customerDetailsMap if rawSubmissions is empty or missing a customer
+    for (const info of customerDetailsMap.values()) {
+      const key = makeKey(info.name, info.mobile);
+      if (!key) continue;
+      if (!customerGroups.has(key)) {
+        customerGroups.set(key, [{
+          name: info.name,
+          mobileNo: info.mobile,
+          plan: info.plan,
+          startDate: info.startDate,
+          address: info.address,
+          locality: info.locality,
+          paymentAmount: info.paymentAmount,
+          paymentStatus: info.paymentStatus,
+          orderStatus: info.orderStatus,
+          requestedMeals: info.requestedMeals,
+        }]);
+      }
+    }
+
+    const result: Array<{
+      customerKey: string;
+      name: string;
+      mobile: string;
+      address: string;
+      locality: string;
+      currentPlan: {
+        name: string;
+        startDate: string;
+        endDate: string;
+        durationDays: number;
+        status: 'Active' | 'Closed' | 'Upcoming';
+        paymentStatus: string;
+        paymentAmount: string;
+        requestedMeals: string[];
+      };
+      isUpgraded: boolean;
+      previousPlans: Array<{
+        name: string;
+        startDate?: string;
+        endDate?: string;
+        durationDays?: number;
+        status: string;
+      }>;
+    }> = [];
+
+    for (const [key, list] of customerGroups.entries()) {
+      // Sort submissions chronologically
+      const sorted = [...list].sort((a, b) => {
+        const sA = Number(a.sNo || 0);
+        const sB = Number(b.sNo || 0);
+        if (sA && sB) return sA - sB;
+        const dA = parseDateFlexible(a.startDate).getTime();
+        const dB = parseDateFlexible(b.startDate).getTime();
+        return dA - dB;
+      });
+
+      // Latest active plan is current plan (prioritize active over closed)
+      const currentSub = sorted.slice().reverse().find(s => {
+        const st = (s.orderStatus || '').toLowerCase();
+        return !st.includes('closed') && !st.includes('inactive');
+      }) || sorted[sorted.length - 1];
+
+      const priorSubs = sorted.filter(s => s !== currentSub);
+
+      const planName = currentSub.plan || 'Monthly Plan';
+      const duration = getPlanDurationDays(planName);
+      const startObj = parseDateFlexible(currentSub.startDate);
+      const endObj = new Date(startObj.getFullYear(), startObj.getMonth(), startObj.getDate() + duration - 1);
+
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const rawOrderStatus = (currentSub.orderStatus || '').toLowerCase();
+      let currentStatus: 'Active' | 'Closed' | 'Upcoming' = 'Active';
+      if (rawOrderStatus.includes('closed') || rawOrderStatus.includes('inactive') || today.getTime() > endObj.getTime()) {
+        currentStatus = 'Closed';
+      } else if (today.getTime() < startObj.getTime()) {
+        currentStatus = 'Upcoming';
+      }
+
+      const isUpgraded =
+        priorSubs.length > 0 ||
+        Boolean(currentSub.previousPlan) ||
+        (currentSub.subscriberType || '').toLowerCase().includes('upgrad');
+
+      const previousPlansList: Array<{
+        name: string;
+        startDate?: string;
+        endDate?: string;
+        durationDays?: number;
+        status: string;
+      }> = [];
+
+      for (const p of priorSubs) {
+        const pDuration = getPlanDurationDays(p.plan);
+        const pStart = parseDateFlexible(p.startDate);
+        const pEnd = new Date(pStart.getFullYear(), pStart.getMonth(), pStart.getDate() + pDuration - 1);
+        previousPlansList.push({
+          name: p.plan || 'Daily / Previous Plan',
+          startDate: p.startDate,
+          endDate: pEnd.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+          durationDays: pDuration,
+          status: 'Upgraded & Completed',
+        });
+      }
+
+      if (currentSub.previousPlan && previousPlansList.length === 0) {
+        previousPlansList.push({
+          name: currentSub.previousPlan,
+          status: 'Previous Plan (Upgraded)',
+        });
+      }
+
+      result.push({
+        customerKey: key,
+        name: currentSub.name || 'Subscriber',
+        mobile: (currentSub.mobileNo || '').replace(/\D/g, '').slice(-10),
+        address: currentSub.address || '',
+        locality: currentSub.locality || '',
+        currentPlan: {
+          name: planName,
+          startDate: currentSub.startDate || startObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+          endDate: endObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+          durationDays: duration,
+          status: currentStatus,
+          paymentStatus: currentSub.paymentStatus || 'Paid',
+          paymentAmount: currentSub.paymentAmount || '',
+          requestedMeals: currentSub.requestedMeals || ['Breakfast', 'Lunch', 'Dinner'],
+        },
+        isUpgraded,
+        previousPlans: previousPlansList,
+      });
+    }
+
+    return result;
+  }, [rawSubmissions, customerDetailsMap]);
+
+  const filteredDirectory = useMemo(() => {
+    return allPlansDirectory.filter(item => {
+      if (directorySearch.trim()) {
+        const q = directorySearch.toLowerCase().trim();
+        const matchesName = item.name.toLowerCase().includes(q);
+        const matchesMob = item.mobile.includes(q);
+        const matchesPlan = item.currentPlan.name.toLowerCase().includes(q);
+        const matchesPrev = item.previousPlans.some(p => p.name.toLowerCase().includes(q));
+        const matchesLoc = item.locality.toLowerCase().includes(q) || item.address.toLowerCase().includes(q);
+        return matchesName || matchesMob || matchesPlan || matchesPrev || matchesLoc;
+      }
+      return true;
+    });
+  }, [allPlansDirectory, directorySearch]);
+
   // =========================================================================
   // 1. PIN AUTHENTICATION GATE
   // =========================================================================
@@ -617,8 +914,217 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
         </div>
       )}
 
-      {/* TOP HEADER: NORMAL STUVVY HEADING TYPOGRAPHY */}
-      <div className="bg-white/95 backdrop-blur-xl p-6 sm:p-8 rounded-[32px] border border-zinc-200/90 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
+      {/* SEPARATE SCREEN NAVIGATION TABS */}
+      <div className="flex items-center gap-2 bg-white/95 backdrop-blur-xl p-1.5 sm:p-2 rounded-2xl border border-zinc-200/90 shadow-2xs w-fit">
+        <button
+          type="button"
+          onClick={() => setAdminNavScreen('dispatches')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-2 ${
+            adminNavScreen === 'dispatches'
+              ? 'bg-purple-900 text-white shadow-xs'
+              : 'text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100'
+          }`}
+        >
+          <Truck className="w-4 h-4" />
+          <span>Daily Delivery Dispatches</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setAdminNavScreen('customer-plans')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-2 ${
+            adminNavScreen === 'customer-plans'
+              ? 'bg-purple-900 text-white shadow-xs'
+              : 'text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100'
+          }`}
+        >
+          <Package className="w-4 h-4" />
+          <span>Customer Plans</span>
+          <span className={`text-[10px] px-2 py-0.2 rounded-full font-bold ${
+            adminNavScreen === 'customer-plans' ? 'bg-purple-800 text-white' : 'bg-purple-100 text-purple-900'
+          }`}>
+            {allPlansDirectory.length}
+          </span>
+        </button>
+      </div>
+
+      {adminNavScreen === 'customer-plans' ? (
+        /* DEDICATED SEPARATE SCREEN: CUSTOMER PLANS */
+        <div className="space-y-6">
+          {/* TOP SUMMARY CARD (STYLED EXACTLY LIKE DELIVERY LOGS IN USER PAGE) */}
+          <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[32px] p-6 sm:p-8 shadow-sm space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100 pb-4 text-left">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black font-heading text-zinc-950 flex items-center gap-2">
+                  <Package className="w-6 h-6 text-purple-700" />
+                  <span>Customer Plans</span>
+                </h2>
+                <p className="text-xs text-zinc-500 font-medium mt-0.5">
+                  Locate all customer plans, past and current plans, paid status for current plan, contact number, and dates.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleExportPlansCsv}
+                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-black text-xs px-3 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
+                  title="Export all customer plans and upgrade history to Excel"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Export Plans Excel</span>
+                </button>
+                <span className="text-[10px] font-black uppercase tracking-wider bg-purple-100 text-purple-900 px-3 py-1 rounded-full border border-purple-200">
+                  {allPlansDirectory.length} Total Customers
+                </span>
+              </div>
+            </div>
+
+            {/* SEARCH INPUT */}
+            <div className="relative">
+              <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={directorySearch}
+                onChange={(e) => setDirectorySearch(e.target.value)}
+                placeholder="Search by customer name, phone number (+91), or plan..."
+                className="w-full pl-9 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-xl text-xs font-semibold outline-none focus:border-purple-600 focus:bg-white transition-all text-zinc-950"
+              />
+              {directorySearch && (
+                <button
+                  onClick={() => setDirectorySearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* LIST OF SUBSCRIBERS (DELIVERY LOGS STYLE) */}
+          <div className="bg-white/95 backdrop-blur-xl border border-zinc-200/90 rounded-[32px] p-6 sm:p-8 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-100 pb-3 text-left">
+              <div>
+                <h3 className="text-base font-black font-heading text-zinc-950">
+                  Subscriber Plan Records
+                </h3>
+                <p className="text-xs text-zinc-500">
+                  Showing {filteredDirectory.length} of {allPlansDirectory.length} records.
+                </p>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="p-12 text-center space-y-3">
+                <RefreshCw className="w-8 h-8 text-purple-600 animate-spin mx-auto" />
+                <p className="text-xs text-zinc-500 font-bold">Loading customer plans...</p>
+              </div>
+            ) : filteredDirectory.length === 0 ? (
+              <div className="p-12 text-center space-y-2">
+                <FileText className="w-8 h-8 text-zinc-300 mx-auto" />
+                <h3 className="text-sm font-black text-zinc-900">No Customers Found</h3>
+                <p className="text-xs text-zinc-500">Try adjusting your search query.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredDirectory.map((item, idx) => (
+                  <div
+                    key={item.customerKey || idx}
+                    className="p-4 sm:p-5 rounded-2xl border border-zinc-200/90 bg-white hover:bg-zinc-50/70 transition-all text-left flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+                  >
+                    {/* 1. NAME & NUMBER */}
+                    <div className="space-y-1 min-w-[200px]">
+                      <div className="text-base font-black font-heading text-zinc-950">
+                        {item.name}
+                      </div>
+                      <a
+                        href={`tel:${item.mobile}`}
+                        className="text-xs font-mono font-bold text-purple-700 flex items-center gap-1.5 hover:underline"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>+91 {item.mobile}</span>
+                      </a>
+                    </div>
+
+                    {/* 2. CURRENT PLAN & PAID STATUS (ONLY FOR CURRENT PLAN) */}
+                    <div className="space-y-1 min-w-[190px]">
+                      <div className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                        Current Plan
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-black text-purple-950 bg-purple-100 px-2.5 py-1 rounded-full border border-purple-200">
+                          {item.currentPlan.name}
+                        </span>
+                        {/* Paid status ONLY for current plan */}
+                        <span className={`text-[11px] font-black px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${
+                          (item.currentPlan.paymentStatus || '').toLowerCase().includes('paid')
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                            : 'bg-amber-50 text-amber-800 border-amber-200'
+                        }`}>
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>{item.currentPlan.paymentStatus || 'Paid'}</span>
+                          {item.currentPlan.paymentAmount && (
+                            <span className="font-mono">({item.currentPlan.paymentAmount.includes('₹') ? '' : '₹'}{item.currentPlan.paymentAmount})</span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 3. DATES */}
+                    <div className="space-y-1 min-w-[190px]">
+                      <div className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                        Date
+                      </div>
+                      <div className="text-xs font-bold text-zinc-900 flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-purple-700 shrink-0" />
+                        <span>{item.currentPlan.startDate} ➔ {item.currentPlan.endDate}</span>
+                      </div>
+                    </div>
+
+                    {/* 4. PAST PLANS (HORIZONTAL) */}
+                    <div className="space-y-1 flex-1 lg:max-w-md">
+                      <div className="text-[10px] font-black uppercase tracking-wider text-zinc-400">
+                        Past Plans
+                      </div>
+                      {item.previousPlans && item.previousPlans.length > 0 ? (
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {item.previousPlans.map((prev, pIdx) => (
+                            <React.Fragment key={pIdx}>
+                              <div className="inline-flex items-center gap-1 text-[11px] bg-zinc-100 border border-zinc-200 text-zinc-700 px-2.5 py-1 rounded-lg font-bold">
+                                <span>{prev.name}</span>
+                                {prev.startDate && (
+                                  <span className="text-[9.5px] text-zinc-400 font-mono">({prev.startDate})</span>
+                                )}
+                                <span className="text-[8.5px] uppercase tracking-wider bg-zinc-200 text-zinc-600 px-1 py-0.2 rounded font-black">
+                                  Past
+                                </span>
+                              </div>
+                              {pIdx < item.previousPlans.length - 1 && (
+                                <ArrowRight className="w-3 h-3 text-zinc-400 shrink-0" />
+                              )}
+                            </React.Fragment>
+                          ))}
+                        </div>
+                      ) : item.isUpgraded ? (
+                        <span className="text-xs font-bold text-purple-900 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-lg inline-block">
+                          Upgraded from Previous Plan
+                        </span>
+                      ) : (
+                        <span className="text-xs text-zinc-400 italic">
+                          None (Direct Plan)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* TOP HEADER: NORMAL STUVVY HEADING TYPOGRAPHY */}
+          <div className="bg-white/95 backdrop-blur-xl p-6 sm:p-8 rounded-[32px] border border-zinc-200/90 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-2.5 flex-wrap">
             <span className="font-heading text-2xl sm:text-3xl text-purple-950 font-black tracking-tight leading-none">
@@ -639,15 +1145,15 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
 
         <div className="flex items-center gap-2.5 shrink-0 self-start md:self-center flex-wrap">
           {/* EXCEL EXPORT DIRECT DOWNLOAD */}
-          <a
-            href={`/api/admin/export-excel?date=${selectedDate}`}
-            download={`stuvvy_dispatch_${selectedDate}.csv`}
+          <button
+            type="button"
+            onClick={handleExportCsv}
             className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-black text-xs px-3.5 py-2.5 rounded-xl flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
             title="Download Excel / CSV Dispatch Sheet for this date"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
             <span>Export Excel</span>
-          </a>
+          </button>
 
           {/* MANUAL REFRESH BUTTON */}
           <button
@@ -1189,6 +1695,8 @@ export const AdminDeliveryPortal: React.FC<AdminDeliveryPortalProps> = ({ onBack
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* ========================================================================= */}
       {/* 4. ISSUE / NOT RECEIVED MODAL                                             */}

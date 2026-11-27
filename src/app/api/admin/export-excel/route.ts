@@ -1,14 +1,10 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
-import { DeliveryLogItem } from '../delivery-logs/route';
+import { getSavedLogs, DeliveryLogItem } from '@/lib/deliveryStorage';
+import { fetchCustomersFromSource } from '@/lib/customerSheets';
+import { parseDateFlexible, getPlanDurationDays } from '@/utils/subscriptionUtils';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-
-const REPO_LOGS_PATH = path.join(process.cwd(), 'src', 'data', 'delivery_logs.json');
-const TMP_LOGS_PATH = path.join(os.tmpdir(), 'stuvvy_delivery_logs.json');
 
 function escapeCsvField(val: string | undefined): string {
   if (!val) return '""';
@@ -19,24 +15,84 @@ function escapeCsvField(val: string | undefined): string {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const filterDate = searchParams.get('date');
+    const filterDate = searchParams.get('date') || new Date().toISOString().split('T')[0];
 
-    let logs: DeliveryLogItem[] = [];
-    if (Array.isArray((globalThis as any).__stuvvyDeliveryLogs) && (globalThis as any).__stuvvyDeliveryLogs.length > 0) {
-      logs = (globalThis as any).__stuvvyDeliveryLogs;
-    } else if (fs.existsSync(TMP_LOGS_PATH)) {
-      const raw = fs.readFileSync(TMP_LOGS_PATH, 'utf-8');
-      logs = JSON.parse(raw);
-    } else if (fs.existsSync(REPO_LOGS_PATH)) {
-      const raw = fs.readFileSync(REPO_LOGS_PATH, 'utf-8');
-      logs = JSON.parse(raw);
+    // 1. Fetch saved logs from multi-layer storage
+    const savedLogs = await getSavedLogs();
+    const dateLogs = savedLogs.filter((l) => l.date === filterDate);
+
+    // 2. Fetch customer directory to build full scheduled deliveries for this date
+    let allSubmissions: any[] = [];
+    try {
+      const custData = await fetchCustomersFromSource();
+      allSubmissions =
+        Array.isArray(custData.allSubmissions) && custData.allSubmissions.length > 0
+          ? custData.allSubmissions
+          : Array.isArray(custData.customers)
+          ? custData.customers
+          : [];
+    } catch (err) {
+      console.warn('Could not fetch customers from source in export-excel:', err);
     }
 
-    if (filterDate) {
-      logs = logs.filter(l => l.date === filterDate);
+    const allSessions: Array<'Breakfast' | 'Lunch' | 'Dinner'> = ['Breakfast', 'Lunch', 'Dinner'];
+    const mergedMap = new Map<string, DeliveryLogItem>();
+
+    // Add existing recorded logs for this date
+    for (const l of dateLogs) {
+      const mob = (l.customerMobile || '').replace(/\D/g, '').slice(-10);
+      const key = `${mob}_${l.mealSession}`;
+      mergedMap.set(key, l);
     }
 
-    // CSV Header with exact requested fields: NAME, DATE, STATUS, etc.
+    // Evaluate active subscribers for this date
+    const targetDateObj = parseDateFlexible(filterDate);
+    targetDateObj.setHours(0, 0, 0, 0);
+
+    for (const c of allSubmissions) {
+      const mob = (c.mobileNo || '').replace(/\D/g, '').slice(-10);
+      if (!mob) continue;
+
+      const duration = getPlanDurationDays(c.plan);
+      const startObj = parseDateFlexible(c.startDate);
+      startObj.setHours(0, 0, 0, 0);
+
+      const endObj = new Date(startObj.getFullYear(), startObj.getMonth(), startObj.getDate() + duration - 1);
+      endObj.setHours(23, 59, 59, 999);
+
+      // Check if targetDate falls within plan validity
+      if (targetDateObj.getTime() >= startObj.getTime() && targetDateObj.getTime() <= endObj.getTime()) {
+        const optedMeals =
+          c.requestedMeals && c.requestedMeals.length > 0
+            ? c.requestedMeals.filter((m: any) => allSessions.includes(m))
+            : allSessions;
+
+        for (const session of optedMeals) {
+          const key = `${mob}_${session}`;
+          if (!mergedMap.has(key)) {
+            mergedMap.set(key, {
+              id: `EXPORT-${filterDate}-${mob}-${String(session).toLowerCase()}`,
+              date: filterDate,
+              customerName: c.name || 'Subscriber',
+              customerMobile: mob,
+              planName: c.plan || 'Monthly',
+              deliveryAddress: c.address || '',
+              locality: c.locality || '',
+              mealSession: session,
+              status: 'pending',
+              markedBy: 'admin',
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        }
+      }
+    }
+
+    const finalLogs = Array.from(mergedMap.values());
+    // If no customers were active on filterDate, fallback to all saved logs
+    const outputLogs = finalLogs.length > 0 ? finalLogs : savedLogs;
+
+    // CSV Header with exact requested fields
     const headers = [
       'CUSTOMER NAME',
       'DATE',
@@ -49,7 +105,7 @@ export async function GET(request: Request) {
       'DELIVERY / ISSUE NOTE'
     ];
 
-    const rows = logs.map(l => {
+    const rows = outputLogs.map((l) => {
       let statusFormatted = 'PENDING';
       if (l.status === 'delivered') statusFormatted = 'DELIVERED';
       else if (l.status === 'not_received') statusFormatted = 'NOT DELIVERED';
@@ -58,7 +114,7 @@ export async function GET(request: Request) {
 
       return [
         escapeCsvField(l.customerName),
-        escapeCsvField(l.date),
+        escapeCsvField(l.date || filterDate),
         escapeCsvField(statusFormatted),
         escapeCsvField(l.customerMobile),
         escapeCsvField(l.planName),

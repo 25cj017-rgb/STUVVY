@@ -17,15 +17,15 @@ export const StuvvyStarRewards: React.FC<StuvvyStarRewardsProps> = ({
   const safeConsecutive = Math.max(1, consecutiveMonths);
   const isMonthly = (planName || '').toLowerCase().includes('month');
 
-  // Compute filled stars (1 to 12)
-  const starsEarned = Math.min(
-    12,
-    totalOrdersOrWeeks
-      ? totalOrdersOrWeeks
-      : isMonthly
-      ? safeConsecutive
-      : 1
-  );
+  const is7999Paid =
+    (planName || '').toLowerCase().includes('3+1') ||
+    (planName || '').toLowerCase().includes('3plus1') ||
+    (planName || '').toLowerCase().includes('7999');
+
+  // Compute filled stars (1 to 12) - STRICT: Only if 7,999 offer is paid
+  const starsEarned = is7999Paid
+    ? Math.min(12, totalOrdersOrWeeks ? totalOrdersOrWeeks : isMonthly ? safeConsecutive : 1)
+    : 0;
 
   return (
     <div className="w-full max-w-xl mx-auto select-none">

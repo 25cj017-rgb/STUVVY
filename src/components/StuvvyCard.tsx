@@ -15,6 +15,8 @@ interface StuvvyCardProps {
   avatarUrl?: string;
   subscriberId?: string;
   consecutiveMonths?: number;
+  paidAmount?: number | string;
+  has7999Offer?: boolean;
 }
 
 /**
@@ -37,7 +39,9 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
   endDateStr,
   status,
   subscriberId,
-  consecutiveMonths = 1
+  consecutiveMonths = 1,
+  paidAmount,
+  has7999Offer
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -60,10 +64,20 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
     setIsFlipped(prev => !prev);
   };
 
-  // 12 Stars definitions
+  // STRICT USER RULE: MUST NOT mark any stars UNLESS the user has paid that ₹7,999 offer!
+  const isPaid7999 =
+    has7999Offer === true ||
+    (typeof paidAmount === 'number' && paidAmount === 7999) ||
+    (typeof paidAmount === 'string' && paidAmount.replace(/\D/g, '').includes('7999')) ||
+    (
+      ((planName || '').toLowerCase().includes('3+1') || (planName || '').toLowerCase().includes('3plus1')) &&
+      (paidAmount === undefined || String(paidAmount).replace(/\D/g, '').includes('7999') || String(paidAmount) === '')
+    );
+
+  // 12 Stars definitions: Strictly 0 stars if not the ₹7,999 offer!
   const totalStars = 12;
-  const earnedStars = Math.max(1, consecutiveMonths);
-  const is3Plus1 = (planName || '').toLowerCase().includes('3+1') || (planName || '').toLowerCase().includes('3plus1') || (planName || '').toLowerCase().includes('meal pass');
+  const earnedStars = isPaid7999 ? Math.max(1, Math.min(12, consecutiveMonths)) : 0;
+  const is3Plus1 = isPaid7999;
 
   return (
     <div id="stuvvy-card-section" className="w-full flex flex-col items-center justify-center py-2 select-none">
@@ -239,7 +253,7 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
                   STUVVY 12-STAR REWARDS
                 </span>
                 <span className="text-[8px] font-black text-purple-900 bg-white/80 px-1.5 py-0.2 rounded-full border border-purple-200">
-                  {earnedStars} of 12 Stars
+                  {earnedStars > 0 ? `${earnedStars} of 12 Stars` : '0 Stars (Locked)'}
                 </span>
               </div>
 
@@ -275,6 +289,12 @@ export const StuvvyCard: React.FC<StuvvyCardProps> = ({
                   );
                 })}
               </div>
+
+              {!isPaid7999 && (
+                <div className="text-[7px] text-amber-900 bg-amber-50/90 border border-amber-200/80 rounded px-1.5 py-0.5 text-center font-bold">
+                  ⭐ Stars unlock exclusively with the ₹7,999 3+1 Meal Pass
+                </div>
+              )}
             </div>
 
             {/* 4. CARD FOOTER: HOTLINE ONLY */}
